@@ -245,6 +245,8 @@ class IASZone(BinarySensor):
 class IASZoneTamper(IASZone):
     """ZHA IAS tamper BinarySensor."""
 
+    _unique_id_suffix = "tamper"
+
     @functools.cached_property
     def translation_key(self) -> str | None:
         """Return the name of the sensor."""
