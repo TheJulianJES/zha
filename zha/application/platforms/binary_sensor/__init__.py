@@ -241,6 +241,26 @@ class IASZone(BinarySensor):
         await PlatformEntity.async_update(self)
 
 
+@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ZONE, models={"SOC001"})
+class IASZoneTamper(IASZone):
+    """ZHA IAS tamper BinarySensor."""
+
+    @functools.cached_property
+    def translation_key(self) -> str | None:
+        """Return the name of the sensor."""
+        return "ias_zone_tamper"
+
+    @functools.cached_property
+    def device_class(self) -> BinarySensorDeviceClass | None:
+        """Return device class from platform DEVICE_CLASSES."""
+        return BinarySensorDeviceClass.TAMPER
+
+    @staticmethod
+    def parse(value: bool | int) -> bool:
+        """Parse the raw attribute into a bool state."""
+        return BinarySensor.parse((value >> 2) & 1)  # use only bit 2
+
+
 @STRICT_MATCH(cluster_handler_names=CLUSTER_HANDLER_ZONE, models={"WL4200", "WL4200S"})
 class SinopeLeakStatus(BinarySensor):
     """Sinope water leak sensor."""
