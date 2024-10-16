@@ -202,7 +202,7 @@ async def test_firmware_update_success(
     zigpy_device: ZigpyDevice,  # pylint: disable=redefined-outer-name
 ) -> None:
     """Test ZHA update platform - firmware update success."""
-    zha_device, cluster, fw_image, installed_fw_version = await setup_test_data(
+    zha_device, device_cluster, fw_image, installed_fw_version = await setup_test_data(
         zha_gateway, zigpy_device
     )
 
@@ -211,7 +211,7 @@ async def test_firmware_update_success(
     entity = get_entity(zha_device, platform=Platform.UPDATE)
 
     # simulate an image available notification
-    await cluster._handle_query_next_image(
+    await device_cluster._handle_query_next_image(
         foundation.ZCLHeader.cluster(
             tsn=0x12, command_id=general.Ota.ServerCommandDefs.query_next_image.id
         ),
@@ -231,14 +231,14 @@ async def test_firmware_update_success(
         == f"0x{fw_image.firmware.header.file_version:08x}"
     )
 
-    async def endpoint_reply(cluster_id, tsn, data, command_id):
-        if cluster_id == general.Ota.cluster_id:
-            hdr, cmd = cluster.deserialize(data)
+    async def endpoint_reply(cluster, data, **kwargs):
+        if cluster == general.Ota.cluster_id:
+            hdr, cmd = device_cluster.deserialize(data)
             if isinstance(cmd, general.Ota.ImageNotifyCommand):
                 zigpy_device.packet_received(
                     make_packet(
                         zigpy_device,
-                        cluster,
+                        device_cluster,
                         general.Ota.ServerCommandDefs.query_next_image.name,
                         field_control=general.Ota.QueryNextImageCommand.FieldControl.HardwareVersion,
                         manufacturer_code=fw_image.firmware.header.manufacturer_id,
@@ -258,7 +258,7 @@ async def test_firmware_update_success(
                 zigpy_device.packet_received(
                     make_packet(
                         zigpy_device,
-                        cluster,
+                        device_cluster,
                         general.Ota.ServerCommandDefs.image_block.name,
                         field_control=general.Ota.ImageBlockCommand.FieldControl.RequestNodeAddr,
                         manufacturer_code=fw_image.firmware.header.manufacturer_id,
@@ -285,7 +285,7 @@ async def test_firmware_update_success(
                     zigpy_device.packet_received(
                         make_packet(
                             zigpy_device,
-                            cluster,
+                            device_cluster,
                             general.Ota.ServerCommandDefs.image_block.name,
                             field_control=general.Ota.ImageBlockCommand.FieldControl.RequestNodeAddr,
                             manufacturer_code=fw_image.firmware.header.manufacturer_id,
@@ -323,7 +323,7 @@ async def test_firmware_update_success(
                     zigpy_device.packet_received(
                         make_packet(
                             zigpy_device,
-                            cluster,
+                            device_cluster,
                             general.Ota.ServerCommandDefs.upgrade_end.name,
                             status=foundation.Status.SUCCESS,
                             manufacturer_code=fw_image.firmware.header.manufacturer_id,
@@ -342,7 +342,7 @@ async def test_firmware_update_success(
                 assert cmd.upgrade_time == 0
 
                 def read_new_fw_version(*args, **kwargs):
-                    cluster.update_attribute(
+                    device_cluster.update_attribute(
                         attrid=general.Ota.AttributeDefs.current_file_version.id,
                         value=fw_image.firmware.header.file_version,
                     )
@@ -352,9 +352,9 @@ async def test_firmware_update_success(
                         )
                     }, {}
 
-                cluster.read_attributes.side_effect = read_new_fw_version
+                device_cluster.read_attributes.side_effect = read_new_fw_version
 
-    cluster.endpoint.reply = AsyncMock(side_effect=endpoint_reply)
+    device_cluster.endpoint.reply = AsyncMock(side_effect=endpoint_reply)
 
     entity = get_entity(zha_device, platform=Platform.UPDATE)
 
@@ -379,14 +379,14 @@ async def test_firmware_update_raises(
     zigpy_device: ZigpyDevice,  # pylint: disable=redefined-outer-name
 ) -> None:
     """Test ZHA update platform - firmware update raises."""
-    zha_device, cluster, fw_image, installed_fw_version = await setup_test_data(
+    zha_device, device_cluster, fw_image, installed_fw_version = await setup_test_data(
         zha_gateway, zigpy_device
     )
 
     entity = get_entity(zha_device, platform=Platform.UPDATE)
 
     # simulate an image available notification
-    await cluster._handle_query_next_image(
+    await device_cluster._handle_query_next_image(
         foundation.ZCLHeader.cluster(
             tsn=0x12, command_id=general.Ota.ServerCommandDefs.query_next_image.id
         ),
@@ -407,14 +407,14 @@ async def test_firmware_update_raises(
         == f"0x{fw_image.firmware.header.file_version:08x}"
     )
 
-    async def endpoint_reply(cluster_id, tsn, data, command_id):
-        if cluster_id == general.Ota.cluster_id:
-            hdr, cmd = cluster.deserialize(data)
+    async def endpoint_reply(cluster, data, **kwargs):
+        if cluster == general.Ota.cluster_id:
+            hdr, cmd = device_cluster.deserialize(data)
             if isinstance(cmd, general.Ota.ImageNotifyCommand):
                 zigpy_device.packet_received(
                     make_packet(
                         zigpy_device,
-                        cluster,
+                        device_cluster,
                         general.Ota.ServerCommandDefs.query_next_image.name,
                         field_control=general.Ota.QueryNextImageCommand.FieldControl.HardwareVersion,
                         manufacturer_code=fw_image.firmware.header.manufacturer_id,
@@ -433,7 +433,7 @@ async def test_firmware_update_raises(
                 assert cmd.image_size == fw_image.firmware.header.image_size
                 raise DeliveryError("failed to deliver")
 
-    cluster.endpoint.reply = AsyncMock(side_effect=endpoint_reply)
+    device_cluster.endpoint.reply = AsyncMock(side_effect=endpoint_reply)
     with pytest.raises(ZHAException):
         await entity.async_install(
             version=f"0x{fw_image.firmware.header.file_version:08x}"
