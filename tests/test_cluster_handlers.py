@@ -2,6 +2,8 @@
 
 # pylint:disable=redefined-outer-name,too-many-lines
 
+from __future__ import annotations
+
 import logging
 import math
 from typing import TYPE_CHECKING, Any
@@ -563,7 +565,7 @@ def test_cluster_handler_registry() -> None:
     """Test ZIGBEE cluster handler Registry."""
 
     # get all quirk ID from zigpy quirks registry
-    cluster_quirk_id_map = {}
+    cluster_quirk_id_map: dict[int, set[str | None]] = {}
     for cluster_id in CLUSTERS_BY_ID:
         cluster_quirk_id_map[cluster_id] = {None}
 
