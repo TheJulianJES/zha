@@ -566,6 +566,18 @@ def test_cluster_handler_registry() -> None:
     all_quirk_ids = {}
     for cluster_id in CLUSTERS_BY_ID:
         all_quirk_ids[cluster_id] = {None}
+
+    # loop over custom clusters in v2 quirks registry
+    for quirks in _DEVICE_REGISTRY._registry_v2.values():
+        for quirk_reg_entry in quirks:
+            # get standalone adds_metadata and adds_metadata from replaces_metadata
+            all_metadata = set(quirk_reg_entry.adds_metadata) | {
+                rm.add for rm in quirk_reg_entry.replaces_metadata
+            }
+            for metadata in all_metadata:
+                all_quirk_ids[metadata.cluster.cluster_id] = {None}
+
+    # loop over custom clusters in v1 quirks registry
     for manufacturer in _DEVICE_REGISTRY.registry.values():
         for model_quirk_list in manufacturer.values():
             for quirk in model_quirk_list:
