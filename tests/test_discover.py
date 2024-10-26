@@ -3,7 +3,6 @@
 import asyncio
 from collections.abc import Callable
 import enum
-import itertools
 import json
 import pathlib
 from unittest import mock
@@ -25,12 +24,9 @@ import zigpy.profiles.zha
 import zigpy.quirks
 from zigpy.quirks.v2 import (
     BinarySensorMetadata,
-    EntityMetadata,
     EntityType,
     NumberMetadata,
     QuirkBuilder,
-    QuirksV2RegistryEntry,
-    ZCLCommandButtonMetadata,
     ZCLSensorMetadata,
 )
 from zigpy.quirks.v2.homeassistant import UnitOfTime
@@ -623,81 +619,6 @@ async def test_quirks_v2_entity_discovery_errors(
 
 
 DEVICE_CLASS_TYPES = [NumberMetadata, BinarySensorMetadata, ZCLSensorMetadata]
-
-
-def validate_device_class_unit(
-    quirk: QuirksV2RegistryEntry,
-    entity_metadata: EntityMetadata,
-    platform: Platform,
-    translations: dict,  # pylint: disable=unused-argument
-) -> None:
-    """Ensure device class and unit are used correctly."""
-    if (
-        hasattr(entity_metadata, "unit")
-        and entity_metadata.unit is not None
-        and hasattr(entity_metadata, "device_class")
-        and entity_metadata.device_class is not None
-    ):
-        m1 = "device_class and unit are both set - unit: "
-        m2 = f"{entity_metadata.unit} device_class: "
-        m3 = f"{entity_metadata.device_class} for {platform.name} "
-        raise ValueError(f"{m1}{m2}{m3}{quirk}")
-
-
-def validate_translation_keys(
-    quirk: QuirksV2RegistryEntry,
-    entity_metadata: EntityMetadata,
-    platform: Platform,
-    translations: dict,
-) -> None:
-    """Ensure translation keys exist for all v2 quirks."""
-    if isinstance(entity_metadata, ZCLCommandButtonMetadata):
-        default_translation_key = entity_metadata.command_name
-    else:
-        default_translation_key = entity_metadata.attribute_name
-    translation_key = entity_metadata.translation_key or default_translation_key
-
-    if (
-        translation_key is not None
-        and translation_key not in translations["entity"][platform]
-    ):
-        raise ValueError(
-            f"Missing translation key: {translation_key} for {platform.name} {quirk}"
-        )
-
-
-def validate_translation_keys_device_class(
-    quirk: QuirksV2RegistryEntry,
-    entity_metadata: EntityMetadata,
-    platform: Platform,
-    translations: dict,  # pylint: disable=unused-argument
-) -> None:
-    """Validate translation keys and device class usage."""
-    if isinstance(entity_metadata, ZCLCommandButtonMetadata):
-        default_translation_key = entity_metadata.command_name
-    else:
-        default_translation_key = entity_metadata.attribute_name
-    translation_key = entity_metadata.translation_key or default_translation_key
-
-    metadata_type = type(entity_metadata)
-    if metadata_type in DEVICE_CLASS_TYPES:
-        device_class = entity_metadata.device_class
-        if device_class is not None and translation_key is not None:
-            m1 = "translation_key and device_class are both set - translation_key: "
-            m2 = f"{translation_key} device_class: {device_class} for {platform.name} "
-            raise ValueError(f"{m1}{m2}{quirk}")
-
-
-def validate_metadata(validator: Callable) -> None:
-    """Ensure v2 quirks metadata does not violate HA rules."""
-    all_v2_quirks = itertools.chain.from_iterable(
-        zigpy.quirks._DEVICE_REGISTRY._registry_v2.values()
-    )
-    translations: dict[str, dict[str, str]] = {}
-    for quirk in all_v2_quirks:
-        for entity_metadata in quirk.entity_metadata:
-            platform = Platform(entity_metadata.entity_platform.value)
-            validator(quirk, entity_metadata, platform, translations)
 
 
 class BadDeviceClass(enum.Enum):
