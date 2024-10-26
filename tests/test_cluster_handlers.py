@@ -563,9 +563,9 @@ def test_cluster_handler_registry() -> None:
     """Test ZIGBEE cluster handler Registry."""
 
     # get all quirk ID from zigpy quirks registry
-    all_quirk_ids = {}
+    cluster_quirk_id_map = {}
     for cluster_id in CLUSTERS_BY_ID:
-        all_quirk_ids[cluster_id] = {None}
+        cluster_quirk_id_map[cluster_id] = {None}
 
     # loop over custom clusters in v2 quirks registry
     for quirks in _DEVICE_REGISTRY._registry_v2.values():
@@ -575,7 +575,7 @@ def test_cluster_handler_registry() -> None:
                 rm.add for rm in quirk_reg_entry.replaces_metadata
             }
             for metadata in all_metadata:
-                all_quirk_ids[metadata.cluster.cluster_id] = {None}
+                cluster_quirk_id_map[metadata.cluster.cluster_id] = {None}
 
     # loop over custom clusters in v1 quirks registry
     for manufacturer in _DEVICE_REGISTRY.registry.values():
@@ -595,9 +595,9 @@ def test_cluster_handler_registry() -> None:
                     for cluster_id in cluster_ids:
                         if not isinstance(cluster_id, int):
                             cluster_id = cluster_id.cluster_id
-                        if cluster_id not in all_quirk_ids:
-                            all_quirk_ids[cluster_id] = {None}
-                        all_quirk_ids[cluster_id].add(quirk_id)
+                        if cluster_id not in cluster_quirk_id_map:
+                            cluster_quirk_id_map[cluster_id] = {None}
+                        cluster_quirk_id_map[cluster_id].add(quirk_id)
 
     for (
         cluster_id,
@@ -605,12 +605,12 @@ def test_cluster_handler_registry() -> None:
     ) in CLUSTER_HANDLER_REGISTRY.items():
         assert isinstance(cluster_id, int)
         assert 0 <= cluster_id <= 0xFFFF
-        assert cluster_id in all_quirk_ids
+        assert cluster_id in cluster_quirk_id_map
         assert isinstance(cluster_handler_classes, dict)
         for quirk_id, cluster_handler in cluster_handler_classes.items():
             assert quirk_id is None or isinstance(quirk_id, str)
             assert issubclass(cluster_handler, ClusterHandler)
-            assert quirk_id in all_quirk_ids[cluster_id]
+            assert quirk_id in cluster_quirk_id_map[cluster_id]
 
 
 def test_epch_unclaimed_cluster_handlers(cluster_handler) -> None:
