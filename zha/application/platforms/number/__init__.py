@@ -864,7 +864,7 @@ class SonoffThermostatLocalTempCalibration(ThermostatLocalTempCalibration):
 
     _attr_native_min_value: float = -12.8
     _attr_native_max_value: float = 12.7
-    _attr_native_step: float = 0.2
+    _attr_native_step: float = 0.1
 
 
 @CONFIG_DIAGNOSTIC_MATCH(
