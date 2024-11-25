@@ -850,7 +850,7 @@ class ThermostatLocalTempCalibration(NumberConfigurationEntity):
     _attribute_name = "local_temperature_calibration"
     _attr_translation_key: str = "local_temperature_calibration"
 
-    _attr_mode: NumberMode = NumberMode.SLIDER
+    _attr_mode: NumberMode = NumberMode.BOX
     _attr_native_unit_of_measurement: str = UnitOfTemperature.CELSIUS
 
 
