@@ -78,6 +78,37 @@ def elec_measurement_zigpy_device_mock(
     return zigpy_device
 
 
+def metering_zigpy_device_mock(
+    zha_gateway: Gateway,
+) -> ZigpyDevice:
+    """Metering zigpy device."""
+
+    zigpy_device = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [
+                    general.Basic.cluster_id,
+                    smartenergy.Metering.cluster_id,
+                ],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.SIMPLE_SENSOR,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+        model="TS011F",  # polling is enabled for this model
+    )
+    zigpy_device.node_desc.mac_capability_flags |= 0b_0000_0100
+    zigpy_device.endpoints[1].smartenergy_metering.PLUGGED_ATTR_READS = {
+        "unit_of_measure": 0,  # kWh
+        "multiplier": 1,
+        "divisor": 1000,
+        "summation_formatting": 0b0_0100_011,  # read from plug
+        "metering_device_type": 0,  # electric
+    }
+    return zigpy_device
+
+
 async def async_test_humidity(
     zha_gateway: Gateway, cluster: Cluster, entity: PlatformEntity
 ) -> None:
@@ -1093,6 +1124,40 @@ async def test_elec_measurement_sensor_polling(zha_gateway: Gateway) -> None:
     zigpy_dev.endpoints[1].electrical_measurement.PLUGGED_ATTR_READS["active_power"] = (
         60
     )
+
+    # ensure the state is still 2.0
+    assert entity.state["state"] == 2.0
+
+    # let the polling happen
+    await asyncio.sleep(90)
+    await zha_gateway.async_block_till_done(wait_background_tasks=True)
+
+    # ensure the state has been updated to 6.0
+    assert entity.state["state"] == 6.0
+
+
+async def test_metering_sensor_polling(zha_gateway: Gateway) -> None:
+    """Test ZHA metering sensor polling."""
+
+    zigpy_dev = metering_zigpy_device_mock(zha_gateway)
+    zigpy_dev.endpoints[1].smartenergy_metering.PLUGGED_ATTR_READS[
+        "current_summ_delivered"
+    ] = 2000
+
+    zha_dev = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    # test that the sensor has an initial state of 2.0
+    entity = get_entity(
+        zha_dev,
+        platform=Platform.SENSOR,
+        exact_entity_type=sensor.PolledSmartEnergySummation,
+    )
+    assert entity.state["state"] == 2.0
+
+    # update the value for the power reading
+    zigpy_dev.endpoints[1].smartenergy_metering.PLUGGED_ATTR_READS[
+        "current_summ_delivered"
+    ] = 6000
 
     # ensure the state is still 2.0
     assert entity.state["state"] == 2.0
