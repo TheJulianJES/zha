@@ -604,7 +604,14 @@ class ClusterHandler(LogMixin, EventBase):
             rest = rest[CLUSTER_READS_PER_REQ:]
         return result
 
-    get_attributes = functools.partialmethod(_get_attributes, False)
+    async def get_attributes(
+        self,
+        attributes: list[str],
+        from_cache: bool = True,
+        only_cache: bool = True,
+    ) -> dict[int | str, Any]:
+        """Get the values for a list of attributes and raise no exceptions."""
+        return await self._get_attributes(False, attributes, from_cache, only_cache)
 
     async def write_attributes_safe(
         self, attributes: dict[str, Any], manufacturer: int | None = None
