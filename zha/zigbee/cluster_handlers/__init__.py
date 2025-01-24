@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Coroutine, Iterator
 import contextlib
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 import functools
 import logging
@@ -489,7 +490,7 @@ class ClusterHandler(LogMixin, EventBase):
     def cluster_command(self, tsn, command_id, args) -> None:
         """Handle commands received to this cluster."""
 
-    def attribute_updated(self, attrid: int, value: Any, _: Any) -> None:
+    def attribute_updated(self, attrid: int, value: Any, timestamp: datetime) -> None:
         """Handle attribute updates on this cluster."""
         attr_name = self._get_attribute_name(attrid)
         self.debug(
@@ -704,7 +705,7 @@ class ZDOClusterHandler(LogMixin):
 class ClientClusterHandler(ClusterHandler):
     """ClusterHandler for Zigbee client (output) clusters."""
 
-    def attribute_updated(self, attrid: int, value: Any, timestamp: Any) -> None:
+    def attribute_updated(self, attrid: int, value: Any, timestamp: datetime) -> None:
         """Handle an attribute updated on this cluster."""
         super().attribute_updated(attrid, value, timestamp)
 

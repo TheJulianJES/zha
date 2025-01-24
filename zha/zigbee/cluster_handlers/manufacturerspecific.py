@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -231,9 +232,9 @@ class SmartThingsAccelerationClusterHandler(ClusterHandler):
             "SmartThings",
         )
 
-    def attribute_updated(self, attrid: int, value: Any, _: Any) -> None:
+    def attribute_updated(self, attrid: int, value: Any, timestamp: datetime) -> None:
         """Handle attribute updates on this cluster."""
-        super().attribute_updated(attrid, value, _)
+        super().attribute_updated(attrid, value, timestamp)
         try:
             attr_name = self._cluster.attributes[attrid].name
         except KeyError:
