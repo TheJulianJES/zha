@@ -322,13 +322,13 @@ class ConfigurableAttributeSwitch(PlatformEntity):
     async def async_update(self) -> None:
         """Attempt to retrieve the state of the entity."""
         self.debug("Polling current state")
+
+        polling_attrs = [self._attribute_name]
+        if self._inverter_attribute_name:
+            polling_attrs.append(self._inverter_attribute_name)
+
         results = await self._cluster_handler.get_attributes(
-            [
-                self._attribute_name,
-                self._inverter_attribute_name,
-            ],
-            from_cache=False,
-            only_cache=False,
+            polling_attrs, from_cache=False, only_cache=False
         )
 
         self.debug("read values=%s", results)
