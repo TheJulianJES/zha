@@ -35,7 +35,7 @@ from tests.common import (
 from zha.application import Platform
 from zha.application.const import ZHA_CLUSTER_HANDLER_READS_PER_REQ
 from zha.application.gateway import Gateway
-from zha.application.platforms import PlatformEntity, sensor
+from zha.application.platforms import BaseEntity, PlatformEntity, sensor
 from zha.application.platforms.sensor import DanfossSoftwareErrorCode, UnitOfMass
 from zha.application.platforms.sensor.const import SensorDeviceClass, SensorStateClass
 from zha.units import PERCENTAGE, UnitOfEnergy, UnitOfPressure, UnitOfVolume
@@ -1102,47 +1102,37 @@ async def test_elec_measurement_sensor_type(
     assert entity.state["measurement_type"] == expected_type
 
 
-async def test_elec_measurement_sensor_polling(zha_gateway: Gateway) -> None:
-    """Test ZHA electrical measurement sensor polling."""
+@pytest.mark.parametrize(
+    "fixture, sensor_cls, ep_attr, plug_attr, divisor",
+    (
+        (
+            elec_measurement_zigpy_device_mock,
+            sensor.PolledElectricalMeasurement,
+            "electrical_measurement",
+            "active_power",
+            1,
+        ),
+        (
+            metering_zigpy_device_mock,
+            sensor.PolledSmartEnergySummation,
+            "smartenergy_metering",
+            "current_summ_delivered",
+            100,
+        ),
+    ),
+)
+async def test_sensor_polling(
+    zha_gateway: Gateway,
+    fixture: Callable[[Gateway], ZigpyDevice],
+    sensor_cls: type[BaseEntity],
+    ep_attr: str,
+    plug_attr: str,
+    divisor: int,
+) -> None:
+    """Test ZHA sensor polling."""
 
-    zigpy_dev = elec_measurement_zigpy_device_mock(zha_gateway)
-    zigpy_dev.endpoints[1].electrical_measurement.PLUGGED_ATTR_READS["active_power"] = (
-        20
-    )
-
-    zha_dev = await join_zigpy_device(zha_gateway, zigpy_dev)
-
-    # test that the sensor has an initial state of 2.0
-    entity = get_entity(
-        zha_dev,
-        platform=Platform.SENSOR,
-        exact_entity_type=sensor.PolledElectricalMeasurement,
-    )
-    assert entity.state["state"] == 2.0
-
-    # update the value for the power reading
-    zigpy_dev.endpoints[1].electrical_measurement.PLUGGED_ATTR_READS["active_power"] = (
-        60
-    )
-
-    # ensure the state is still 2.0
-    assert entity.state["state"] == 2.0
-
-    # let the polling happen
-    await asyncio.sleep(90)
-    await zha_gateway.async_block_till_done(wait_background_tasks=True)
-
-    # ensure the state has been updated to 6.0
-    assert entity.state["state"] == 6.0
-
-
-async def test_metering_sensor_polling(zha_gateway: Gateway) -> None:
-    """Test ZHA metering sensor polling."""
-
-    zigpy_dev = metering_zigpy_device_mock(zha_gateway)
-    zigpy_dev.endpoints[1].smartenergy_metering.PLUGGED_ATTR_READS[
-        "current_summ_delivered"
-    ] = 2000
+    zigpy_dev = fixture(zha_gateway)
+    getattr(zigpy_dev.endpoints[1], ep_attr).PLUGGED_ATTR_READS[plug_attr] = 20
 
     zha_dev = await join_zigpy_device(zha_gateway, zigpy_dev)
 
@@ -1150,24 +1140,22 @@ async def test_metering_sensor_polling(zha_gateway: Gateway) -> None:
     entity = get_entity(
         zha_dev,
         platform=Platform.SENSOR,
-        exact_entity_type=sensor.PolledSmartEnergySummation,
+        exact_entity_type=sensor_cls,
     )
-    assert entity.state["state"] == 2.0
+    assert entity.state["state"] == 2.0 / divisor
 
     # update the value for the power reading
-    zigpy_dev.endpoints[1].smartenergy_metering.PLUGGED_ATTR_READS[
-        "current_summ_delivered"
-    ] = 6000
+    getattr(zigpy_dev.endpoints[1], ep_attr).PLUGGED_ATTR_READS[plug_attr] = 60
 
     # ensure the state is still 2.0
-    assert entity.state["state"] == 2.0
+    assert entity.state["state"] == 2.0 / divisor
 
     # let the polling happen
     await asyncio.sleep(90)
     await zha_gateway.async_block_till_done(wait_background_tasks=True)
 
     # ensure the state has been updated to 6.0
-    assert entity.state["state"] == 6.0
+    assert entity.state["state"] == 6.0 / divisor
 
 
 @pytest.mark.parametrize(
