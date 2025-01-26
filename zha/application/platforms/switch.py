@@ -6,6 +6,7 @@ from abc import ABC
 from dataclasses import dataclass
 import functools
 import logging
+import typing
 from typing import TYPE_CHECKING, Any, Self, cast
 
 from zhaquirks.quirk_ids import DANFOSS_ALLY_THERMOSTAT, TUYA_PLUG_ONOFF
@@ -190,6 +191,7 @@ class ConfigurableAttributeSwitch(PlatformEntity):
 
     _attr_entity_category = EntityCategory.CONFIG
     _attribute_name: str
+    _attribute_converter: typing.Callable[[typing.Any], typing.Any] | None = None
     _inverter_attribute_name: str | None = None
     _force_inverted: bool = False
     _off_value: int = 0
@@ -243,6 +245,8 @@ class ConfigurableAttributeSwitch(PlatformEntity):
         """Init this entity from the quirks metadata."""
         super()._init_from_quirks_metadata(entity_metadata)
         self._attribute_name = entity_metadata.attribute_name
+        if entity_metadata.attribute_converter is not None:
+            self._attribute_converter = entity_metadata.attribute_converter
         if entity_metadata.invert_attribute_name:
             self._inverter_attribute_name = entity_metadata.invert_attribute_name
         if entity_metadata.force_inverted:
@@ -282,11 +286,13 @@ class ConfigurableAttributeSwitch(PlatformEntity):
     @property
     def is_on(self) -> bool:
         """Return if the switch is on based on the statemachine."""
-        if self._on_value != 1:
-            val = self._cluster_handler.cluster.get(self._attribute_name)
-            val = val == self._on_value
+        raw_state = self._cluster_handler.cluster.get(self._attribute_name)
+        if self._attribute_converter:
+            val = self._attribute_converter(raw_state)
+        elif self._on_value != 1:
+            val = raw_state == self._on_value
         else:
-            val = bool(self._cluster_handler.cluster.get(self._attribute_name))
+            val = bool(raw_state)
         return (not val) if self.inverted else val
 
     def handle_cluster_handler_attribute_updated(
