@@ -115,10 +115,10 @@ class BinarySensor(PlatformEntity):
         self._state = raw_state = self._cluster_handler.cluster.get(
             self._attribute_name
         )
-        if self._attribute_converter:
-            return self._attribute_converter(raw_state)
         if raw_state is None:
             return False
+        if self._attribute_converter:
+            return self._attribute_converter(raw_state)
         return self.parse(raw_state)
 
     def handle_cluster_handler_attribute_updated(
