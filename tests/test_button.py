@@ -283,3 +283,66 @@ async def test_quirks_write_attr_button(
         ]
 
     assert cluster.get(cluster.AttributeDefs.feed.name) == 2
+
+
+async def test_quirks_write_attr_buttons_uid(zha_gateway: Gateway) -> None:
+    """Test multiple buttons created with different unique id suffixes."""
+
+    registry = DeviceRegistry()
+    zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [
+                    general.Basic.cluster_id,
+                    FakeManufacturerCluster.cluster_id,
+                ],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zha.DeviceType.REMOTE_CONTROL,
+                SIG_EP_PROFILE: zha.PROFILE_ID,
+            }
+        },
+        manufacturer="Fake_Model",
+        model="Fake_Manufacturer",
+    )
+
+    (
+        QuirkBuilder("Fake_Model", "Fake_Manufacturer", registry=registry)
+        .replaces(FakeManufacturerCluster)
+        .write_attr_button(
+            FakeManufacturerCluster.AttributeDefs.feed.name,
+            1,
+            FakeManufacturerCluster.cluster_id,
+            unique_id_suffix="btn_1",
+            translation_key="btn_1",
+            fallback_name="Button 1",
+        )
+        .write_attr_button(
+            FakeManufacturerCluster.AttributeDefs.feed.name,
+            2,
+            FakeManufacturerCluster.cluster_id,
+            unique_id_suffix="btn_2",
+            translation_key="btn_2",
+            fallback_name="Button 2",
+        )
+        .add_to_registry()
+    )
+
+    zigpy_device_ = registry.get_device(zigpy_dev)
+
+    assert isinstance(zigpy_device_, CustomDeviceV2)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device_)
+
+    entity_btn_1 = get_entity(zha_device, platform=Platform.BUTTON, qualifier="btn_1")
+    entity_btn_2 = get_entity(zha_device, platform=Platform.BUTTON, qualifier="btn_2")
+
+    # check both entities are created and have a different unique id suffix
+    assert isinstance(entity_btn_1, WriteAttributeButton)
+    assert entity_btn_1.translation_key == "btn_1"
+    assert entity_btn_1._unique_id_suffix == "feed-btn_1"
+    assert entity_btn_1._attribute_value == 1
+
+    assert isinstance(entity_btn_2, WriteAttributeButton)
+    assert entity_btn_2.translation_key == "btn_2"
+    assert entity_btn_2._unique_id_suffix == "feed-btn_2"
+    assert entity_btn_2._attribute_value == 2
