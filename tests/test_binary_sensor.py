@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, call
 import pytest
 from zigpy.profiles import zha
 import zigpy.profiles.zha
-from zigpy.quirks import DEVICE_REGISTRY
+from zigpy.quirks import DeviceRegistry
 from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder
 from zigpy.zcl.clusters import general, measurement, security
 from zigpy.zcl.clusters.general import OnOff
@@ -215,6 +215,7 @@ async def test_smarttthings_multi(
 async def test_quirks_binary_sensor_attr_converter(zha_gateway: Gateway) -> None:
     """Test ZHA quirks v2 binary_sensor with attribute_converter."""
 
+    registry = DeviceRegistry()
     zigpy_dev = create_mock_zigpy_device(
         zha_gateway,
         {
@@ -229,7 +230,7 @@ async def test_quirks_binary_sensor_attr_converter(zha_gateway: Gateway) -> None
     )
 
     (
-        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model, registry=registry)
         .binary_sensor(
             OnOff.AttributeDefs.on_off.name,
             OnOff.cluster_id,
@@ -240,7 +241,7 @@ async def test_quirks_binary_sensor_attr_converter(zha_gateway: Gateway) -> None
         .add_to_registry()
     )
 
-    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
+    zigpy_device_ = registry.get_device(zigpy_dev)
 
     assert isinstance(zigpy_device_, CustomDeviceV2)
     cluster = zigpy_device_.endpoints[1].on_off

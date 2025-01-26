@@ -13,7 +13,7 @@ from zhaquirks.danfoss import thermostat as danfoss_thermostat
 from zigpy.device import Device as ZigpyDevice
 from zigpy.profiles import zha
 import zigpy.profiles.zha
-from zigpy.quirks import DEVICE_REGISTRY, CustomCluster, get_device
+from zigpy.quirks import CustomCluster, DeviceRegistry, get_device
 from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder, ReportingConfig
 from zigpy.quirks.v2.homeassistant.sensor import (
     SensorDeviceClass as SensorDeviceClassV2,
@@ -1686,6 +1686,7 @@ async def test_danfoss_thermostat_sw_error(zha_gateway: Gateway) -> None:
 async def test_quirks_sensor_attr_converter(zha_gateway: Gateway) -> None:
     """Test ZHA quirks v2 sensor with attribute_converter."""
 
+    registry = DeviceRegistry()
     zigpy_dev = create_mock_zigpy_device(
         zha_gateway,
         {
@@ -1703,7 +1704,7 @@ async def test_quirks_sensor_attr_converter(zha_gateway: Gateway) -> None:
     )
 
     (
-        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model, registry=registry)
         .sensor(
             AnalogInput.AttributeDefs.present_value.name,
             AnalogInput.cluster_id,
@@ -1714,7 +1715,7 @@ async def test_quirks_sensor_attr_converter(zha_gateway: Gateway) -> None:
         .add_to_registry()
     )
 
-    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
+    zigpy_device_ = registry.get_device(zigpy_dev)
 
     assert isinstance(zigpy_device_, CustomDeviceV2)
     cluster = zigpy_device_.endpoints[1].analog_input
