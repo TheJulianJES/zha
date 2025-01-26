@@ -14,8 +14,8 @@ from zhaquirks.const import (
 from zhaquirks.tuya.ts0601_valve import ParksideTuyaValveManufCluster
 from zigpy.exceptions import ZigbeeException
 from zigpy.profiles import zha
-from zigpy.quirks import CustomCluster, CustomDevice
-from zigpy.quirks.v2 import QuirkBuilder
+from zigpy.quirks import CustomCluster, CustomDevice, DeviceRegistry
+from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder
 import zigpy.types as t
 from zigpy.zcl.clusters import general, security
 from zigpy.zcl.clusters.manufacturer_specific import ManufacturerSpecificCluster
@@ -30,6 +30,7 @@ from tests.common import (
     get_entity,
     join_zigpy_device,
     mock_coro,
+    patch_cluster_for_testing,
     update_attribute_cache,
 )
 from zha.application import Platform
@@ -184,30 +185,10 @@ class FakeManufacturerCluster(CustomCluster, ManufacturerSpecificCluster):
         )
 
 
-(
-    QuirkBuilder("Fake_Model", "Fake_Manufacturer")
-    .replaces(FakeManufacturerCluster)
-    .command_button(
-        FakeManufacturerCluster.ServerCommandDefs.self_test.name,
-        FakeManufacturerCluster.cluster_id,
-        command_args=(5,),
-        translation_key="self_test",
-        fallback_name="Self test",
-    )
-    .write_attr_button(
-        FakeManufacturerCluster.AttributeDefs.feed.name,
-        2,
-        FakeManufacturerCluster.cluster_id,
-        translation_key="feed",
-        fallback_name="Feed",
-    )
-    .add_to_registry()
-)
-
-
 async def custom_button_device(zha_gateway: Gateway):
     """Button device fixture for quirks button tests."""
 
+    registry = DeviceRegistry()
     zigpy_device = create_mock_zigpy_device(
         zha_gateway,
         {
@@ -224,6 +205,32 @@ async def custom_button_device(zha_gateway: Gateway):
         manufacturer="Fake_Model",
         model="Fake_Manufacturer",
     )
+
+    (
+        QuirkBuilder("Fake_Model", "Fake_Manufacturer", registry=registry)
+        .replaces(FakeManufacturerCluster)
+        .command_button(
+            FakeManufacturerCluster.ServerCommandDefs.self_test.name,
+            FakeManufacturerCluster.cluster_id,
+            command_args=(5,),
+            translation_key="self_test",
+            fallback_name="Self test",
+        )
+        .write_attr_button(
+            FakeManufacturerCluster.AttributeDefs.feed.name,
+            2,
+            FakeManufacturerCluster.cluster_id,
+            translation_key="feed",
+            fallback_name="Feed",
+        )
+        .add_to_registry()
+    )
+
+    zigpy_device = registry.get_device(zigpy_device)
+
+    assert isinstance(zigpy_device, CustomDeviceV2)
+    # XXX: this should be handled automatically, patch quirks added cluster
+    patch_cluster_for_testing(zigpy_device.endpoints[1].mfg_identify)
 
     zigpy_device.endpoints[1].mfg_identify.PLUGGED_ATTR_READS = {
         FakeManufacturerCluster.AttributeDefs.feed.name: 0,
