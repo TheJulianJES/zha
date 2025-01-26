@@ -89,6 +89,8 @@ class BinarySensor(PlatformEntity):
                 Platform.BINARY_SENSOR.value,
                 _LOGGER,
             )
+        if entity_metadata.attribute_converter is not None:
+            self.parse = entity_metadata.attribute_converter
 
     @functools.cached_property
     def info_object(self) -> BinarySensorEntityInfo:
