@@ -26,7 +26,12 @@ from tests.common import (
 from zha.application import Platform
 from zha.application.gateway import Gateway
 from zha.application.platforms import PlatformEntity
-from zha.application.platforms.binary_sensor import Accelerometer, IASZone, Occupancy
+from zha.application.platforms.binary_sensor import (
+    Accelerometer,
+    BinarySensor,
+    IASZone,
+    Occupancy,
+)
 from zha.zigbee.cluster_handlers.const import SMARTTHINGS_ACCELERATION_CLUSTER
 
 DEVICE_IAS = {
@@ -242,11 +247,12 @@ async def test_quirks_binary_sensor(zha_gateway: Gateway) -> None:
 
     zha_device = await join_zigpy_device(zha_gateway, zigpy_device_)
     entity = get_entity(zha_device, platform=Platform.BINARY_SENSOR)
+    assert isinstance(entity, BinarySensor)
 
     # turn on at binary sensor, test we get inverted value
     await send_attributes_report(zha_gateway, cluster, {"on_off": 1})
-    assert bool(entity.state["state"]) is False
+    assert entity.is_on is False
 
     # turn off at binary sensor, test we get inverted value
     await send_attributes_report(zha_gateway, cluster, {"on_off": 0})
-    assert bool(entity.state["state"]) is True
+    assert entity.is_on is True
