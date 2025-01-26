@@ -9,6 +9,7 @@ import enum
 import functools
 import logging
 import numbers
+import typing
 from typing import TYPE_CHECKING, Any, Self
 
 from zhaquirks.danfoss import thermostat as danfoss_thermostat
@@ -150,6 +151,7 @@ class Sensor(PlatformEntity):
 
     PLATFORM = Platform.SENSOR
     _attribute_name: int | str | None = None
+    _attribute_converter: typing.Callable[[typing.Any], typing.Any] | None = None
     _decimals: int = 1
     _divisor: int = 1
     _multiplier: int | float = 1
@@ -226,6 +228,8 @@ class Sensor(PlatformEntity):
         """Init this entity from the quirks metadata."""
         super()._init_from_quirks_metadata(entity_metadata)
         self._attribute_name = entity_metadata.attribute_name
+        if entity_metadata.attribute_converter is not None:
+            self._attribute_converter = entity_metadata.attribute_converter
         if entity_metadata.divisor is not None:
             self._divisor = entity_metadata.divisor
         if entity_metadata.multiplier is not None:
@@ -275,6 +279,8 @@ class Sensor(PlatformEntity):
         raw_state = self._cluster_handler.cluster.get(self._attribute_name)
         if raw_state is None:
             return None
+        if self._attribute_converter:
+            return self._attribute_converter(raw_state)
         return self.formatter(raw_state)
 
     def handle_cluster_handler_attribute_updated(
