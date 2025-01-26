@@ -1683,7 +1683,7 @@ async def test_danfoss_thermostat_sw_error(zha_gateway: Gateway) -> None:
     assert entity.state["Top_pcb_sensor_error"]
 
 
-async def test_quirks_sensor(zha_gateway: Gateway) -> None:
+async def test_quirks_sensor_attr_converter(zha_gateway: Gateway) -> None:
     """Test ZHA quirks v2 sensor with attribute_converter."""
 
     zigpy_dev = create_mock_zigpy_device(

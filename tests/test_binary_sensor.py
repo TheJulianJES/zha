@@ -212,7 +212,7 @@ async def test_smarttthings_multi(
     ]
 
 
-async def test_quirks_binary_sensor(zha_gateway: Gateway) -> None:
+async def test_quirks_binary_sensor_attr_converter(zha_gateway: Gateway) -> None:
     """Test ZHA quirks v2 binary_sensor with attribute_converter."""
 
     zigpy_dev = create_mock_zigpy_device(
@@ -249,10 +249,9 @@ async def test_quirks_binary_sensor(zha_gateway: Gateway) -> None:
     entity = get_entity(zha_device, platform=Platform.BINARY_SENSOR)
     assert isinstance(entity, BinarySensor)
 
-    # turn on at binary sensor, test we get inverted value
+    # send updated value, check if the value is inverted
     await send_attributes_report(zha_gateway, cluster, {"on_off": 1})
     assert entity.is_on is False
 
-    # turn off at binary sensor, test we get inverted value
     await send_attributes_report(zha_gateway, cluster, {"on_off": 0})
     assert entity.is_on is True
