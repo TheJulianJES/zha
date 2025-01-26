@@ -4,8 +4,12 @@ from collections.abc import Awaitable, Callable
 from unittest.mock import MagicMock, call
 
 import pytest
+from zigpy.profiles import zha
 import zigpy.profiles.zha
+from zigpy.quirks import DEVICE_REGISTRY
+from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder
 from zigpy.zcl.clusters import general, measurement, security
+from zigpy.zcl.clusters.general import OnOff
 
 from tests.common import (
     SIG_EP_INPUT,
@@ -201,3 +205,48 @@ async def test_smarttthings_multi(
             {"attribute_id": 18, "attribute_name": "x_axis", "attribute_value": 120},
         )
     ]
+
+
+async def test_quirks_binary_sensor(zha_gateway: Gateway) -> None:
+    """Test ZHA quirks v2 binary_sensor with attribute_converter."""
+
+    zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [general.Basic.cluster_id, general.OnOff.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zha.DeviceType.SIMPLE_SENSOR,
+            }
+        },
+        manufacturer="manufacturer",
+        model="model",
+    )
+
+    (
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
+        .binary_sensor(
+            OnOff.AttributeDefs.on_off.name,
+            OnOff.cluster_id,
+            translation_key="on_off",
+            fallback_name="On/off",
+            attribute_converter=lambda x: not bool(x),  # invert value with lambda
+        )
+        .add_to_registry()
+    )
+
+    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
+
+    assert isinstance(zigpy_device_, CustomDeviceV2)
+    cluster = zigpy_device_.endpoints[1].on_off
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device_)
+    entity = get_entity(zha_device, platform=Platform.BINARY_SENSOR)
+
+    # turn on at binary sensor, test we get inverted value
+    await send_attributes_report(zha_gateway, cluster, {"on_off": 1})
+    assert bool(entity.state["state"]) is False
+
+    # turn off at binary sensor, test we get inverted value
+    await send_attributes_report(zha_gateway, cluster, {"on_off": 0})
+    assert bool(entity.state["state"]) is True
