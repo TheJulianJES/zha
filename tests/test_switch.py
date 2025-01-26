@@ -14,10 +14,11 @@ from zhaquirks.const import (
 )
 from zigpy.exceptions import ZigbeeException
 from zigpy.profiles import zha
-from zigpy.quirks import _DEVICE_REGISTRY, CustomCluster, CustomDevice
+from zigpy.quirks import DEVICE_REGISTRY, CustomCluster, CustomDevice
 from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder
 import zigpy.types as t
 from zigpy.zcl.clusters import closures, general
+from zigpy.zcl.clusters.general import OnOff
 from zigpy.zcl.clusters.manufacturer_specific import ManufacturerSpecificCluster
 import zigpy.zcl.foundation as zcl_f
 
@@ -512,7 +513,7 @@ async def test_switch_configurable_custom_on_off_values(zha_gateway: Gateway) ->
         .add_to_registry()
     )
 
-    zigpy_device_ = _DEVICE_REGISTRY.get_device(zigpy_dev)
+    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
 
     assert isinstance(zigpy_device_, CustomDeviceV2)
     cluster = zigpy_device_.endpoints[1].tuya_manufacturer
@@ -592,7 +593,7 @@ async def test_switch_configurable_custom_on_off_values_force_inverted(
         .add_to_registry()
     )
 
-    zigpy_device_ = _DEVICE_REGISTRY.get_device(zigpy_dev)
+    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
 
     assert isinstance(zigpy_device_, CustomDeviceV2)
     cluster = zigpy_device_.endpoints[1].tuya_manufacturer
@@ -672,7 +673,7 @@ async def test_switch_configurable_custom_on_off_values_inverter_attribute(
         .add_to_registry()
     )
 
-    zigpy_device_ = _DEVICE_REGISTRY.get_device(zigpy_dev)
+    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
 
     assert isinstance(zigpy_device_, CustomDeviceV2)
     cluster = zigpy_device_.endpoints[1].tuya_manufacturer
@@ -847,3 +848,51 @@ async def test_cover_inversion_switch_not_created(zha_gateway: Gateway) -> None:
     # entity should not be created when mode or config status aren't present
     with pytest.raises(KeyError):
         get_entity(zha_device, platform=Platform.SWITCH)
+
+
+async def test_quirks_switch_attr_converter(zha_gateway: Gateway) -> None:
+    """Test ZHA quirks v2 switch with attribute_converter."""
+
+    zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [
+                    general.Basic.cluster_id,
+                    general.OnOff.cluster_id,
+                ],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zha.DeviceType.SIMPLE_SENSOR,
+            }
+        },
+        manufacturer="manufacturer",
+        model="model",
+    )
+
+    (
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
+        .switch(
+            OnOff.AttributeDefs.on_off.name,
+            OnOff.cluster_id,
+            translation_key="on_off_quirks",
+            fallback_name="On/off",
+            attribute_converter=lambda x: not bool(x),  # invert value with lambda
+        )
+        .add_to_registry()
+    )
+
+    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
+
+    assert isinstance(zigpy_device_, CustomDeviceV2)
+    cluster = zigpy_device_.endpoints[1].on_off
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device_)
+    entity = get_entity(zha_device, platform=Platform.SWITCH, qualifier="on_off")
+    assert entity.translation_key == "on_off_quirks"
+
+    # send updated value, check if the value is inverted
+    await send_attributes_report(zha_gateway, cluster, {"on_off": 1})
+    assert entity.state["state"] is False
+
+    await send_attributes_report(zha_gateway, cluster, {"on_off": 0})
+    assert entity.state["state"] is True
