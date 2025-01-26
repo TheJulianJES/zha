@@ -15,7 +15,7 @@ from zhaquirks.tuya.ts0601_valve import ParksideTuyaValveManufCluster
 from zigpy.exceptions import ZigbeeException
 from zigpy.profiles import zha
 from zigpy.quirks import CustomCluster, CustomDevice
-from zigpy.quirks.v2 import add_to_registry_v2
+from zigpy.quirks.v2 import QuirkBuilder
 import zigpy.types as t
 from zigpy.zcl.clusters import general, security
 from zigpy.zcl.clusters.manufacturer_specific import ManufacturerSpecificCluster
@@ -185,7 +185,7 @@ class FakeManufacturerCluster(CustomCluster, ManufacturerSpecificCluster):
 
 
 (
-    add_to_registry_v2("Fake_Model", "Fake_Manufacturer")
+    QuirkBuilder("Fake_Model", "Fake_Manufacturer")
     .replaces(FakeManufacturerCluster)
     .command_button(
         FakeManufacturerCluster.ServerCommandDefs.self_test.name,
@@ -201,6 +201,7 @@ class FakeManufacturerCluster(CustomCluster, ManufacturerSpecificCluster):
         translation_key="feed",
         fallback_name="Feed",
     )
+    .add_to_registry()
 )
 
 
