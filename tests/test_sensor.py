@@ -11,8 +11,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from zhaquirks.danfoss import thermostat as danfoss_thermostat
 from zigpy.device import Device as ZigpyDevice
+from zigpy.profiles import zha
 import zigpy.profiles.zha
-from zigpy.quirks import CustomCluster, get_device
+from zigpy.quirks import DEVICE_REGISTRY, CustomCluster, get_device
 from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder, ReportingConfig
 from zigpy.quirks.v2.homeassistant.sensor import (
     SensorDeviceClass as SensorDeviceClassV2,
@@ -20,6 +21,7 @@ from zigpy.quirks.v2.homeassistant.sensor import (
 import zigpy.types as t
 from zigpy.zcl import Cluster
 from zigpy.zcl.clusters import general, homeautomation, hvac, measurement, smartenergy
+from zigpy.zcl.clusters.general import AnalogInput
 from zigpy.zcl.clusters.manufacturer_specific import ManufacturerSpecificCluster
 
 from tests.common import (
@@ -1679,3 +1681,50 @@ async def test_danfoss_thermostat_sw_error(zha_gateway: Gateway) -> None:
     assert entity.extra_state_attribute_names
     assert "Top_pcb_sensor_error" in entity.extra_state_attribute_names
     assert entity.state["Top_pcb_sensor_error"]
+
+
+async def test_quirks_sensor(zha_gateway: Gateway) -> None:
+    """Test ZHA quirks v2 sensor with attribute_converter."""
+
+    zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [
+                    general.Basic.cluster_id,
+                    general.AnalogInput.cluster_id,
+                ],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zha.DeviceType.SIMPLE_SENSOR,
+            }
+        },
+        manufacturer="manufacturer",
+        model="model",
+    )
+
+    (
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
+        .sensor(
+            AnalogInput.AttributeDefs.present_value.name,
+            AnalogInput.cluster_id,
+            translation_key="quirks_sensor",
+            fallback_name="Quirks sensor",
+            attribute_converter=lambda x: x + 100,
+        )
+        .add_to_registry()
+    )
+
+    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
+
+    assert isinstance(zigpy_device_, CustomDeviceV2)
+    cluster = zigpy_device_.endpoints[1].analog_input
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device_)
+    entity = get_entity(zha_device, platform=Platform.SENSOR, qualifier="present_value")
+
+    # send updated value, check if the value is converted
+    await send_attributes_report(zha_gateway, cluster, {"present_value": 100})
+    assert entity.state["state"] == 200.0
+
+    await send_attributes_report(zha_gateway, cluster, {"present_value": 0})
+    assert entity.state["state"] == 100.0
