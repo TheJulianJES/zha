@@ -350,15 +350,12 @@ class PlatformEntity(BaseEntity):
         if entity_metadata.translation_key:
             self._attr_translation_key = entity_metadata.translation_key
 
-        if has_attribute_name:
+        if unique_id_suffix := entity_metadata.unique_id_suffix:
+            self._unique_id_suffix = unique_id_suffix
+        elif has_attribute_name:
             self._unique_id_suffix = entity_metadata.attribute_name
         elif has_command_name:
             self._unique_id_suffix = entity_metadata.command_name
-
-        if entity_metadata.unique_id_suffix:
-            self._unique_id_suffix = (
-                f"{self._unique_id_suffix}-{entity_metadata.unique_id_suffix}"
-            )
 
         if entity_metadata.entity_type is EntityType.CONFIG:
             self._attr_entity_category = EntityCategory.CONFIG

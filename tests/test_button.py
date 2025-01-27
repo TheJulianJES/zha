@@ -339,10 +339,10 @@ async def test_quirks_write_attr_buttons_uid(zha_gateway: Gateway) -> None:
     # check both entities are created and have a different unique id suffix
     assert isinstance(entity_btn_1, WriteAttributeButton)
     assert entity_btn_1.translation_key == "btn_1"
-    assert entity_btn_1._unique_id_suffix == "feed-btn_1"
+    assert entity_btn_1._unique_id_suffix == "btn_1"
     assert entity_btn_1._attribute_value == 1
 
     assert isinstance(entity_btn_2, WriteAttributeButton)
     assert entity_btn_2.translation_key == "btn_2"
-    assert entity_btn_2._unique_id_suffix == "feed-btn_2"
+    assert entity_btn_2._unique_id_suffix == "btn_2"
     assert entity_btn_2._attribute_value == 2
