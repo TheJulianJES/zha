@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import astuple
 import logging
 from typing import TYPE_CHECKING, cast
 
@@ -51,6 +52,7 @@ from zha.application.registries import (
 
 # importing cluster handlers updates registries
 from zha.zigbee.cluster_handlers import (  # noqa: F401 pylint: disable=unused-import
+    AttrReportConfig,
     ClusterHandler,
     closures,
     general,
@@ -298,18 +300,37 @@ class DeviceProbe:
                         entity_metadata.device_class.value, entity_class
                     )
 
-                # automatically add the attribute to ZCL_INIT_ATTRS for the cluster
-                # handler if it is not already in the list
-                if (
-                    hasattr(entity_metadata, "attribute_name")
-                    and entity_metadata.attribute_name
-                    not in cluster_handler.ZCL_INIT_ATTRS
-                ):
-                    init_attrs = cluster_handler.ZCL_INIT_ATTRS.copy()
-                    init_attrs[entity_metadata.attribute_name] = (
-                        entity_metadata.attribute_initialized_from_cache
-                    )
-                    cluster_handler.__dict__[zha_const.ZCL_INIT_ATTRS] = init_attrs
+                # process the entity metadata for ZCL_INIT_ATTRS and REPORT_CONFIG
+                if attr_name := getattr(entity_metadata, "attribute_name", None):
+                    # if the entity has a reporting config, add it to the cluster handler
+                    if rep_conf := getattr(entity_metadata, "reporting_config", None):
+                        # if attr is already in REPORT_CONFIG, remove it first
+                        cluster_handler.REPORT_CONFIG = tuple(
+                            filter(
+                                lambda cfg: cfg["attr"] != attr_name,
+                                cluster_handler.REPORT_CONFIG,
+                            )
+                        )
+                        # tuples are immutable and we re-set the REPORT_CONFIG here,
+                        # so no need to check for an instance variable
+                        cluster_handler.REPORT_CONFIG += (
+                            AttrReportConfig(attr=attr_name, config=astuple(rep_conf)),
+                        )
+                        # claim the cluster handler, so ZHA configures and binds it
+                        endpoint.claim_cluster_handlers([cluster_handler])
+
+                    # not in REPORT_CONFIG, add to ZCL_INIT_ATTRS if it not already in
+                    elif attr_name not in cluster_handler.ZCL_INIT_ATTRS:
+                        # copy existing ZCL_INIT_ATTRS into instance variable once,
+                        # so we don't modify other instances of the same cluster handler
+                        if zha_const.ZCL_INIT_ATTRS not in cluster_handler.__dict__:
+                            cluster_handler.ZCL_INIT_ATTRS = (
+                                cluster_handler.ZCL_INIT_ATTRS.copy()
+                            )
+                        # add the attribute to the guaranteed instance variable
+                        cluster_handler.ZCL_INIT_ATTRS[attr_name] = (
+                            entity_metadata.attribute_initialized_from_cache
+                        )
 
                 endpoint.async_new_entity(
                     platform=platform,
