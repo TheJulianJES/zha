@@ -120,7 +120,7 @@ class TuyaClusterHandler(ClusterHandler):
 class OppleRemoteClusterHandler(ClusterHandler):
     """Opple cluster handler."""
 
-    REPORT_CONFIG = ()
+    REPORT_CONFIG: tuple[AttrReportConfig, ...] = ()
 
     def __init__(self, cluster: zigpy.zcl.Cluster, endpoint: Endpoint) -> None:
         """Initialize Opple cluster handler."""
