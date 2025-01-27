@@ -1455,9 +1455,7 @@ async def test_state_class(
     assert "Quirks provided an invalid state class: energy" in caplog.text
 
 
-async def test_cluster_handler_quirks_attributes(
-    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
-) -> None:
+async def test_cluster_handler_quirks_attributes(zha_gateway: Gateway) -> None:
     """Test quirks sensor setting up ZCL_INIT_ATTRS and REPORT_CONFIG correctly."""
 
     # Suppress normal endpoint probing, as this will claim the Opple cluster handler
