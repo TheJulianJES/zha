@@ -6,14 +6,14 @@ from datetime import UTC, datetime
 from functools import partial
 import math
 from typing import Any, Optional
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from zhaquirks.danfoss import thermostat as danfoss_thermostat
 from zigpy.device import Device as ZigpyDevice
 import zigpy.profiles.zha
 from zigpy.quirks import CustomCluster, get_device
-from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder
+from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder, ReportingConfig
 from zigpy.quirks.v2.homeassistant.sensor import (
     SensorDeviceClass as SensorDeviceClassV2,
 )
@@ -33,12 +33,14 @@ from tests.common import (
     send_attributes_report,
 )
 from zha.application import Platform
-from zha.application.const import ZHA_CLUSTER_HANDLER_READS_PER_REQ
+from zha.application.const import ZCL_INIT_ATTRS, ZHA_CLUSTER_HANDLER_READS_PER_REQ
 from zha.application.gateway import Gateway
 from zha.application.platforms import PlatformEntity, sensor
 from zha.application.platforms.sensor import DanfossSoftwareErrorCode, UnitOfMass
 from zha.application.platforms.sensor.const import SensorDeviceClass, SensorStateClass
 from zha.units import PERCENTAGE, UnitOfEnergy, UnitOfPressure, UnitOfVolume
+from zha.zigbee.cluster_handlers import AttrReportConfig
+from zha.zigbee.cluster_handlers.manufacturerspecific import OppleRemoteClusterHandler
 from zha.zigbee.device import Device
 
 EMAttrs = homeautomation.ElectricalMeasurement.AttributeDefs
@@ -1351,6 +1353,9 @@ class OppleCluster(CustomCluster, ManufacturerSpecificCluster):
         unit=UnitOfMass.GRAMS,
         translation_key="last_feeding_size",
         fallback_name="Last feeding size",
+        reporting_config=ReportingConfig(
+            min_interval=0, max_interval=60, reportable_change=1
+        ),
     )
     .sensor(
         "power",
@@ -1448,6 +1453,55 @@ async def test_state_class(
     assert energy_delivered_entity.state_class == SensorStateClass.TOTAL_INCREASING
     assert energy_invalid_state_class.state_class is None
     assert "Quirks provided an invalid state class: energy" in caplog.text
+
+
+async def test_cluster_handler_quirks_attributes(
+    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test quirks sensor setting up ZCL_INIT_ATTRS and REPORT_CONFIG correctly."""
+
+    # Suppress normal endpoint probing, as this will claim the Opple cluster handler
+    # already due to it being in the "CLUSTER_HANDLER_ONLY_CLUSTERS" registry.
+    # We want to test the handler also gets claimed via quirks v2 reporting config.
+    with patch("zha.application.discovery.EndpointProbe.discover_entities"):
+        zha_device, cluster = await zigpy_device_aqara_sensor_v2_mock(zha_gateway)
+    assert isinstance(zha_device.device, CustomDeviceV2)
+
+    # get cluster handler of OppleCluster
+    opple_ch = zha_device.endpoints[1].all_cluster_handlers["1:0xfcc0"]
+    assert isinstance(opple_ch, OppleRemoteClusterHandler)
+
+    # make sure the cluster handler was claimed due to reporting config, so ZHA binds it
+    assert opple_ch in zha_device.endpoints[1].claimed_cluster_handlers.values()
+
+    # check ZCL_INIT_ATTRS contains sensor attributes that are not in REPORT_CONFIG
+    assert opple_ch.ZCL_INIT_ATTRS == {
+        "energy": True,
+        "energy_delivered": True,
+        "energy_invalid_state_class": True,
+        "power": True,
+    }
+    # check that ZCL_INIT_ATTRS is an instance variable and not a class variable now
+    assert opple_ch.ZCL_INIT_ATTRS is opple_ch.__dict__[ZCL_INIT_ATTRS]
+    assert opple_ch.ZCL_INIT_ATTRS is not OppleRemoteClusterHandler.ZCL_INIT_ATTRS
+
+    # double check we didn't modify the class variable
+    assert OppleRemoteClusterHandler.ZCL_INIT_ATTRS == {}
+
+    # check if REPORT_CONFIG is set correctly
+    assert (
+        (
+            AttrReportConfig(
+                attr="last_feeding_size",
+                config=(0, 60, 1),
+            ),
+        )
+    ) == opple_ch.REPORT_CONFIG
+
+    # this cannot be wrong, as REPORT_CONFIG is an immutable tuple and not a list/dict,
+    # but let's check it anyway in case the type changes in the future
+    assert opple_ch.REPORT_CONFIG is not OppleRemoteClusterHandler.REPORT_CONFIG
+    assert OppleRemoteClusterHandler.REPORT_CONFIG == ()
 
 
 async def test_device_counter_sensors(zha_gateway: Gateway) -> None:
