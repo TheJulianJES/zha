@@ -14,7 +14,7 @@ from zhaquirks.const import (
 )
 from zigpy.exceptions import ZigbeeException
 from zigpy.profiles import zha
-from zigpy.quirks import CustomCluster, CustomDevice, DeviceRegistry
+from zigpy.quirks import _DEVICE_REGISTRY, CustomCluster, CustomDevice
 from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder
 import zigpy.types as t
 from zigpy.zcl.clusters import closures, general
@@ -485,7 +485,6 @@ async def test_switch_configurable(
 async def test_switch_configurable_custom_on_off_values(zha_gateway: Gateway) -> None:
     """Test ZHA configurable switch platform."""
 
-    registry = DeviceRegistry()
     zigpy_dev = create_mock_zigpy_device(
         zha_gateway,
         {
@@ -500,7 +499,7 @@ async def test_switch_configurable_custom_on_off_values(zha_gateway: Gateway) ->
     )
 
     (
-        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model, registry=registry)
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
         .adds(WindowDetectionFunctionQuirk.TuyaManufCluster)
         .switch(
             "window_detection_function",
@@ -513,7 +512,7 @@ async def test_switch_configurable_custom_on_off_values(zha_gateway: Gateway) ->
         .add_to_registry()
     )
 
-    zigpy_device_ = registry.get_device(zigpy_dev)
+    zigpy_device_ = _DEVICE_REGISTRY.get_device(zigpy_dev)
 
     assert isinstance(zigpy_device_, CustomDeviceV2)
     cluster = zigpy_device_.endpoints[1].tuya_manufacturer
@@ -565,7 +564,6 @@ async def test_switch_configurable_custom_on_off_values_force_inverted(
 ) -> None:
     """Test ZHA configurable switch platform."""
 
-    registry = DeviceRegistry()
     zigpy_dev = create_mock_zigpy_device(
         zha_gateway,
         {
@@ -580,7 +578,7 @@ async def test_switch_configurable_custom_on_off_values_force_inverted(
     )
 
     (
-        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model, registry=registry)
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
         .adds(WindowDetectionFunctionQuirk.TuyaManufCluster)
         .switch(
             "window_detection_function",
@@ -594,7 +592,7 @@ async def test_switch_configurable_custom_on_off_values_force_inverted(
         .add_to_registry()
     )
 
-    zigpy_device_ = registry.get_device(zigpy_dev)
+    zigpy_device_ = _DEVICE_REGISTRY.get_device(zigpy_dev)
 
     assert isinstance(zigpy_device_, CustomDeviceV2)
     cluster = zigpy_device_.endpoints[1].tuya_manufacturer
@@ -646,7 +644,6 @@ async def test_switch_configurable_custom_on_off_values_inverter_attribute(
 ) -> None:
     """Test ZHA configurable switch platform."""
 
-    registry = DeviceRegistry()
     zigpy_dev = create_mock_zigpy_device(
         zha_gateway,
         {
@@ -661,7 +658,7 @@ async def test_switch_configurable_custom_on_off_values_inverter_attribute(
     )
 
     (
-        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model, registry=registry)
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
         .adds(WindowDetectionFunctionQuirk.TuyaManufCluster)
         .switch(
             "window_detection_function",
@@ -675,7 +672,7 @@ async def test_switch_configurable_custom_on_off_values_inverter_attribute(
         .add_to_registry()
     )
 
-    zigpy_device_ = registry.get_device(zigpy_dev)
+    zigpy_device_ = _DEVICE_REGISTRY.get_device(zigpy_dev)
 
     assert isinstance(zigpy_device_, CustomDeviceV2)
     cluster = zigpy_device_.endpoints[1].tuya_manufacturer
