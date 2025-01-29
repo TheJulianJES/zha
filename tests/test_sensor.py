@@ -15,6 +15,7 @@ from zigpy.profiles import zha
 import zigpy.profiles.zha
 from zigpy.quirks import CustomCluster, DeviceRegistry, get_device
 from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder, ReportingConfig
+from zigpy.quirks.v2.homeassistant import UnitOfMass as UnitOfMassV2
 from zigpy.quirks.v2.homeassistant.sensor import (
     SensorDeviceClass as SensorDeviceClassV2,
 )
@@ -1360,7 +1361,7 @@ class OppleCluster(CustomCluster, ManufacturerSpecificCluster):
         OppleCluster.cluster_id,
         divisor=1,
         multiplier=1,
-        unit=zigpy.quirks.v2.homeassistant.UnitOfMass.GRAMS,
+        unit=UnitOfMassV2.GRAMS,
         translation_key="last_feeding_size",
         fallback_name="Last feeding size",
         reporting_config=ReportingConfig(
