@@ -30,7 +30,6 @@ from zigpy.quirks.v2 import (
     QuirkBuilder,
     ZCLSensorMetadata,
 )
-from zigpy.quirks.v2.homeassistant import UnitOfTime
 import zigpy.types
 from zigpy.zcl import ClusterType
 import zigpy.zcl.clusters.closures
@@ -317,7 +316,7 @@ async def test_quirks_v2_entity_discovery(
             min_value=1,
             max_value=100,
             step=1,
-            unit=UnitOfTime.SECONDS,
+            unit=zigpy.quirks.v2.homeassistant.UnitOfTime.SECONDS,
             multiplier=1,
             translation_key="off_wait_time",
             fallback_name="Off wait time",
@@ -518,7 +517,7 @@ def _get_test_device(
             min_value=1,
             max_value=100,
             step=1,
-            unit=UnitOfTime.SECONDS,
+            unit=zigpy.quirks.v2.homeassistant.UnitOfTime.SECONDS,
             multiplier=1,
             translation_key="on_off_transition_time",
             fallback_name="On off transition time",
@@ -529,7 +528,7 @@ def _get_test_device(
             min_value=1,
             max_value=100,
             step=1,
-            unit=UnitOfTime.SECONDS,
+            unit=zigpy.quirks.v2.homeassistant.UnitOfTime.SECONDS,
             multiplier=1,
             translation_key="on_off_transition_time",
             fallback_name="On off transition time",

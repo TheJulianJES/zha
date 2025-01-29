@@ -38,7 +38,7 @@ from zha.application import Platform
 from zha.application.const import ZCL_INIT_ATTRS, ZHA_CLUSTER_HANDLER_READS_PER_REQ
 from zha.application.gateway import Gateway
 from zha.application.platforms import PlatformEntity, sensor
-from zha.application.platforms.sensor import DanfossSoftwareErrorCode, UnitOfMass
+from zha.application.platforms.sensor import DanfossSoftwareErrorCode
 from zha.application.platforms.sensor.const import SensorDeviceClass, SensorStateClass
 from zha.units import PERCENTAGE, UnitOfEnergy, UnitOfPressure, UnitOfVolume
 from zha.zigbee.cluster_handlers import AttrReportConfig
@@ -1360,7 +1360,7 @@ class OppleCluster(CustomCluster, ManufacturerSpecificCluster):
         OppleCluster.cluster_id,
         divisor=1,
         multiplier=1,
-        unit=UnitOfMass.GRAMS,
+        unit=zigpy.quirks.v2.homeassistant.UnitOfMass.GRAMS,
         translation_key="last_feeding_size",
         fallback_name="Last feeding size",
         reporting_config=ReportingConfig(
