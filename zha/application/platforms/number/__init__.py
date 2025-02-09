@@ -7,7 +7,7 @@ import functools
 import logging
 from typing import TYPE_CHECKING, Any, Self
 
-from zhaquirks.quirk_ids import DANFOSS_ALLY_THERMOSTAT
+from zhaquirks.quirk_ids import DANFOSS_ALLY_THERMOSTAT, TUYA_TRV_ADV_CALIBRATION
 from zigpy.quirks.v2 import NumberMetadata
 from zigpy.zcl.clusters.hvac import Thermostat
 
@@ -862,7 +862,6 @@ class SonoffThermostatLocalTempCalibration(ThermostatLocalTempCalibration):
 
     _attr_native_min_value: float = -12.8
     _attr_native_max_value: float = 12.7
-    _attr_native_step: float = 0.1
 
 
 @CONFIG_DIAGNOSTIC_MATCH(
@@ -880,7 +879,18 @@ class BoschThermostatLocalTempCalibration(ThermostatLocalTempCalibration):
 
     _attr_native_min_value: float = -5.0
     _attr_native_max_value: float = 5.0
-    _attr_native_step: float = 0.1
+
+
+@CONFIG_DIAGNOSTIC_MATCH(
+    cluster_handler_names=CLUSTER_HANDLER_THERMOSTAT,
+    quirk_ids={TUYA_TRV_ADV_CALIBRATION},
+    stop_on_match_group=CLUSTER_HANDLER_THERMOSTAT,
+)
+class TuyaThermostatLocalTempCalibration(ThermostatLocalTempCalibration):
+    """Local temperature calibration for Tuya TRVs."""
+
+    _attr_native_min_value: float = -6.0
+    _attr_native_max_value: float = 6.0
 
 
 @CONFIG_DIAGNOSTIC_MATCH(
