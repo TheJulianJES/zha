@@ -70,25 +70,21 @@ class BaseCover(PlatformEntity, ABC):
     @abstractmethod
     def supported_features(self) -> CoverEntityFeature:
         """Return supported features."""
-        pass
 
     @property
     @abstractmethod
     def is_closed(self) -> bool | None:
         """Return True if the cover is closed."""
-        pass
 
     @property
     @abstractmethod
     def is_opening(self) -> bool | None:
         """Return if the cover is opening or not."""
-        pass
 
     @property
     @abstractmethod
     def is_closing(self) -> bool | None:
         """Return if the cover is closing or not."""
-        pass
 
     @property
     @abstractmethod
@@ -97,7 +93,6 @@ class BaseCover(PlatformEntity, ABC):
 
         In HA, None is unknown, 0 is closed, 100 is fully open.
         """
-        pass
 
     @property
     @abstractmethod
@@ -106,27 +101,22 @@ class BaseCover(PlatformEntity, ABC):
 
         In HA, None is unknown, 0 is closed, 100 is fully open.
         """
-        pass
 
     @abstractmethod
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
-        pass
 
     @abstractmethod
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover."""
-        pass
 
     @abstractmethod
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
-        pass
 
     @abstractmethod
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover."""
-        pass
 
 
 @MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_COVER)
