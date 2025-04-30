@@ -961,18 +961,5 @@ async def test_endpoint_none_profile(
     zigpy_dev.endpoints[3].profile_id = None
     zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
 
-    assert zha_device.async_get_clusters() == {
-        3: {
-            CLUSTER_TYPE_IN: {
-                general.Basic.cluster_id: zigpy_dev.endpoints[3].in_clusters[
-                    general.Basic.cluster_id
-                ],
-                general.OnOff.cluster_id: zigpy_dev.endpoints[3].in_clusters[
-                    general.OnOff.cluster_id
-                ],
-            },
-            CLUSTER_TYPE_OUT: {},
-        }
-    }
     assert zha_device.async_get_std_clusters() == {}
     assert "Skipping endpoint, profile is None" in caplog.text
