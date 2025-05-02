@@ -126,8 +126,6 @@ class BaseNumber(PlatformEntity):
 class AnalogOutputNumber(BaseNumber):
     """Representation of a ZHA Number entity."""
 
-    _attr_translation_key: str | None = "number"
-
     def __init__(
         self,
         cluster_handlers: list[ClusterHandler],
