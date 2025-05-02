@@ -610,13 +610,6 @@ class AnalogInputSensor(Sensor):
                 self._cluster_handler.resolution
             )
 
-    def on_add(self) -> None:
-        """Run when entity is added."""
-        super().on_add()
-        if (description := self._cluster_handler.description) is not None:
-            self._attr_translation_key = None
-            self._attr_fallback_name: str = description
-
     def _is_supported(self) -> bool:
         """Return True if this sensor is supported."""
         if self._cluster_handler.description is None:
