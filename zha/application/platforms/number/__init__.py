@@ -126,7 +126,7 @@ class BaseNumber(PlatformEntity):
 class AnalogOutputNumber(BaseNumber):
     """Representation of a ZHA Number entity."""
 
-    _attr_translation_key: str = "number"
+    _attr_translation_key: str | None = "number"
 
     def __init__(
         self,
@@ -172,14 +172,9 @@ class AnalogOutputNumber(BaseNumber):
                 self.handle_cluster_handler_attribute_updated,
             )
         )
-        if (
-            hasattr(self._analog_output_cluster_handler, "description")
-            and self._analog_output_cluster_handler.description is not None
-        ):
+        if (description := self._analog_output_cluster_handler.description) is not None:
             self._attr_translation_key = None
-            self._attr_fallback_name: str = (
-                self._analog_output_cluster_handler.description
-            )
+            self._attr_fallback_name: str = description
 
     @property
     def native_value(self) -> float | None:
