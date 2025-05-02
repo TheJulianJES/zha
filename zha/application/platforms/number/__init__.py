@@ -156,10 +156,7 @@ class AnalogOutputNumber(BaseNumber):
         else:
             self._attr_icon = None
 
-        if analog_output.description is not None:
-            self._attr_fallback_name = analog_output.description
-        else:
-            self._attr_fallback_name = None
+        self._attr_fallback_name = analog_output.description
 
     def on_add(self) -> None:
         """Run when entity is added."""
