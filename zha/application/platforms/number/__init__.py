@@ -167,9 +167,6 @@ class AnalogOutputNumber(BaseNumber):
                 self.handle_cluster_handler_attribute_updated,
             )
         )
-        if (description := self._analog_output_cluster_handler.description) is not None:
-            self._attr_translation_key = None
-            self._attr_fallback_name: str = description
 
     @property
     def native_value(self) -> float | None:
