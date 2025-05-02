@@ -202,12 +202,6 @@ class Sensor(PlatformEntity):
                 self.handle_cluster_handler_attribute_updated,
             )
         )
-        if (
-            hasattr(self._cluster_handler, "description")
-            and self._cluster_handler.description is not None
-        ):
-            self._attr_translation_key = None
-            self._attr_fallback_name: str = self._cluster_handler.description
 
     def _is_supported(self) -> bool:
         if (
@@ -615,6 +609,13 @@ class AnalogInputSensor(Sensor):
             self._attr_suggested_display_precision = resolution_to_decimal_precision(
                 self._cluster_handler.resolution
             )
+
+    def on_add(self) -> None:
+        """Run when entity is added."""
+        super().on_add()
+        if (description := self._cluster_handler.description) is not None:
+            self._attr_translation_key = None
+            self._attr_fallback_name: str = description
 
     def _is_supported(self) -> bool:
         """Return True if this sensor is supported."""
