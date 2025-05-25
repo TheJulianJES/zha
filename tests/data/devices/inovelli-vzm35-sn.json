@@ -8,7 +8,7 @@
   "friendly_model": "VZM35-SN",
   "name": "Inovelli VZM35-SN",
   "quirk_applied": true,
-  "quirk_class": "zhaquirks.inovelli.VZM35SN.InovelliVZM35SNv7",
+  "quirk_class": "zigpy.quirks.v2.CustomDeviceV2",
   "quirk_id": null,
   "manufacturer_code": 4655,
   "power_source": "Mains",
@@ -1304,17 +1304,17 @@
               "unsupported": false
             },
             {
-              "id": "0x0107",
-              "name": "smart_fan_led_display_levels",
-              "zcl_type": "uint8",
-              "value": 0,
-              "unsupported": false
-            },
-            {
               "id": "0x0034",
               "name": "smart_fan_mode",
               "zcl_type": "bool_",
               "value": 1,
+              "unsupported": false
+            },
+            {
+              "id": "0x0107",
+              "name": "smart_fan_led_display_levels",
+              "zcl_type": "uint8",
+              "value": 0,
               "unsupported": false
             },
             {
@@ -1742,208 +1742,6 @@
               "unsupported": false
             }
           ]
-        }
-      ],
-      "out_clusters": [
-        {
-          "cluster_id": "0x0003",
-          "endpoint_attribute": "identify",
-          "attributes": [
-            {
-              "id": "0xfffd",
-              "name": "cluster_revision",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0000",
-              "name": "identify_time",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0xfffe",
-              "name": "reporting_status",
-              "zcl_type": "enum8",
-              "value": null,
-              "unsupported": false
-            }
-          ]
-        },
-        {
-          "cluster_id": "0x0006",
-          "endpoint_attribute": "on_off",
-          "attributes": [
-            {
-              "id": "0xfffd",
-              "name": "cluster_revision",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x4000",
-              "name": "global_scene_control",
-              "zcl_type": "bool_",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x4002",
-              "name": "off_wait_time",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0000",
-              "name": "on_off",
-              "zcl_type": "bool_",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x4001",
-              "name": "on_time",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0xfffe",
-              "name": "reporting_status",
-              "zcl_type": "enum8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x4003",
-              "name": "start_up_on_off",
-              "zcl_type": "enum8",
-              "value": null,
-              "unsupported": false
-            }
-          ]
-        },
-        {
-          "cluster_id": "0x0008",
-          "endpoint_attribute": "level",
-          "attributes": [
-            {
-              "id": "0xfffd",
-              "name": "cluster_revision",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0004",
-              "name": "current_frequency",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0000",
-              "name": "current_level",
-              "zcl_type": "uint8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0014",
-              "name": "default_move_rate",
-              "zcl_type": "uint8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0006",
-              "name": "max_frequency",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0003",
-              "name": "max_level",
-              "zcl_type": "uint8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0005",
-              "name": "min_frequency",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0002",
-              "name": "min_level",
-              "zcl_type": "uint8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0013",
-              "name": "off_transition_time",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0011",
-              "name": "on_level",
-              "zcl_type": "uint8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0010",
-              "name": "on_off_transition_time",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0012",
-              "name": "on_transition_time",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x000f",
-              "name": "options",
-              "zcl_type": "map8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0001",
-              "name": "remaining_time",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0xfffe",
-              "name": "reporting_status",
-              "zcl_type": "enum8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x4000",
-              "name": "start_up_current_level",
-              "zcl_type": "uint8",
-              "value": null,
-              "unsupported": false
-            }
-          ]
         },
         {
           "cluster_id": "0xfc31",
@@ -2468,16 +2266,16 @@
               "unsupported": false
             },
             {
-              "id": "0x0107",
-              "name": "smart_fan_led_display_levels",
-              "zcl_type": "uint8",
+              "id": "0x0034",
+              "name": "smart_fan_mode",
+              "zcl_type": "bool_",
               "value": null,
               "unsupported": false
             },
             {
-              "id": "0x0034",
-              "name": "smart_fan_mode",
-              "zcl_type": "bool_",
+              "id": "0x0107",
+              "name": "smart_fan_led_display_levels",
+              "zcl_type": "uint8",
               "value": null,
               "unsupported": false
             },
@@ -2491,6 +2289,208 @@
             {
               "id": "0x0016",
               "name": "switch_type",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            }
+          ]
+        }
+      ],
+      "out_clusters": [
+        {
+          "cluster_id": "0x0003",
+          "endpoint_attribute": "identify",
+          "attributes": [
+            {
+              "id": "0xfffd",
+              "name": "cluster_revision",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0000",
+              "name": "identify_time",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0xfffe",
+              "name": "reporting_status",
+              "zcl_type": "enum8",
+              "value": null,
+              "unsupported": false
+            }
+          ]
+        },
+        {
+          "cluster_id": "0x0006",
+          "endpoint_attribute": "on_off",
+          "attributes": [
+            {
+              "id": "0xfffd",
+              "name": "cluster_revision",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x4000",
+              "name": "global_scene_control",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x4002",
+              "name": "off_wait_time",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0000",
+              "name": "on_off",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x4001",
+              "name": "on_time",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0xfffe",
+              "name": "reporting_status",
+              "zcl_type": "enum8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x4003",
+              "name": "start_up_on_off",
+              "zcl_type": "enum8",
+              "value": null,
+              "unsupported": false
+            }
+          ]
+        },
+        {
+          "cluster_id": "0x0008",
+          "endpoint_attribute": "level",
+          "attributes": [
+            {
+              "id": "0xfffd",
+              "name": "cluster_revision",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0004",
+              "name": "current_frequency",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0000",
+              "name": "current_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0014",
+              "name": "default_move_rate",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0006",
+              "name": "max_frequency",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0003",
+              "name": "max_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0005",
+              "name": "min_frequency",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0002",
+              "name": "min_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0013",
+              "name": "off_transition_time",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0011",
+              "name": "on_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0010",
+              "name": "on_off_transition_time",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0012",
+              "name": "on_transition_time",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x000f",
+              "name": "options",
+              "zcl_type": "map8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0001",
+              "name": "remaining_time",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0xfffe",
+              "name": "reporting_status",
+              "zcl_type": "enum8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x4000",
+              "name": "start_up_current_level",
               "zcl_type": "uint8",
               "value": null,
               "unsupported": false
@@ -2788,208 +2788,6 @@
               "unsupported": false
             }
           ]
-        }
-      ],
-      "out_clusters": [
-        {
-          "cluster_id": "0x0003",
-          "endpoint_attribute": "identify",
-          "attributes": [
-            {
-              "id": "0xfffd",
-              "name": "cluster_revision",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0000",
-              "name": "identify_time",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0xfffe",
-              "name": "reporting_status",
-              "zcl_type": "enum8",
-              "value": null,
-              "unsupported": false
-            }
-          ]
-        },
-        {
-          "cluster_id": "0x0006",
-          "endpoint_attribute": "on_off",
-          "attributes": [
-            {
-              "id": "0xfffd",
-              "name": "cluster_revision",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x4000",
-              "name": "global_scene_control",
-              "zcl_type": "bool_",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x4002",
-              "name": "off_wait_time",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0000",
-              "name": "on_off",
-              "zcl_type": "bool_",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x4001",
-              "name": "on_time",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0xfffe",
-              "name": "reporting_status",
-              "zcl_type": "enum8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x4003",
-              "name": "start_up_on_off",
-              "zcl_type": "enum8",
-              "value": null,
-              "unsupported": false
-            }
-          ]
-        },
-        {
-          "cluster_id": "0x0008",
-          "endpoint_attribute": "level",
-          "attributes": [
-            {
-              "id": "0xfffd",
-              "name": "cluster_revision",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0004",
-              "name": "current_frequency",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0000",
-              "name": "current_level",
-              "zcl_type": "uint8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0014",
-              "name": "default_move_rate",
-              "zcl_type": "uint8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0006",
-              "name": "max_frequency",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0003",
-              "name": "max_level",
-              "zcl_type": "uint8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0005",
-              "name": "min_frequency",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0002",
-              "name": "min_level",
-              "zcl_type": "uint8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0013",
-              "name": "off_transition_time",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0011",
-              "name": "on_level",
-              "zcl_type": "uint8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0010",
-              "name": "on_off_transition_time",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0012",
-              "name": "on_transition_time",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x000f",
-              "name": "options",
-              "zcl_type": "map8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x0001",
-              "name": "remaining_time",
-              "zcl_type": "uint16",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0xfffe",
-              "name": "reporting_status",
-              "zcl_type": "enum8",
-              "value": null,
-              "unsupported": false
-            },
-            {
-              "id": "0x4000",
-              "name": "start_up_current_level",
-              "zcl_type": "uint8",
-              "value": null,
-              "unsupported": false
-            }
-          ]
         },
         {
           "cluster_id": "0xfc31",
@@ -3514,16 +3312,16 @@
               "unsupported": false
             },
             {
-              "id": "0x0107",
-              "name": "smart_fan_led_display_levels",
-              "zcl_type": "uint8",
+              "id": "0x0034",
+              "name": "smart_fan_mode",
+              "zcl_type": "bool_",
               "value": null,
               "unsupported": false
             },
             {
-              "id": "0x0034",
-              "name": "smart_fan_mode",
-              "zcl_type": "bool_",
+              "id": "0x0107",
+              "name": "smart_fan_led_display_levels",
+              "zcl_type": "uint8",
               "value": null,
               "unsupported": false
             },
@@ -3537,6 +3335,208 @@
             {
               "id": "0x0016",
               "name": "switch_type",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            }
+          ]
+        }
+      ],
+      "out_clusters": [
+        {
+          "cluster_id": "0x0003",
+          "endpoint_attribute": "identify",
+          "attributes": [
+            {
+              "id": "0xfffd",
+              "name": "cluster_revision",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0000",
+              "name": "identify_time",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0xfffe",
+              "name": "reporting_status",
+              "zcl_type": "enum8",
+              "value": null,
+              "unsupported": false
+            }
+          ]
+        },
+        {
+          "cluster_id": "0x0006",
+          "endpoint_attribute": "on_off",
+          "attributes": [
+            {
+              "id": "0xfffd",
+              "name": "cluster_revision",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x4000",
+              "name": "global_scene_control",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x4002",
+              "name": "off_wait_time",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0000",
+              "name": "on_off",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x4001",
+              "name": "on_time",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0xfffe",
+              "name": "reporting_status",
+              "zcl_type": "enum8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x4003",
+              "name": "start_up_on_off",
+              "zcl_type": "enum8",
+              "value": null,
+              "unsupported": false
+            }
+          ]
+        },
+        {
+          "cluster_id": "0x0008",
+          "endpoint_attribute": "level",
+          "attributes": [
+            {
+              "id": "0xfffd",
+              "name": "cluster_revision",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0004",
+              "name": "current_frequency",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0000",
+              "name": "current_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0014",
+              "name": "default_move_rate",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0006",
+              "name": "max_frequency",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0003",
+              "name": "max_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0005",
+              "name": "min_frequency",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0002",
+              "name": "min_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0013",
+              "name": "off_transition_time",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0011",
+              "name": "on_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0010",
+              "name": "on_off_transition_time",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0012",
+              "name": "on_transition_time",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x000f",
+              "name": "options",
+              "zcl_type": "map8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0001",
+              "name": "remaining_time",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0xfffe",
+              "name": "reporting_status",
+              "zcl_type": "enum8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x4000",
+              "name": "start_up_current_level",
               "zcl_type": "uint8",
               "value": null,
               "unsupported": false
@@ -3561,74 +3561,7 @@
       ]
     }
   },
-  "original_signature": {
-    "models_info": [
-      [
-        "Inovelli",
-        "VZM35-SN"
-      ]
-    ],
-    "endpoints": {
-      "1": {
-        "profile_id": "0x0104",
-        "device_type": "0x0101",
-        "input_clusters": [
-          "0x0000",
-          "0x0003",
-          "0x0004",
-          "0x0005",
-          "0x0006",
-          "0x0008",
-          "0x0025",
-          "0x0202",
-          "0x0b05",
-          "0xfc31",
-          "0xfc57"
-        ],
-        "output_clusters": [
-          "0x0019"
-        ]
-      },
-      "2": {
-        "profile_id": "0x0104",
-        "device_type": "0x0104",
-        "input_clusters": [
-          "0x0000",
-          "0x0003",
-          "0x0004",
-          "0x0005"
-        ],
-        "output_clusters": [
-          "0x0003",
-          "0x0006",
-          "0x0008"
-        ]
-      },
-      "3": {
-        "profile_id": "0x0104",
-        "device_type": "0x0104",
-        "input_clusters": [
-          "0x0000",
-          "0x0003",
-          "0x0004",
-          "0x0005"
-        ],
-        "output_clusters": [
-          "0x0003",
-          "0x0006",
-          "0x0008"
-        ]
-      },
-      "242": {
-        "profile_id": "0xa1e0",
-        "device_type": "0x0061",
-        "input_clusters": [],
-        "output_clusters": [
-          "0x0021"
-        ]
-      }
-    }
-  },
+  "original_signature": {},
   "zha_lib_entities": {
     "button": [
       {
@@ -5729,6 +5662,226 @@
           "available": true,
           "state": "Normal"
         }
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:03:3d:90:21-2-64561",
+          "migrate_unique_ids": [],
+          "platform": "sensor",
+          "class_name": "InovelliInternalTemperature",
+          "translation_key": "internal_temp_monitor",
+          "device_class": "temperature",
+          "state_class": "measurement",
+          "entity_category": "diagnostic",
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "cluster_handlers": [
+            {
+              "class_name": "InovelliConfigEntityClusterHandler",
+              "generic_id": "cluster_handler_0xfc31",
+              "endpoint_id": 2,
+              "cluster": {
+                "id": 64561,
+                "name": "InovelliVZM35SNCluster",
+                "type": "server"
+              },
+              "id": "2:0xfc31",
+              "unique_id": "ab:cd:ef:12:03:3d:90:21:2:0xfc31",
+              "status": "INITIALIZED",
+              "value_attribute": null
+            }
+          ],
+          "device_ieee": [
+            33,
+            144,
+            61,
+            3,
+            18,
+            239,
+            205,
+            171
+          ],
+          "endpoint_id": 2,
+          "available": true,
+          "group_id": null,
+          "attribute": "internal_temp_monitor",
+          "suggested_display_precision": null,
+          "divisor": 1,
+          "multiplier": 1,
+          "unit": "\u00b0C"
+        },
+        "state": {
+          "class_name": "InovelliInternalTemperature",
+          "available": true,
+          "state": null
+        }
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:03:3d:90:21-2-64561-overheated",
+          "migrate_unique_ids": [],
+          "platform": "sensor",
+          "class_name": "InovelliOverheated",
+          "translation_key": "overheated",
+          "device_class": "enum",
+          "state_class": null,
+          "entity_category": "diagnostic",
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "cluster_handlers": [
+            {
+              "class_name": "InovelliConfigEntityClusterHandler",
+              "generic_id": "cluster_handler_0xfc31",
+              "endpoint_id": 2,
+              "cluster": {
+                "id": 64561,
+                "name": "InovelliVZM35SNCluster",
+                "type": "server"
+              },
+              "id": "2:0xfc31",
+              "unique_id": "ab:cd:ef:12:03:3d:90:21:2:0xfc31",
+              "status": "INITIALIZED",
+              "value_attribute": null
+            }
+          ],
+          "device_ieee": [
+            33,
+            144,
+            61,
+            3,
+            18,
+            239,
+            205,
+            171
+          ],
+          "endpoint_id": 2,
+          "available": true,
+          "group_id": null,
+          "attribute": "overheated",
+          "suggested_display_precision": null,
+          "divisor": 1,
+          "multiplier": 1,
+          "unit": null
+        },
+        "state": {
+          "class_name": "InovelliOverheated",
+          "available": true,
+          "state": null
+        }
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:03:3d:90:21-3-64561",
+          "migrate_unique_ids": [],
+          "platform": "sensor",
+          "class_name": "InovelliInternalTemperature",
+          "translation_key": "internal_temp_monitor",
+          "device_class": "temperature",
+          "state_class": "measurement",
+          "entity_category": "diagnostic",
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "cluster_handlers": [
+            {
+              "class_name": "InovelliConfigEntityClusterHandler",
+              "generic_id": "cluster_handler_0xfc31",
+              "endpoint_id": 3,
+              "cluster": {
+                "id": 64561,
+                "name": "InovelliVZM35SNCluster",
+                "type": "server"
+              },
+              "id": "3:0xfc31",
+              "unique_id": "ab:cd:ef:12:03:3d:90:21:3:0xfc31",
+              "status": "INITIALIZED",
+              "value_attribute": null
+            }
+          ],
+          "device_ieee": [
+            33,
+            144,
+            61,
+            3,
+            18,
+            239,
+            205,
+            171
+          ],
+          "endpoint_id": 3,
+          "available": true,
+          "group_id": null,
+          "attribute": "internal_temp_monitor",
+          "suggested_display_precision": null,
+          "divisor": 1,
+          "multiplier": 1,
+          "unit": "\u00b0C"
+        },
+        "state": {
+          "class_name": "InovelliInternalTemperature",
+          "available": true,
+          "state": null
+        }
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:03:3d:90:21-3-64561-overheated",
+          "migrate_unique_ids": [],
+          "platform": "sensor",
+          "class_name": "InovelliOverheated",
+          "translation_key": "overheated",
+          "device_class": "enum",
+          "state_class": null,
+          "entity_category": "diagnostic",
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "cluster_handlers": [
+            {
+              "class_name": "InovelliConfigEntityClusterHandler",
+              "generic_id": "cluster_handler_0xfc31",
+              "endpoint_id": 3,
+              "cluster": {
+                "id": 64561,
+                "name": "InovelliVZM35SNCluster",
+                "type": "server"
+              },
+              "id": "3:0xfc31",
+              "unique_id": "ab:cd:ef:12:03:3d:90:21:3:0xfc31",
+              "status": "INITIALIZED",
+              "value_attribute": null
+            }
+          ],
+          "device_ieee": [
+            33,
+            144,
+            61,
+            3,
+            18,
+            239,
+            205,
+            171
+          ],
+          "endpoint_id": 3,
+          "available": true,
+          "group_id": null,
+          "attribute": "overheated",
+          "suggested_display_precision": null,
+          "divisor": 1,
+          "multiplier": 1,
+          "unit": null
+        },
+        "state": {
+          "class_name": "InovelliOverheated",
+          "available": true,
+          "state": null
+        }
       }
     ],
     "switch": [
@@ -6121,6 +6274,62 @@
           "class_name": "InovelliOnOffLEDMode",
           "available": true,
           "state": false,
+          "inverted": false
+        }
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:03:3d:90:21-1-64561-smart_bulb_mode",
+          "migrate_unique_ids": [],
+          "platform": "switch",
+          "class_name": "InovelliSmartBulbMode",
+          "translation_key": "smart_bulb_mode",
+          "device_class": null,
+          "state_class": null,
+          "entity_category": "config",
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "cluster_handlers": [
+            {
+              "class_name": "InovelliConfigEntityClusterHandler",
+              "generic_id": "cluster_handler_0xfc31",
+              "endpoint_id": 1,
+              "cluster": {
+                "id": 64561,
+                "name": "InovelliVZM35SNCluster",
+                "type": "server"
+              },
+              "id": "1:0xfc31",
+              "unique_id": "ab:cd:ef:12:03:3d:90:21:1:0xfc31",
+              "status": "INITIALIZED",
+              "value_attribute": null
+            }
+          ],
+          "device_ieee": [
+            33,
+            144,
+            61,
+            3,
+            18,
+            239,
+            205,
+            171
+          ],
+          "endpoint_id": 1,
+          "available": true,
+          "group_id": null,
+          "attribute_name": "smart_bulb_mode",
+          "invert_attribute_name": null,
+          "force_inverted": false,
+          "off_value": 0,
+          "on_value": 1
+        },
+        "state": {
+          "class_name": "InovelliSmartBulbMode",
+          "available": true,
+          "state": true,
           "inverted": false
         }
       },

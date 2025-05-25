@@ -8,7 +8,7 @@
   "friendly_model": "VZM31-SN",
   "name": "Inovelli VZM31-SN",
   "quirk_applied": true,
-  "quirk_class": "zhaquirks.inovelli.VZM31SN.InovelliVZM31SNv12",
+  "quirk_class": "zigpy.quirks.v2.CustomDeviceV2",
   "quirk_id": null,
   "manufacturer_code": 4655,
   "power_source": "Mains",
@@ -2986,7 +2986,7 @@
             {
               "id": "0x001a",
               "name": "leading_or_trailing_edge",
-              "zcl_type": "bool_",
+              "zcl_type": "uint8",
               "value": 0,
               "unsupported": false
             },
@@ -3107,6 +3107,20 @@
               "name": "power_type",
               "zcl_type": "uint8",
               "value": 1,
+              "unsupported": false
+            },
+            {
+              "id": "0x0018",
+              "name": "quick_start_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0017",
+              "name": "quick_start_time",
+              "zcl_type": "uint8",
+              "value": null,
               "unsupported": false
             },
             {
@@ -3490,6 +3504,95 @@
               "id": "0xfffe",
               "name": "reporting_status",
               "zcl_type": "enum8",
+              "value": null,
+              "unsupported": false
+            }
+          ]
+        },
+        {
+          "cluster_id": "0x0004",
+          "endpoint_attribute": "groups",
+          "attributes": [
+            {
+              "id": "0xfffd",
+              "name": "cluster_revision",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0000",
+              "name": "name_support",
+              "zcl_type": "map8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0xfffe",
+              "name": "reporting_status",
+              "zcl_type": "enum8",
+              "value": null,
+              "unsupported": false
+            }
+          ]
+        },
+        {
+          "cluster_id": "0x0005",
+          "endpoint_attribute": "scenes",
+          "attributes": [
+            {
+              "id": "0xfffd",
+              "name": "cluster_revision",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0000",
+              "name": "count",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0002",
+              "name": "current_group",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0001",
+              "name": "current_scene",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0005",
+              "name": "last_configured_by",
+              "zcl_type": "EUI64",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0004",
+              "name": "name_support",
+              "zcl_type": "map8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0xfffe",
+              "name": "reporting_status",
+              "zcl_type": "enum8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0003",
+              "name": "scene_valid",
+              "zcl_type": "bool_",
               "value": null,
               "unsupported": false
             }
@@ -4082,7 +4185,7 @@
             {
               "id": "0x001a",
               "name": "leading_or_trailing_edge",
-              "zcl_type": "bool_",
+              "zcl_type": "uint8",
               "value": null,
               "unsupported": false
             },
@@ -4206,6 +4309,20 @@
               "unsupported": false
             },
             {
+              "id": "0x0018",
+              "name": "quick_start_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0017",
+              "name": "quick_start_time",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
               "id": "0x0004",
               "name": "ramp_rate_off_to_on_local",
               "zcl_type": "uint8",
@@ -4288,60 +4405,7 @@
       ]
     }
   },
-  "original_signature": {
-    "models_info": [
-      [
-        "Inovelli",
-        "VZM31-SN"
-      ]
-    ],
-    "endpoints": {
-      "1": {
-        "profile_id": "0x0104",
-        "device_type": "0x0101",
-        "input_clusters": [
-          "0x0000",
-          "0x0003",
-          "0x0004",
-          "0x0005",
-          "0x0006",
-          "0x0008",
-          "0x0702",
-          "0x0b04",
-          "0x0b05",
-          "0xfc31",
-          "0xfc57"
-        ],
-        "output_clusters": [
-          "0x0019"
-        ]
-      },
-      "2": {
-        "profile_id": "0x0104",
-        "device_type": "0x0104",
-        "input_clusters": [
-          "0x0000",
-          "0x0003",
-          "0x0004",
-          "0x0005"
-        ],
-        "output_clusters": [
-          "0x0003",
-          "0x0006",
-          "0x0008",
-          "0xfc31"
-        ]
-      },
-      "242": {
-        "profile_id": "0xa1e0",
-        "device_type": "0x0061",
-        "input_clusters": [],
-        "output_clusters": [
-          "0x0021"
-        ]
-      }
-    }
-  },
+  "original_signature": {},
   "zha_lib_entities": {
     "button": [
       {

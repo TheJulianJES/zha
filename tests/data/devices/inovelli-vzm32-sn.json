@@ -7,8 +7,8 @@
   "friendly_manufacturer": "Inovelli",
   "friendly_model": "VZM32-SN",
   "name": "Inovelli VZM32-SN",
-  "quirk_applied": false,
-  "quirk_class": "zigpy.device.Device",
+  "quirk_applied": true,
+  "quirk_class": "zigpy.quirks.v2.CustomDeviceV2",
   "quirk_id": null,
   "manufacturer_code": 4655,
   "power_source": "Mains",
@@ -2755,8 +2755,583 @@
         },
         {
           "cluster_id": "0xfc31",
-          "endpoint_attribute": "manufacturer_specific",
-          "attributes": []
+          "endpoint_attribute": "inovelli_vzm31sn_cluster",
+          "attributes": [
+            {
+              "id": "0x0014",
+              "name": "active_energy_reports",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0012",
+              "name": "active_power_reports",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x000c",
+              "name": "auto_off_timer",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x007b",
+              "name": "aux_switch_scenes",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x007d",
+              "name": "binding_off_to_on_sync_level",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0032",
+              "name": "button_delay",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x003d",
+              "name": "default_led1_strip_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x003c",
+              "name": "default_led1_strip_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x003f",
+              "name": "default_led1_strip_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x003e",
+              "name": "default_led1_strip_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0042",
+              "name": "default_led2_strip_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0041",
+              "name": "default_led2_strip_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0044",
+              "name": "default_led2_strip_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0043",
+              "name": "default_led2_strip_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0047",
+              "name": "default_led3_strip_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0046",
+              "name": "default_led3_strip_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0049",
+              "name": "default_led3_strip_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0048",
+              "name": "default_led3_strip_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x004c",
+              "name": "default_led4_strip_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x004b",
+              "name": "default_led4_strip_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x004e",
+              "name": "default_led4_strip_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x004d",
+              "name": "default_led4_strip_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0051",
+              "name": "default_led5_strip_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0050",
+              "name": "default_led5_strip_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0053",
+              "name": "default_led5_strip_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0052",
+              "name": "default_led5_strip_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0056",
+              "name": "default_led6_strip_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0055",
+              "name": "default_led6_strip_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0058",
+              "name": "default_led6_strip_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0057",
+              "name": "default_led6_strip_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x005b",
+              "name": "default_led7_strip_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x005a",
+              "name": "default_led7_strip_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x005d",
+              "name": "default_led7_strip_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x005c",
+              "name": "default_led7_strip_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x000d",
+              "name": "default_level_local",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x000e",
+              "name": "default_level_remote",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0033",
+              "name": "device_bind_number",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0006",
+              "name": "dimming_speed_down_local",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0005",
+              "name": "dimming_speed_down_remote",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0002",
+              "name": "dimming_speed_up_local",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0001",
+              "name": "dimming_speed_up_remote",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0106",
+              "name": "disable_clear_notifications_double_tap",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0036",
+              "name": "double_tap_down_enabled",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0038",
+              "name": "double_tap_down_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0035",
+              "name": "double_tap_up_enabled",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0037",
+              "name": "double_tap_up_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0082",
+              "name": "fan_module_binding_control",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0078",
+              "name": "fan_single_tap_behavior",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0079",
+              "name": "fan_timer_display",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0104",
+              "name": "firmware_progress_led",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0085",
+              "name": "high_for_bound_control",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0019",
+              "name": "increased_non_neutral_output",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0020",
+              "name": "internal_temp_monitor",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x000b",
+              "name": "invert_switch",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x001a",
+              "name": "leading_or_trailing_edge",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0086",
+              "name": "led_color_for_bound_control",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0060",
+              "name": "led_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x005f",
+              "name": "led_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0062",
+              "name": "led_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0061",
+              "name": "led_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0064",
+              "name": "led_scaling_mode",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x006e",
+              "name": "light_on_presence_behavior",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0011",
+              "name": "load_level_indicator_timeout",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0100",
+              "name": "local_protection",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0083",
+              "name": "low_for_bound_control",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x000a",
+              "name": "maximum_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0084",
+              "name": "medium_for_bound_control",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0009",
+              "name": "minimum_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0103",
+              "name": "on_off_led_mode",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0102",
+              "name": "output_mode",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0021",
+              "name": "overheated",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0013",
+              "name": "periodic_power_and_energy_reports",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0015",
+              "name": "power_type",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0004",
+              "name": "ramp_rate_off_to_on_local",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0003",
+              "name": "ramp_rate_off_to_on_remote",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0008",
+              "name": "ramp_rate_on_to_off_local",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0007",
+              "name": "ramp_rate_on_to_off_remote",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0105",
+              "name": "relay_click_in_on_off_mode",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0101",
+              "name": "remote_protection",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0034",
+              "name": "smart_bulb_mode",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x000f",
+              "name": "state_after_power_restored",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0016",
+              "name": "switch_type",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            }
+          ]
         },
         {
           "cluster_id": "0xfc32",
@@ -3377,8 +3952,583 @@
         },
         {
           "cluster_id": "0xfc31",
-          "endpoint_attribute": "manufacturer_specific",
-          "attributes": []
+          "endpoint_attribute": "inovelli_vzm31sn_cluster",
+          "attributes": [
+            {
+              "id": "0x0014",
+              "name": "active_energy_reports",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0012",
+              "name": "active_power_reports",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x000c",
+              "name": "auto_off_timer",
+              "zcl_type": "uint16",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x007b",
+              "name": "aux_switch_scenes",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x007d",
+              "name": "binding_off_to_on_sync_level",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0032",
+              "name": "button_delay",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x003d",
+              "name": "default_led1_strip_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x003c",
+              "name": "default_led1_strip_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x003f",
+              "name": "default_led1_strip_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x003e",
+              "name": "default_led1_strip_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0042",
+              "name": "default_led2_strip_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0041",
+              "name": "default_led2_strip_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0044",
+              "name": "default_led2_strip_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0043",
+              "name": "default_led2_strip_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0047",
+              "name": "default_led3_strip_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0046",
+              "name": "default_led3_strip_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0049",
+              "name": "default_led3_strip_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0048",
+              "name": "default_led3_strip_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x004c",
+              "name": "default_led4_strip_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x004b",
+              "name": "default_led4_strip_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x004e",
+              "name": "default_led4_strip_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x004d",
+              "name": "default_led4_strip_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0051",
+              "name": "default_led5_strip_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0050",
+              "name": "default_led5_strip_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0053",
+              "name": "default_led5_strip_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0052",
+              "name": "default_led5_strip_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0056",
+              "name": "default_led6_strip_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0055",
+              "name": "default_led6_strip_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0058",
+              "name": "default_led6_strip_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0057",
+              "name": "default_led6_strip_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x005b",
+              "name": "default_led7_strip_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x005a",
+              "name": "default_led7_strip_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x005d",
+              "name": "default_led7_strip_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x005c",
+              "name": "default_led7_strip_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x000d",
+              "name": "default_level_local",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x000e",
+              "name": "default_level_remote",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0033",
+              "name": "device_bind_number",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0006",
+              "name": "dimming_speed_down_local",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0005",
+              "name": "dimming_speed_down_remote",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0002",
+              "name": "dimming_speed_up_local",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0001",
+              "name": "dimming_speed_up_remote",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0106",
+              "name": "disable_clear_notifications_double_tap",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0036",
+              "name": "double_tap_down_enabled",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0038",
+              "name": "double_tap_down_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0035",
+              "name": "double_tap_up_enabled",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0037",
+              "name": "double_tap_up_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0082",
+              "name": "fan_module_binding_control",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0078",
+              "name": "fan_single_tap_behavior",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0079",
+              "name": "fan_timer_display",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0104",
+              "name": "firmware_progress_led",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0085",
+              "name": "high_for_bound_control",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0019",
+              "name": "increased_non_neutral_output",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0020",
+              "name": "internal_temp_monitor",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x000b",
+              "name": "invert_switch",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x001a",
+              "name": "leading_or_trailing_edge",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0086",
+              "name": "led_color_for_bound_control",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0060",
+              "name": "led_color_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x005f",
+              "name": "led_color_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0062",
+              "name": "led_intensity_when_off",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0061",
+              "name": "led_intensity_when_on",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0064",
+              "name": "led_scaling_mode",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x006e",
+              "name": "light_on_presence_behavior",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0011",
+              "name": "load_level_indicator_timeout",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0100",
+              "name": "local_protection",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0083",
+              "name": "low_for_bound_control",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x000a",
+              "name": "maximum_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0084",
+              "name": "medium_for_bound_control",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0009",
+              "name": "minimum_level",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0103",
+              "name": "on_off_led_mode",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0102",
+              "name": "output_mode",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0021",
+              "name": "overheated",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0013",
+              "name": "periodic_power_and_energy_reports",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0015",
+              "name": "power_type",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0004",
+              "name": "ramp_rate_off_to_on_local",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0003",
+              "name": "ramp_rate_off_to_on_remote",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0008",
+              "name": "ramp_rate_on_to_off_local",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0007",
+              "name": "ramp_rate_on_to_off_remote",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0105",
+              "name": "relay_click_in_on_off_mode",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0101",
+              "name": "remote_protection",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0034",
+              "name": "smart_bulb_mode",
+              "zcl_type": "bool_",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x000f",
+              "name": "state_after_power_restored",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x0016",
+              "name": "switch_type",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            }
+          ]
         }
       ]
     },
@@ -3892,6 +5042,7 @@
       ]
     }
   },
+  "original_signature": {},
   "zha_lib_entities": {
     "binary_sensor": [
       {
@@ -4757,6 +5908,116 @@
           "class_name": "ElectricalMeasurementRMSVoltage",
           "available": true,
           "state": 73.1
+        }
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:59:98:78:6f-1-64561",
+          "migrate_unique_ids": [],
+          "platform": "sensor",
+          "class_name": "InovelliInternalTemperature",
+          "translation_key": "internal_temp_monitor",
+          "device_class": "temperature",
+          "state_class": "measurement",
+          "entity_category": "diagnostic",
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "cluster_handlers": [
+            {
+              "class_name": "InovelliConfigEntityClusterHandler",
+              "generic_id": "cluster_handler_0xfc31",
+              "endpoint_id": 1,
+              "cluster": {
+                "id": 64561,
+                "name": "InovelliVZM32SNCluster",
+                "type": "server"
+              },
+              "id": "1:0xfc31",
+              "unique_id": "ab:cd:ef:12:59:98:78:6f:1:0xfc31",
+              "status": "INITIALIZED",
+              "value_attribute": null
+            }
+          ],
+          "device_ieee": [
+            111,
+            120,
+            152,
+            89,
+            18,
+            239,
+            205,
+            171
+          ],
+          "endpoint_id": 1,
+          "available": true,
+          "group_id": null,
+          "attribute": "internal_temp_monitor",
+          "suggested_display_precision": null,
+          "divisor": 1,
+          "multiplier": 1,
+          "unit": "\u00b0C"
+        },
+        "state": {
+          "class_name": "InovelliInternalTemperature",
+          "available": true,
+          "state": null
+        }
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:59:98:78:6f-1-64561-overheated",
+          "migrate_unique_ids": [],
+          "platform": "sensor",
+          "class_name": "InovelliOverheated",
+          "translation_key": "overheated",
+          "device_class": "enum",
+          "state_class": null,
+          "entity_category": "diagnostic",
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "cluster_handlers": [
+            {
+              "class_name": "InovelliConfigEntityClusterHandler",
+              "generic_id": "cluster_handler_0xfc31",
+              "endpoint_id": 1,
+              "cluster": {
+                "id": 64561,
+                "name": "InovelliVZM32SNCluster",
+                "type": "server"
+              },
+              "id": "1:0xfc31",
+              "unique_id": "ab:cd:ef:12:59:98:78:6f:1:0xfc31",
+              "status": "INITIALIZED",
+              "value_attribute": null
+            }
+          ],
+          "device_ieee": [
+            111,
+            120,
+            152,
+            89,
+            18,
+            239,
+            205,
+            171
+          ],
+          "endpoint_id": 1,
+          "available": true,
+          "group_id": null,
+          "attribute": "overheated",
+          "suggested_display_precision": null,
+          "divisor": 1,
+          "multiplier": 1,
+          "unit": null
+        },
+        "state": {
+          "class_name": "InovelliOverheated",
+          "available": true,
+          "state": null
         }
       }
     ],

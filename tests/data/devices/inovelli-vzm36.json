@@ -8,7 +8,7 @@
   "friendly_model": "VZM36",
   "name": "Inovelli VZM36",
   "quirk_applied": true,
-  "quirk_class": "zhaquirks.inovelli.VZM36.InovelliVZM36",
+  "quirk_class": "zigpy.quirks.v2.CustomDeviceV2",
   "quirk_id": null,
   "manufacturer_code": 4655,
   "power_source": "Mains",
@@ -788,6 +788,13 @@
             {
               "id": "0x0020",
               "name": "internal_temp_monitor",
+              "zcl_type": "uint8",
+              "value": null,
+              "unsupported": false
+            },
+            {
+              "id": "0x001a",
+              "name": "leading_or_trailing_edge",
               "zcl_type": "uint8",
               "value": null,
               "unsupported": false
@@ -2014,62 +2021,7 @@
       ]
     }
   },
-  "original_signature": {
-    "models_info": [
-      [
-        "Inovelli",
-        "VZM36"
-      ]
-    ],
-    "endpoints": {
-      "1": {
-        "profile_id": "0x0104",
-        "device_type": "0x0101",
-        "input_clusters": [
-          "0x0000",
-          "0x0003",
-          "0x0004",
-          "0x0005",
-          "0x0006",
-          "0x0008",
-          "0x0b05",
-          "0x1000",
-          "0xfc31",
-          "0xfc57"
-        ],
-        "output_clusters": [
-          "0x0019"
-        ]
-      },
-      "2": {
-        "profile_id": "0x0104",
-        "device_type": "0x0101",
-        "input_clusters": [
-          "0x0000",
-          "0x0003",
-          "0x0004",
-          "0x0005",
-          "0x0006",
-          "0x0008",
-          "0x0202",
-          "0x0b05",
-          "0x1000",
-          "0xfc31"
-        ],
-        "output_clusters": [
-          "0x0019"
-        ]
-      },
-      "242": {
-        "profile_id": "0xa1e0",
-        "device_type": "0x0061",
-        "input_clusters": [],
-        "output_clusters": [
-          "0x0021"
-        ]
-      }
-    }
-  },
+  "original_signature": {},
   "zha_lib_entities": {
     "button": [
       {
