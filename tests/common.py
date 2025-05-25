@@ -387,9 +387,18 @@ def zigpy_device_from_device_data(
 
         for cluster_type in ("in_clusters", "out_clusters"):
             for cluster in ep[cluster_type]:
-                real_cluster = getattr(endpoint, cluster_type)[
+                real_cluster = getattr(endpoint, cluster_type).get(
                     int(cluster["cluster_id"], 16)
-                ]
+                )
+
+                if real_cluster is None:
+                    _LOGGER.warning(
+                        "Cluster %s not found in endpoint %s of device %s",
+                        cluster["cluster_id"],
+                        epid,
+                        device.ieee,
+                    )
+                    continue
 
                 if patch_cluster:
                     patch_cluster_for_testing(real_cluster)
