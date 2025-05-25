@@ -105,6 +105,7 @@ def zigpy_device_from_legacy_diagnostics(
     for epid, ep in cluster_data.items():
         endpoint.request = AsyncMock(return_value=[0])
         for cluster_id, cluster in ep["in_clusters"].items():
+            # todo: likely also add here?
             real_cluster = device.endpoints[int(epid)].in_clusters[int(cluster_id, 16)]
             if patch_cluster:
                 patch_cluster_for_testing(real_cluster)
