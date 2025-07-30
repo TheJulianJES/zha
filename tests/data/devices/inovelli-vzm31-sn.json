@@ -8,7 +8,7 @@
   "friendly_model": "VZM31-SN",
   "name": "Inovelli VZM31-SN",
   "quirk_applied": true,
-  "quirk_class": "zhaquirks.inovelli.VZM31SN.InovelliVZM31SNv12",
+  "quirk_class": "zigpy.quirks.v2.CustomDeviceV2",
   "quirk_id": null,
   "manufacturer_code": 4655,
   "power_source": "Mains",
@@ -602,7 +602,7 @@
             {
               "id": "0x001a",
               "name": "leading_or_trailing_edge",
-              "zcl_type": "bool",
+              "zcl_type": "uint8",
               "value": 0
             },
             {
@@ -776,6 +776,16 @@
           "cluster_id": "0x0003",
           "endpoint_attribute": "identify",
           "attributes": []
+        },
+        {
+          "cluster_id": "0x0004",
+          "endpoint_attribute": "groups",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0005",
+          "endpoint_attribute": "scenes",
+          "attributes": []
         }
       ],
       "out_clusters": [
@@ -817,60 +827,7 @@
       ]
     }
   },
-  "original_signature": {
-    "models_info": [
-      [
-        "Inovelli",
-        "VZM31-SN"
-      ]
-    ],
-    "endpoints": {
-      "1": {
-        "profile_id": "0x0104",
-        "device_type": "0x0101",
-        "input_clusters": [
-          "0x0000",
-          "0x0003",
-          "0x0004",
-          "0x0005",
-          "0x0006",
-          "0x0008",
-          "0x0702",
-          "0x0b04",
-          "0x0b05",
-          "0xfc31",
-          "0xfc57"
-        ],
-        "output_clusters": [
-          "0x0019"
-        ]
-      },
-      "2": {
-        "profile_id": "0x0104",
-        "device_type": "0x0104",
-        "input_clusters": [
-          "0x0000",
-          "0x0003",
-          "0x0004",
-          "0x0005"
-        ],
-        "output_clusters": [
-          "0x0003",
-          "0x0006",
-          "0x0008",
-          "0xfc31"
-        ]
-      },
-      "242": {
-        "profile_id": "0xa1e0",
-        "device_type": "0x0061",
-        "input_clusters": [],
-        "output_clusters": [
-          "0x0021"
-        ]
-      }
-    }
-  },
+  "original_signature": {},
   "zha_lib_entities": {
     "button": [
       {
