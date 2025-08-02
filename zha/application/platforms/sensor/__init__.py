@@ -665,9 +665,9 @@ class Battery(Sensor):
 class BaseElectricalMeasurement(PollableSensor):
     """Base class for electrical measurement."""
 
-    _attr_max_attribute_name: str | None = None
     _use_custom_polling: bool = False
     _attr_suggested_display_precision = 1
+    _attr_max_attribute_name: str | None = None
     _divisor_attribute_name: str | None = None
     _multiplier_attribute_name: str | None = None
     _attr_state_class: SensorStateClass = SensorStateClass.MEASUREMENT
