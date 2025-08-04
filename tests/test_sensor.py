@@ -377,6 +377,7 @@ async def async_test_em_rms_voltage(
     zha_gateway: Gateway, cluster: Cluster, entity: PlatformEntity
 ) -> None:
     """Test electrical measurement RMS Voltage sensor."""
+    assert entity.extra_state_attribute_names == {"measurement_type", "rms_voltage_max"}
 
     await send_attributes_report(zha_gateway, cluster, {0: 1, 0x0505: 1234})
     assert_state(entity, 123.4, "V")
