@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 import contextlib
 import copy
 import dataclasses
@@ -69,6 +69,8 @@ from zha.application.const import (
     UNKNOWN_MODEL,
     ZHA_CLUSTER_HANDLER_CFG_DONE,
     ZHA_CLUSTER_HANDLER_MSG,
+    ZHA_DEVICE_ENTITY_ADDED_EVENT,
+    ZHA_DEVICE_ENTITY_REMOVED_EVENT,
     ZHA_DEVICE_UPDATED_EVENT,
     ZHA_EVENT,
 )
@@ -172,6 +174,29 @@ class DeviceFirmwareInfoUpdatedEvent:
 
     old_firmware_version: str | None
     new_firmware_version: str | None
+
+
+@dataclass(kw_only=True, frozen=True)
+class DeviceEntityAddedEvent:
+    """Event generated when a new entity is added to a device."""
+
+    event_type: Final[str] = ZHA_DEVICE_ENTITY_ADDED_EVENT
+    event: Final[str] = ZHA_DEVICE_ENTITY_ADDED_EVENT
+
+    # TODO: allow all entity information to be serialized and include it here
+    platform: Platform
+    unique_id: str
+
+
+@dataclass(kw_only=True, frozen=True)
+class DeviceEntityRemovedEvent:
+    """Event generated when an entity is removed from a device."""
+
+    event_type: Final[str] = ZHA_DEVICE_ENTITY_REMOVED_EVENT
+    event: Final[str] = ZHA_DEVICE_ENTITY_REMOVED_EVENT
+
+    platform: Platform
+    unique_id: str
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -1048,10 +1073,106 @@ class Device(LogMixin, EventBase):
             entity.on_add()
             self._pending_entities.append(entity)
 
+    def _add_entity(self, entity: PlatformEntity) -> None:
+        """Add an entity to the device."""
+        key = (entity.PLATFORM, entity.unique_id)
+
+        if key in self._platform_entities:
+            raise ValueError(
+                f"Cannot add entity {entity!r}, unique ID already taken by {self._platform_entities[key]!r}"
+            )
+
+        _LOGGER.debug("Discovered new entity %s", entity)
+
+        # `entity.on_add()` is assumed to have been called already
+        self._platform_entities[key] = entity
+        self.emit(
+            DeviceEntityAddedEvent.event_type,
+            DeviceEntityAddedEvent(
+                platform=entity.PLATFORM,
+                unique_id=entity.unique_id,
+            ),
+        )
+
+    async def _remove_entity(
+        self, entity: BaseEntity, *, emit_event: bool = True
+    ) -> None:
+        """Remove an entity from the device."""
+        key = (entity.PLATFORM, entity.unique_id)
+
+        if key not in self._platform_entities:
+            raise ValueError(f"Cannot remove entity {entity!r}, unique ID not found")
+
+        await entity.on_remove()
+        del self._platform_entities[key]
+
+        if emit_event:
+            self.emit(
+                DeviceEntityRemovedEvent.event_type,
+                DeviceEntityRemovedEvent(
+                    platform=entity.PLATFORM,
+                    unique_id=entity.unique_id,
+                ),
+            )
+
+    async def _add_pending_entities(self) -> None:
+        """Add pending entities to the device."""
+        all_entities = dict(self._platform_entities)
+        new_entities: dict[tuple[Platform, str], PlatformEntity] = {}
+
+        for entity in self._pending_entities:
+            entity.recompute_capabilities()
+
+            # Ignore unsupported entities
+            if not entity.is_supported() or not entity.is_supported_in_list(
+                all_entities.values()
+            ):
+                await entity.on_remove()
+                continue
+
+            key = (entity.PLATFORM, entity.unique_id)
+
+            # Ignore entities that already exist
+            if key in all_entities:
+                await entity.on_remove()
+                continue
+
+            all_entities[key] = entity
+            new_entities[key] = entity
+
+        self._pending_entities.clear()
+
+        # Compute a new primary entity
+        self._compute_primary_entity(all_entities.values())
+
+        # Finally, add the new entities
+        for entity in new_entities.values():
+            self._add_entity(entity)
+
+    async def recompute_entities(self) -> None:
+        """Recompute all entities for this device."""
+        self.debug("Recomputing entities")
+
+        entities = list(self._platform_entities.values())
+
+        # Remove all entities that are no longer supported
+        for entity in entities[:]:
+            entity.recompute_capabilities()
+
+            if not entity.is_supported() or not entity.is_supported_in_list(entities):
+                self.debug("Removing unsupported entity %s", entity)
+                await self._remove_entity(entity)
+                entities.remove(entity)
+
+        # Discover new entities
+        self._discover_new_entities()
+        await self._add_pending_entities()
+
     async def async_initialize(self, from_cache: bool = False) -> None:
         """Initialize cluster handlers."""
         self.debug("started initialization")
 
+        # We discover prospective entities before initialization
         self._discover_new_entities()
 
         await self._zdo_handler.async_initialize(from_cache)
@@ -1067,34 +1188,8 @@ class Device(LogMixin, EventBase):
             except Exception:  # pylint: disable=broad-exception-caught
                 self.debug("Failed to initialize endpoint", exc_info=True)
 
-        # Compute the final entities
-        new_entities: dict[tuple[Platform, str], PlatformEntity] = {}
-
-        for entity in self._pending_entities:
-            entity.recompute_capabilities()
-
-            # Ignore unsupported entities
-            if not entity.is_supported() or not entity.is_supported_in_list(
-                new_entities.values()
-            ):
-                await entity.on_remove()
-                continue
-
-            key = (entity.PLATFORM, entity.unique_id)
-
-            # Ignore entities that already exist
-            if key in new_entities:
-                await entity.on_remove()
-                continue
-
-            new_entities[key] = entity
-
-        if new_entities:
-            _LOGGER.debug("Discovered new entities %r", new_entities)
-            self._platform_entities.update(new_entities)
-
-        # At this point we can compute a primary entity
-        self._compute_primary_entity()
+        # And add them after
+        await self._add_pending_entities()
 
         # Sync the device's firmware version with the first platform entity
         for (platform, _unique_id), entity in self.platform_entities.items():
@@ -1133,9 +1228,11 @@ class Device(LogMixin, EventBase):
                     exc_info=True,
                 )
 
-        for platform_entity in self._platform_entities.values():
+        for platform_entity in list(self._platform_entities.values()):
             try:
-                await platform_entity.on_remove()
+                # TODO: To avoid unnecessary traffic during shutdown, we don't
+                # need to emit an event for every entity, just the device
+                await self._remove_entity(platform_entity, emit_event=False)
             except Exception:
                 _LOGGER.warning(
                     "Failed to remove platform entity %s for device %s",
@@ -1455,13 +1552,11 @@ class Device(LogMixin, EventBase):
         args = (self.nwk, self.model) + args
         _LOGGER.log(level, msg, *args, **kwargs)
 
-    def _compute_primary_entity(self) -> None:
-        """Compute the primary entity for this device."""
+    def _compute_primary_entity(self, entities: Sequence[PlatformEntity]) -> None:
+        """Compute the primary entity from a given set of entities."""
 
         # First, check if any entity is explicitly primary
-        explicitly_primary = [
-            entity for entity in self._platform_entities.values() if entity.primary
-        ]
+        explicitly_primary = [entity for entity in entities if entity.primary]
 
         if len(explicitly_primary) == 1:
             self.debug(
@@ -1477,7 +1572,7 @@ class Device(LogMixin, EventBase):
         # not explicitly marked as not primary
         candidates = [
             e
-            for e in self._platform_entities.values()
+            for e in entities
             if e.enabled and hasattr(e, "info_object") and e._attr_primary is not False
         ]
         candidates.sort(reverse=True, key=lambda e: e.primary_weight)
