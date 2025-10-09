@@ -399,6 +399,34 @@ async def test_coordinator_info_generic_name(
 
     assert current_coordinator.model == "Generic Zigbee Coordinator (EZSP)"
     assert current_coordinator.manufacturer == ""
+    assert current_coordinator.name == " Generic Zigbee Coordinator (EZSP)"
+
+
+async def test_name_nabu_casa_devices(
+    zha_gateway: Gateway,
+) -> None:
+    """Test that Nabu Casa devices strip the manufacturer from the name."""
+
+    current_coord_dev = zigpy_device(
+        zha_gateway, ieee="aa:bb:cc:dd:ee:ff:00:11", nwk=0x0000
+    )
+    current_coord_dev.node_desc = current_coord_dev.node_desc.replace(
+        logical_type=zdo_t.LogicalType.Coordinator
+    )
+
+    app = current_coord_dev.application
+    app.state.node_info.ieee = current_coord_dev.ieee
+    app.state.node_info.model = "Home Assistant Connect ZBT-2"
+    app.state.node_info.manufacturer = "Nabu Casa"
+
+    current_coordinator = await join_zigpy_device(zha_gateway, current_coord_dev)
+    assert current_coordinator.is_active_coordinator
+
+    assert current_coordinator.model == "Home Assistant Connect ZBT-2"
+    assert current_coordinator.manufacturer == "Nabu Casa"
+
+    # device name doesn't include manufacturer
+    assert current_coordinator.name == "Home Assistant Connect ZBT-2"
 
 
 async def test_async_get_clusters(
