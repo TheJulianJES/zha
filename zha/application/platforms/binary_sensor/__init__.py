@@ -75,6 +75,7 @@ class BinarySensor(PlatformEntity):
         self._cluster_handler = cluster_handlers[0]
         super().__init__(cluster_handlers, endpoint, device, **kwargs)
         self._state: bool = self.is_on
+        self.recompute_capabilities()
 
     def on_add(self) -> None:
         """Run when entity is added."""
