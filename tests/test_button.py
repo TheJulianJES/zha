@@ -391,14 +391,6 @@ async def test_cluster_handler_quirks_unnecessary_claiming(
             translation_key="self_test",
             fallback_name="Self test",
         )
-        # TODO: we claim the cluster handler + read attributes for write_attr_button...
-        # .write_attr_button(
-        #     "last_feeding_size",
-        #     20,
-        #     OppleCluster.cluster_id,
-        #     translation_key="last_feeding_size",
-        #     fallback_name="Last Feeding Size",
-        # )
         .add_to_registry()
     )
 
