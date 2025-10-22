@@ -1615,7 +1615,7 @@ async def test_cluster_handler_quirks_attribute_reporting(zha_gateway: Gateway) 
     # make sure the cluster handler was claimed due to reporting config, so ZHA binds it
     assert opple_ch in zha_device.endpoints[1].claimed_cluster_handlers.values()
 
-    # check that BIND is set to True, as reporting is configured
+    # check that BIND is not set to False, as reporting is configured
     assert opple_ch.BIND is True
 
     # check ZCL_INIT_ATTRS contains sensor attributes that are not in REPORT_CONFIG
