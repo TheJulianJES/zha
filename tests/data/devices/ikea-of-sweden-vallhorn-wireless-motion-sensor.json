@@ -463,7 +463,7 @@
               },
               "id": "1:0xfc81",
               "unique_id": "8c:6f:b9:ff:fe:26:3b:4a:1:0xfc81",
-              "status": "CREATED",
+              "status": "INITIALIZED",
               "value_attribute": null
             }
           ],
@@ -693,7 +693,7 @@
               },
               "id": "1:0xfc81",
               "unique_id": "8c:6f:b9:ff:fe:26:3b:4a:1:0xfc81",
-              "status": "CREATED",
+              "status": "INITIALIZED",
               "value_attribute": null
             }
           ],
