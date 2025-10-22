@@ -1658,10 +1658,10 @@ async def test_cluster_handler_quirks_attribute_reading(zha_gateway: Gateway) ->
         )
         .replaces(OppleCluster)
         .sensor(
-            "attribute_to_be_read",
+            "last_feeding_size",
             OppleCluster.cluster_id,
-            translation_key="attribute_to_be_read",
-            fallback_name="Attribute to be read",
+            translation_key="last_feeding_size",
+            fallback_name="Last feeding size",
         )
         .add_to_registry()
     )
@@ -1704,7 +1704,7 @@ async def test_cluster_handler_quirks_attribute_reading(zha_gateway: Gateway) ->
 
     # check ZCL_INIT_ATTRS contains sensor attributes that are not in REPORT_CONFIG
     assert opple_ch.ZCL_INIT_ATTRS == {
-        "attribute_to_be_read": True,
+        "last_feeding_size": True,
     }
     # check that ZCL_INIT_ATTRS is an instance variable and not a class variable now
     assert opple_ch.ZCL_INIT_ATTRS is opple_ch.__dict__[ZCL_INIT_ATTRS]
