@@ -270,6 +270,9 @@ class DeviceProbe:
                         )
                         # claim the cluster handler, so ZHA configures and binds it
                         endpoint.claim_cluster_handlers([cluster_handler])
+                        # TODO: clean up BIND logic
+                        # explicitly set BIND to True, as REPORT_CONFIG implies binding
+                        cluster_handler.BIND = True
 
                     # not in REPORT_CONFIG, add to ZCL_INIT_ATTRS if it not already in
                     elif attr_name not in cluster_handler.ZCL_INIT_ATTRS:
@@ -283,6 +286,13 @@ class DeviceProbe:
                         cluster_handler.ZCL_INIT_ATTRS[attr_name] = (
                             entity_metadata.attribute_initialized_from_cache
                         )
+                        # claim the cluster handler, so ZHA initializes the attribute
+                        endpoint.claim_cluster_handlers([cluster_handler])
+                        # if REPORT_CONFIG is still empty, disable binding
+                        if not cluster_handler.REPORT_CONFIG:
+                            cluster_handler.BIND = (
+                                False  # no need to bind if only initializing attribute
+                            )
 
                 yield entity_class(
                     cluster_handlers=[cluster_handler],
