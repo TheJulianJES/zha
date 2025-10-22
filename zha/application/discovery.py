@@ -258,6 +258,7 @@ class DeviceProbe:
 
                 # process the entity metadata for ZCL_INIT_ATTRS and REPORT_CONFIG
                 if attr_name := getattr(entity_metadata, "attribute_name", None):
+                    # TODO: ignore "attribute write buttons"? currently, we claim ch
                     # if the entity has a reporting config, add it to the cluster handler
                     if rep_conf := getattr(entity_metadata, "reporting_config", None):
                         # if attr is already in REPORT_CONFIG, remove it first
