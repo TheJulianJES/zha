@@ -1,7 +1,7 @@
 """Test ZHA button."""
 
 from typing import Final
-from unittest.mock import _Call, call, patch
+from unittest.mock import call, patch
 
 import pytest
 from zhaquirks.const import (
@@ -288,7 +288,7 @@ async def custom_button_device(zha_gateway: Gateway):
     ],
 )
 async def test_quirks_command_button(
-    zha_gateway: Gateway, qualifier: str, request_call: _Call
+    zha_gateway: Gateway, qualifier: str, request_call
 ) -> None:
     """Test ZHA button platform."""
     zha_device, cluster = await custom_button_device(zha_gateway)
