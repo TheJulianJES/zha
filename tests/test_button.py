@@ -1,7 +1,7 @@
 """Test ZHA button."""
 
 from typing import Final
-from unittest.mock import call, patch
+from unittest.mock import _Call, call, patch
 
 import pytest
 from zhaquirks.const import (
@@ -221,9 +221,18 @@ async def custom_button_device(zha_gateway: Gateway):
         .command_button(
             FakeManufacturerCluster.ServerCommandDefs.self_test.name,
             FakeManufacturerCluster.cluster_id,
+            command_args=(5,),
+            unique_id_suffix="self_test_args",
+            translation_key="self_test_args",
+            fallback_name="Self test args",
+        )
+        .command_button(
+            FakeManufacturerCluster.ServerCommandDefs.self_test.name,
+            FakeManufacturerCluster.cluster_id,
             command_kwargs={"identify_time": 5},
-            translation_key="self_test",
-            fallback_name="Self test",
+            unique_id_suffix="self_test_kwargs",
+            translation_key="self_test_kwargs",
+            fallback_name="Self test kwargs",
         )
         .write_attr_button(
             FakeManufacturerCluster.AttributeDefs.feed.name,
@@ -249,14 +258,43 @@ async def custom_button_device(zha_gateway: Gateway):
     return zha_device, zigpy_device.endpoints[1].mfg_identify
 
 
+@pytest.mark.parametrize(
+    ("qualifier", "request_call"),
+    [
+        (
+            "self_test_args",
+            call(
+                False,
+                0,
+                FakeManufacturerCluster.ServerCommandDefs.self_test.schema,
+                5,
+                manufacturer=4151,
+                expect_reply=True,
+                tsn=None,
+            ),
+        ),
+        (
+            "self_test_kwargs",
+            call(
+                False,
+                0,
+                FakeManufacturerCluster.ServerCommandDefs.self_test.schema,
+                manufacturer=4151,
+                expect_reply=True,
+                tsn=None,
+                identify_time=5,
+            ),
+        ),
+    ],
+)
 async def test_quirks_command_button(
-    zha_gateway: Gateway,
+    zha_gateway: Gateway, qualifier: str, request_call: _Call
 ) -> None:
     """Test ZHA button platform."""
     zha_device, cluster = await custom_button_device(zha_gateway)
     assert cluster is not None
     entity: PlatformEntity = get_entity(
-        zha_device, platform=Platform.BUTTON, entity_type=Button
+        zha_device, platform=Platform.BUTTON, entity_type=Button, qualifier=qualifier
     )
 
     with patch(
@@ -266,16 +304,7 @@ async def test_quirks_command_button(
         await entity.async_press()
         await zha_gateway.async_block_till_done()
         assert len(cluster.request.mock_calls) == 1
-        assert cluster.request.call_args[0][0] is False
-        assert cluster.request.call_args[0][1] == 0
-        assert (
-            cluster.request.call_args[0][2]
-            == FakeManufacturerCluster.ServerCommandDefs.self_test.schema
-        )
-        assert cluster.request.call_args[1]["expect_reply"] is True
-        assert cluster.request.call_args[1]["manufacturer"] == 4151
-        assert cluster.request.call_args[1]["identify_time"] == 5
-        assert cluster.request.call_args[1]["tsn"] is None
+        assert cluster.request.mock_calls[0] == request_call
 
 
 async def test_quirks_write_attr_button(
