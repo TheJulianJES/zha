@@ -221,7 +221,7 @@ async def custom_button_device(zha_gateway: Gateway):
         .command_button(
             FakeManufacturerCluster.ServerCommandDefs.self_test.name,
             FakeManufacturerCluster.cluster_id,
-            command_args=(5,),
+            command_kwargs={"identify_time": 5},
             translation_key="self_test",
             fallback_name="Self test",
         )
@@ -387,7 +387,7 @@ async def test_cluster_handler_quirks_unnecessary_claiming(
         .command_button(
             FakeManufacturerCluster.ServerCommandDefs.self_test.name,
             OppleCluster.cluster_id,
-            command_args=(5,),
+            command_kwargs={"identify_time": 5},
             translation_key="self_test",
             fallback_name="Self test",
         )
