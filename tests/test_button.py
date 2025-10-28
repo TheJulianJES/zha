@@ -268,7 +268,7 @@ async def test_quirks_command_button(
         assert len(cluster.request.mock_calls) == 1
         assert cluster.request.call_args[0][0] is False
         assert cluster.request.call_args[0][1] == 0
-        assert cluster.request.call_args[0][3] == 5
+        assert cluster.request.call_args[0][3] == 5  # duration in seconds
 
 
 async def test_quirks_write_attr_button(
