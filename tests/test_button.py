@@ -221,7 +221,7 @@ async def custom_button_device(zha_gateway: Gateway):
         .command_button(
             FakeManufacturerCluster.ServerCommandDefs.self_test.name,
             FakeManufacturerCluster.cluster_id,
-            command_kwargs={"identify_time": 5},
+            command_args=(5,),
             translation_key="self_test",
             fallback_name="Self test",
         )
@@ -268,7 +268,7 @@ async def test_quirks_command_button(
         assert len(cluster.request.mock_calls) == 1
         assert cluster.request.call_args[0][0] is False
         assert cluster.request.call_args[0][1] == 0
-        assert cluster.request.call_args[0][3] == 5  # duration in seconds
+        assert cluster.request.call_args[0][3] == 5
 
 
 async def test_quirks_write_attr_button(
