@@ -385,7 +385,7 @@ async def test_cluster_handler_quirks_unnecessary_claiming(
         )
         .replaces(OppleCluster)
         .command_button(
-            FakeManufacturerCluster.ServerCommandDefs.self_test.name,
+            OppleCluster.ServerCommandDefs.self_test.name,
             OppleCluster.cluster_id,
             command_kwargs={"identify_time": 5},
             translation_key="self_test",
