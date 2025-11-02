@@ -199,7 +199,8 @@ def cluster_handlers(cluster_handler):
 def test_registry_matching(rule, matched, cluster_handlers) -> None:
     """Test strict rule matching."""
     assert (
-        rule.strict_matched(MANUFACTURER, MODEL, cluster_handlers, QUIRK_ID) is matched
+        rule.strict_matched(MANUFACTURER, MODEL, cluster_handlers, {QUIRK_ID})
+        is matched
     )
 
 
@@ -305,7 +306,7 @@ def test_registry_matching(rule, matched, cluster_handlers) -> None:
 def test_registry_loose_matching(rule, matched, cluster_handlers) -> None:
     """Test loose rule matching."""
     assert (
-        rule.loose_matched(MANUFACTURER, MODEL, cluster_handlers, QUIRK_ID) is matched
+        rule.loose_matched(MANUFACTURER, MODEL, cluster_handlers, {QUIRK_ID}) is matched
     )
 
 
@@ -434,7 +435,7 @@ def test_weighted_match(
     ch_level = cluster_handler("level", 8)
 
     match, claimed = entity_registry.get_entity(
-        s.component, manufacturer, model, [ch_on_off, ch_level], quirk_id
+        s.component, manufacturer, model, [ch_on_off, ch_level], {quirk_id}
     )
 
     assert match.__name__ == match_name
@@ -462,7 +463,7 @@ def test_multi_sensor_match(
         "manufacturer",
         "model",
         cluster_handlers=[ch_se, ch_illuminati],
-        quirk_id="quirk_id",
+        quirk_ids={"quirk_id"},
     )
 
     assert s.binary_sensor in match
@@ -492,7 +493,7 @@ def test_multi_sensor_match(
         "manufacturer",
         "model",
         cluster_handlers={ch_se, ch_illuminati},
-        quirk_id="quirk_id",
+        quirk_ids={"quirk_id"},
     )
 
     assert s.binary_sensor in match
