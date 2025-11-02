@@ -500,14 +500,15 @@ class EndpointProbe:
                 cluster_id, {None: ClusterHandler}
             )
 
-            quirk_id = (
-                endpoint.device.quirk_id
-                if endpoint.device.quirk_id in cluster_handler_classes
-                else None
-            )
+            # get first quirk id from device that matches a registered cluster handler
+            cluster_quirk_id: str | None = None
+            for qid in endpoint.device.quirk_id:
+                if qid in cluster_handler_classes:
+                    cluster_quirk_id = qid
+                    break
 
             cluster_handler_class = cluster_handler_classes.get(
-                quirk_id, ClusterHandler
+                cluster_quirk_id, ClusterHandler
             )
 
             cluster_handler = cluster_handler_class(cluster, endpoint)

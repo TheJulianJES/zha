@@ -189,7 +189,7 @@ class MatchRule:
         manufacturer: str,
         model: str,
         cluster_handlers: list,
-        quirk_id: str | None,
+        quirk_id: set[str],
     ) -> bool:
         """Return True if this device matches the criteria."""
         return all(self._matched(manufacturer, model, cluster_handlers, quirk_id))
@@ -199,7 +199,7 @@ class MatchRule:
         manufacturer: str,
         model: str,
         cluster_handlers: list,
-        quirk_id: str | None,
+        quirk_id: set[str],
     ) -> bool:
         """Return True if this device matches the criteria."""
         return any(self._matched(manufacturer, model, cluster_handlers, quirk_id))
@@ -209,7 +209,7 @@ class MatchRule:
         manufacturer: str,
         model: str,
         cluster_handlers: list,
-        quirk_id: str | None,
+        quirk_id: set[str],
     ) -> list:
         """Return a list of field matches."""
         if not any(
@@ -247,9 +247,9 @@ class MatchRule:
 
         if self.quirk_ids:
             if callable(self.quirk_ids):
-                matches.append(self.quirk_ids(quirk_id))
+                matches.append(any(self.quirk_ids(qid) for qid in quirk_id))
             else:
-                matches.append(quirk_id in self.quirk_ids)
+                matches.append(any(qid in self.quirk_ids for qid in quirk_id))
 
         return matches
 
@@ -290,7 +290,7 @@ class PlatformEntityRegistry:
         manufacturer: str,
         model: str,
         cluster_handlers: list[ClusterHandler],
-        quirk_id: str | None,
+        quirk_id: set[str],
         default: type[PlatformEntity] | None = None,
     ) -> tuple[type[PlatformEntity] | None, list[ClusterHandler]]:
         """Match a ZHA ClusterHandler to a ZHA Entity class."""
@@ -307,7 +307,7 @@ class PlatformEntityRegistry:
         manufacturer: str,
         model: str,
         cluster_handlers: list[ClusterHandler],
-        quirk_id: str | None,
+        quirk_id: set[str],
     ) -> tuple[
         dict[Platform, list[EntityClassAndClusterHandlers]], list[ClusterHandler]
     ]:
@@ -340,7 +340,7 @@ class PlatformEntityRegistry:
         manufacturer: str,
         model: str,
         cluster_handlers: list[ClusterHandler],
-        quirk_id: str | None,
+        quirk_id: set[str],
     ) -> tuple[
         dict[Platform, list[EntityClassAndClusterHandlers]], list[ClusterHandler]
     ]:

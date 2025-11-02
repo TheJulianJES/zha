@@ -187,7 +187,7 @@ class DeviceInfo:
     name: str
     quirk_applied: bool
     quirk_class: str
-    quirk_id: str | None
+    quirk_id: set[str]
     manufacturer_code: int | None
     power_source: str
     lqi: int
@@ -267,7 +267,9 @@ class Device(LogMixin, EventBase):
             f"{self._zigpy_device.__class__.__module__}."
             f"{self._zigpy_device.__class__.__name__}"
         )
-        self.quirk_id: str | None = getattr(self._zigpy_device, ATTR_QUIRK_ID, None)
+        qid: set[str] | str = getattr(self._zigpy_device, ATTR_QUIRK_ID, set())
+        self.quirk_id: set[str] = {qid} if isinstance(qid, str) else qid
+
         self._power_config_ch: ClusterHandler | None = None
         self._identify_ch: ClusterHandler | None = None
         self._basic_ch: ClusterHandler | None = None
