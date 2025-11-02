@@ -545,13 +545,13 @@ def test_quirk_classes() -> None:
             raise ValueError(f"Quirk ID '{value}' does not exist.")
 
     # get all quirk ID from zigpy quirks registry
-    all_quirk_ids = []
+    all_quirk_ids: set[str] = set()
     for manufacturer in zigpy_quirks._DEVICE_REGISTRY.registry_v1.values():
         for model_quirk_list in manufacturer.values():
             for quirk in model_quirk_list:
-                quirk_id = getattr(quirk, ATTR_QUIRK_ID, None)
-                if quirk_id is not None and quirk_id not in all_quirk_ids:
-                    all_quirk_ids.append(quirk_id)
+                qid: set[str] | str = getattr(quirk, ATTR_QUIRK_ID, set())
+                device_quirk_ids: set[str] = {qid} if isinstance(qid, str) else qid
+                all_quirk_ids.update(device_quirk_ids)
 
     # validate all quirk IDs used in component match rules
     for rule, _ in iter_all_rules():
