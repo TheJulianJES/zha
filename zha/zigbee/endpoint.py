@@ -152,7 +152,7 @@ class Endpoint:
 
             # get first quirk id from device that matches a registered cluster handler
             cluster_quirk_id: str | None = None
-            for qid in self.device.quirk_id:
+            for qid in self.device.quirk_ids:
                 if qid in cluster_handler_classes:
                     cluster_quirk_id = qid
                     break

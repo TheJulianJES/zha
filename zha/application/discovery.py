@@ -408,7 +408,7 @@ class EndpointProbe:
                 endpoint.device.manufacturer,
                 endpoint.device.model,
                 cluster_handlers,
-                endpoint.device.quirk_id,
+                endpoint.device.quirk_ids,
             )
             if entity_class is None:
                 return
@@ -437,7 +437,7 @@ class EndpointProbe:
             endpoint.device.manufacturer,
             endpoint.device.model,
             [cluster_handler],
-            endpoint.device.quirk_id,
+            endpoint.device.quirk_ids,
         )
         if entity_class is None:
             return
@@ -502,7 +502,7 @@ class EndpointProbe:
 
             # get first quirk id from device that matches a registered cluster handler
             cluster_quirk_id: str | None = None
-            for qid in endpoint.device.quirk_id:
+            for qid in endpoint.device.quirk_ids:
                 if qid in cluster_handler_classes:
                     cluster_quirk_id = qid
                     break
@@ -540,14 +540,14 @@ class EndpointProbe:
                 device.manufacturer,
                 device.model,
                 cluster_handlers,
-                device.quirk_id,
+                device.quirk_ids,
             )
         else:
             matches, claimed = PLATFORM_ENTITIES.get_multi_entity(
                 device.manufacturer,
                 device.model,
                 endpoint.unclaimed_cluster_handlers(),
-                device.quirk_id,
+                device.quirk_ids,
             )
 
         endpoint.claim_cluster_handlers(claimed)

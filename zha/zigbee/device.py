@@ -187,7 +187,7 @@ class DeviceInfo:
     name: str
     quirk_applied: bool
     quirk_class: str
-    quirk_id: set[str]
+    quirk_ids: set[str]
     manufacturer_code: int | None
     power_source: str
     lqi: int
@@ -268,7 +268,7 @@ class Device(LogMixin, EventBase):
             f"{self._zigpy_device.__class__.__name__}"
         )
         qid: set[str] | str = getattr(self._zigpy_device, ATTR_QUIRK_ID, set())
-        self.quirk_id: set[str] = {qid} if isinstance(qid, str) else qid
+        self.quirk_ids: set[str] = {qid} if isinstance(qid, str) else qid
 
         self._power_config_ch: ClusterHandler | None = None
         self._identify_ch: ClusterHandler | None = None
@@ -314,7 +314,7 @@ class Device(LogMixin, EventBase):
             f"{repr(self._zigpy_device)} - "
             f"quirk_applied: {self.quirk_applied} - "
             f"quirk_or_device_class: {self.quirk_class} - "
-            f"quirk_id: {self.quirk_id}"
+            f"quirk_ids: {self.quirk_ids}"
         )
 
     @property
@@ -742,7 +742,7 @@ class Device(LogMixin, EventBase):
             name=self.name,
             quirk_applied=self.quirk_applied,
             quirk_class=self.quirk_class,
-            quirk_id=self.quirk_id,
+            quirk_ids=self.quirk_ids,
             manufacturer_code=self.manufacturer_code,
             power_source=self.power_source,
             lqi=self.lqi,
@@ -1433,7 +1433,7 @@ class Device(LogMixin, EventBase):
         info["name"] = self.name
         info["quirk_applied"] = self.quirk_applied
         info["quirk_class"] = self.quirk_class
-        info["quirk_id"] = self.quirk_id
+        info["quirk_ids"] = self.quirk_ids
         info["manufacturer_code"] = self.manufacturer_code
         info["power_source"] = self.power_source
         info["lqi"] = self.lqi

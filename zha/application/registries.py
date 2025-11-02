@@ -189,27 +189,27 @@ class MatchRule:
         manufacturer: str,
         model: str,
         cluster_handlers: list,
-        quirk_id: set[str],
+        quirk_ids: set[str],
     ) -> bool:
         """Return True if this device matches the criteria."""
-        return all(self._matched(manufacturer, model, cluster_handlers, quirk_id))
+        return all(self._matched(manufacturer, model, cluster_handlers, quirk_ids))
 
     def loose_matched(
         self,
         manufacturer: str,
         model: str,
         cluster_handlers: list,
-        quirk_id: set[str],
+        quirk_ids: set[str],
     ) -> bool:
         """Return True if this device matches the criteria."""
-        return any(self._matched(manufacturer, model, cluster_handlers, quirk_id))
+        return any(self._matched(manufacturer, model, cluster_handlers, quirk_ids))
 
     def _matched(
         self,
         manufacturer: str,
         model: str,
         cluster_handlers: list,
-        quirk_id: set[str],
+        quirk_ids: set[str],
     ) -> list:
         """Return a list of field matches."""
         if not any(
@@ -247,9 +247,9 @@ class MatchRule:
 
         if self.quirk_ids:
             if callable(self.quirk_ids):
-                matches.append(any(self.quirk_ids(qid) for qid in quirk_id))
+                matches.append(any(self.quirk_ids(qid) for qid in quirk_ids))
             else:
-                matches.append(any(qid in self.quirk_ids for qid in quirk_id))
+                matches.append(any(qid in self.quirk_ids for qid in quirk_ids))
 
         return matches
 
@@ -290,13 +290,13 @@ class PlatformEntityRegistry:
         manufacturer: str,
         model: str,
         cluster_handlers: list[ClusterHandler],
-        quirk_id: set[str],
+        quirk_ids: set[str],
         default: type[PlatformEntity] | None = None,
     ) -> tuple[type[PlatformEntity] | None, list[ClusterHandler]]:
         """Match a ZHA ClusterHandler to a ZHA Entity class."""
         matches = self._strict_registry[platform]
         for match in sorted(matches, key=WEIGHT_ATTR, reverse=True):
-            if match.strict_matched(manufacturer, model, cluster_handlers, quirk_id):
+            if match.strict_matched(manufacturer, model, cluster_handlers, quirk_ids):
                 claimed = match.claim_cluster_handlers(cluster_handlers)
                 return self._strict_registry[platform][match], claimed
 
@@ -307,7 +307,7 @@ class PlatformEntityRegistry:
         manufacturer: str,
         model: str,
         cluster_handlers: list[ClusterHandler],
-        quirk_id: set[str],
+        quirk_ids: set[str],
     ) -> tuple[
         dict[Platform, list[EntityClassAndClusterHandlers]], list[ClusterHandler]
     ]:
@@ -321,7 +321,7 @@ class PlatformEntityRegistry:
                 sorted_matches = sorted(matches, key=WEIGHT_ATTR, reverse=True)
                 for match in sorted_matches:
                     if match.strict_matched(
-                        manufacturer, model, cluster_handlers, quirk_id
+                        manufacturer, model, cluster_handlers, quirk_ids
                     ):
                         claimed = match.claim_cluster_handlers(cluster_handlers)
                         for ent_class in matches[match]:
@@ -340,7 +340,7 @@ class PlatformEntityRegistry:
         manufacturer: str,
         model: str,
         cluster_handlers: list[ClusterHandler],
-        quirk_id: set[str],
+        quirk_ids: set[str],
     ) -> tuple[
         dict[Platform, list[EntityClassAndClusterHandlers]], list[ClusterHandler]
     ]:
@@ -357,7 +357,7 @@ class PlatformEntityRegistry:
                 sorted_matches = sorted(matches, key=WEIGHT_ATTR, reverse=True)
                 for match in sorted_matches:
                     if match.strict_matched(
-                        manufacturer, model, cluster_handlers, quirk_id
+                        manufacturer, model, cluster_handlers, quirk_ids
                     ):
                         claimed = match.claim_cluster_handlers(cluster_handlers)
                         for ent_class in matches[match]:

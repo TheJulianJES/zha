@@ -545,7 +545,7 @@ class OnOffClusterHandler(ClusterHandler):
         super().__init__(cluster, endpoint)
         self._off_listener: asyncio.TimerHandle | None = None
 
-        if TUYA_PLUG_ONOFF in endpoint.device.quirk_id:
+        if TUYA_PLUG_ONOFF in endpoint.device.quirk_ids:
             self.ZCL_INIT_ATTRS = self.ZCL_INIT_ATTRS.copy()
             self.ZCL_INIT_ATTRS["backlight_mode"] = True
             self.ZCL_INIT_ATTRS["power_on_state"] = True
