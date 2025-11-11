@@ -268,7 +268,7 @@ class Device(LogMixin, EventBase):
             f"{self._zigpy_device.__class__.__name__}"
         )
         qid: set[str] | str = getattr(self._zigpy_device, ATTR_QUIRK_ID, set())
-        self.quirk_ids: set[str] = {qid} if isinstance(qid, str) else qid
+        self.quirk_ids: set[str] = {qid} if isinstance(qid, str) else set(qid)
 
         self._power_config_ch: ClusterHandler | None = None
         self._identify_ch: ClusterHandler | None = None

@@ -550,7 +550,7 @@ def test_quirk_classes() -> None:
         for model_quirk_list in manufacturer.values():
             for quirk in model_quirk_list:
                 qid: set[str] | str = getattr(quirk, ATTR_QUIRK_ID, set())
-                device_quirk_ids: set[str] = {qid} if isinstance(qid, str) else qid
+                device_quirk_ids: set[str] = {qid} if isinstance(qid, str) else set(qid)
                 all_quirk_ids.update(device_quirk_ids)
 
     # validate all quirk IDs used in component match rules

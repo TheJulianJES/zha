@@ -545,7 +545,7 @@ def test_cluster_handler_registry() -> None:
         for model_quirk_list in manufacturer.values():
             for quirk in model_quirk_list:
                 qid: set[str] | str = getattr(quirk, ATTR_QUIRK_ID, set())
-                quirk_ids: set[str] = {qid} if isinstance(qid, str) else qid
+                quirk_ids: set[str] = {qid} if isinstance(qid, str) else set(qid)
 
                 device_description: dict[str, dict[str, Any]] = getattr(
                     quirk, "replacement", None
