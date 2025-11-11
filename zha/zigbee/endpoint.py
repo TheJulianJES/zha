@@ -150,15 +150,16 @@ class Endpoint:
                 cluster_id, {None: ClusterHandler}
             )
 
-            # get first quirk id from device that matches a registered cluster handler
-            cluster_quirk_id: str | None = None
-            for qid in self.device.quirk_ids:
-                if qid in cluster_handler_classes:
-                    cluster_quirk_id = qid
+            # get first exposed feature from device
+            # that matches a registered cluster handler
+            cluster_exposed_features: str | None = None
+            for exposed_features in self.device.exposes_features:
+                if exposed_features in cluster_handler_classes:
+                    cluster_exposed_features = exposed_features
                     break
 
             cluster_handler_class = cluster_handler_classes.get(
-                cluster_quirk_id, ClusterHandler
+                cluster_exposed_features, ClusterHandler
             )
 
             # Allow cluster handler to filter out bad matches

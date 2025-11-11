@@ -1972,7 +1972,7 @@ class BitMapSensor(Sensor):
 
 @MULTI_MATCH(
     cluster_handler_names=CLUSTER_HANDLER_THERMOSTAT,
-    quirk_ids={DANFOSS_ALLY_THERMOSTAT},
+    exposed_features={DANFOSS_ALLY_THERMOSTAT},
 )
 class DanfossOpenWindowDetection(EnumSensor):
     """Danfoss proprietary attribute.
@@ -1988,7 +1988,7 @@ class DanfossOpenWindowDetection(EnumSensor):
 
 @CONFIG_DIAGNOSTIC_MATCH(
     cluster_handler_names=CLUSTER_HANDLER_THERMOSTAT,
-    quirk_ids={DANFOSS_ALLY_THERMOSTAT},
+    exposed_features={DANFOSS_ALLY_THERMOSTAT},
 )
 class DanfossLoadEstimate(Sensor):
     """Danfoss proprietary attribute for communicating its estimate of the radiator load."""
@@ -2001,7 +2001,7 @@ class DanfossLoadEstimate(Sensor):
 
 @CONFIG_DIAGNOSTIC_MATCH(
     cluster_handler_names=CLUSTER_HANDLER_THERMOSTAT,
-    quirk_ids={DANFOSS_ALLY_THERMOSTAT},
+    exposed_features={DANFOSS_ALLY_THERMOSTAT},
 )
 class DanfossAdaptationRunStatus(BitMapSensor):
     """Danfoss proprietary attribute for showing the status of the adaptation run."""
@@ -2015,7 +2015,7 @@ class DanfossAdaptationRunStatus(BitMapSensor):
 
 @CONFIG_DIAGNOSTIC_MATCH(
     cluster_handler_names=CLUSTER_HANDLER_THERMOSTAT,
-    quirk_ids={DANFOSS_ALLY_THERMOSTAT},
+    exposed_features={DANFOSS_ALLY_THERMOSTAT},
 )
 class DanfossPreheatTime(Sensor):
     """Danfoss proprietary attribute for communicating the time when it starts pre-heating."""
@@ -2029,7 +2029,7 @@ class DanfossPreheatTime(Sensor):
 
 @CONFIG_DIAGNOSTIC_MATCH(
     cluster_handler_names=CLUSTER_HANDLER_DIAGNOSTIC,
-    quirk_ids={DANFOSS_ALLY_THERMOSTAT},
+    exposed_features={DANFOSS_ALLY_THERMOSTAT},
 )
 class DanfossSoftwareErrorCode(BitMapSensor):
     """Danfoss proprietary attribute for communicating the error code."""
@@ -2043,7 +2043,7 @@ class DanfossSoftwareErrorCode(BitMapSensor):
 
 @CONFIG_DIAGNOSTIC_MATCH(
     cluster_handler_names=CLUSTER_HANDLER_DIAGNOSTIC,
-    quirk_ids={DANFOSS_ALLY_THERMOSTAT},
+    exposed_features={DANFOSS_ALLY_THERMOSTAT},
 )
 class DanfossMotorStepCounter(Sensor):
     """Danfoss proprietary attribute for communicating the motor step counter."""
