@@ -99,6 +99,7 @@ def cluster_handlers(cluster_handler):
         ),
         (MatchRule(exposed_features=EXPOSED_FEATURE), True),
         (MatchRule(exposed_features="no match"), False),
+        (MatchRule(exposed_features={"no match for this yet", EXPOSED_FEATURE}), True),
         (
             MatchRule(
                 exposed_features=EXPOSED_FEATURE,
