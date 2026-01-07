@@ -167,9 +167,11 @@ class Endpoint:
                 cluster_handler_class = ClusterHandler
 
             _LOGGER.debug(
-                "Creating cluster handler for cluster id: %s class: %s",
+                "Creating INPUT cluster handler for cluster id: %s class: %s device: %s endpoint: %s",
                 cluster_id,
-                cluster_handler_class,
+                cluster_handler_class.__name__,
+                self._device.ieee,
+                self.id,
             )
 
             try:
