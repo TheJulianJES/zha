@@ -260,7 +260,7 @@
               },
               "id": "1:0x0006",
               "unique_id": "ab:cd:ef:12:d3:a3:07:1f:1:0x0006",
-              "status": "CONFIGURED",
+              "status": "INITIALIZED",
               "value_attribute": "on_off"
             }
           ],

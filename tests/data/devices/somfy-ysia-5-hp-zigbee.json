@@ -578,7 +578,7 @@
               },
               "id": "1:0x0006",
               "unique_id": "ab:cd:ef:12:05:26:2e:c9:1:0x0006",
-              "status": "CONFIGURED",
+              "status": "INITIALIZED",
               "value_attribute": "on_off"
             }
           ],
@@ -621,7 +621,7 @@
               },
               "id": "2:0x0006",
               "unique_id": "ab:cd:ef:12:05:26:2e:c9:2:0x0006",
-              "status": "CONFIGURED",
+              "status": "INITIALIZED",
               "value_attribute": "on_off"
             }
           ],
@@ -664,7 +664,7 @@
               },
               "id": "3:0x0006",
               "unique_id": "ab:cd:ef:12:05:26:2e:c9:3:0x0006",
-              "status": "CONFIGURED",
+              "status": "INITIALIZED",
               "value_attribute": "on_off"
             }
           ],
@@ -707,7 +707,7 @@
               },
               "id": "4:0x0006",
               "unique_id": "ab:cd:ef:12:05:26:2e:c9:4:0x0006",
-              "status": "CONFIGURED",
+              "status": "INITIALIZED",
               "value_attribute": "on_off"
             }
           ],
@@ -750,7 +750,7 @@
               },
               "id": "5:0x0006",
               "unique_id": "ab:cd:ef:12:05:26:2e:c9:5:0x0006",
-              "status": "CONFIGURED",
+              "status": "INITIALIZED",
               "value_attribute": "on_off"
             }
           ],

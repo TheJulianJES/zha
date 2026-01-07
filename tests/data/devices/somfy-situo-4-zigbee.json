@@ -366,7 +366,7 @@
               },
               "id": "1:0x0006",
               "unique_id": "ab:cd:ef:12:85:3b:98:5a:1:0x0006",
-              "status": "CONFIGURED",
+              "status": "INITIALIZED",
               "value_attribute": "on_off"
             }
           ],
@@ -409,7 +409,7 @@
               },
               "id": "2:0x0006",
               "unique_id": "ab:cd:ef:12:85:3b:98:5a:2:0x0006",
-              "status": "CONFIGURED",
+              "status": "INITIALIZED",
               "value_attribute": "on_off"
             }
           ],
@@ -452,7 +452,7 @@
               },
               "id": "3:0x0006",
               "unique_id": "ab:cd:ef:12:85:3b:98:5a:3:0x0006",
-              "status": "CONFIGURED",
+              "status": "INITIALIZED",
               "value_attribute": "on_off"
             }
           ],
@@ -495,7 +495,7 @@
               },
               "id": "4:0x0006",
               "unique_id": "ab:cd:ef:12:85:3b:98:5a:4:0x0006",
-              "status": "CONFIGURED",
+              "status": "INITIALIZED",
               "value_attribute": "on_off"
             }
           ],

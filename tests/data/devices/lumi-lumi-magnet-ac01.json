@@ -179,7 +179,7 @@
               },
               "id": "1:0x0006",
               "unique_id": "54:ef:44:10:00:1e:85:7f:1:0x0006",
-              "status": "CONFIGURED",
+              "status": "INITIALIZED",
               "value_attribute": "on_off"
             }
           ],

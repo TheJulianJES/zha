@@ -212,7 +212,7 @@
               },
               "id": "1:0x0006",
               "unique_id": "00:15:8d:00:01:ab:40:52:1:0x0006",
-              "status": "CONFIGURED",
+              "status": "INITIALIZED",
               "value_attribute": "on_off"
             }
           ],

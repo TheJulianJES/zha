@@ -241,7 +241,7 @@
               },
               "id": "1:0x0006",
               "unique_id": "a4:c1:38:01:fb:fa:59:2b:1:0x0006",
-              "status": "CONFIGURED",
+              "status": "INITIALIZED",
               "value_attribute": "on_off"
             }
           ],
