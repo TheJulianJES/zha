@@ -512,6 +512,24 @@ class EndpointProbe:
                 cluster_exposed_feature, ClusterHandler
             )
 
+            # Check if a listener is already registered on this cluster to prevent duplicates
+            # This can happen if entity discovery is called multiple times
+            # Note: zigpy stores listeners as tuples (listener, weak_ref_flag)
+            existing_listeners = getattr(cluster, "_listeners", {})
+            has_existing_handler = any(
+                isinstance(listener_tuple[0], cluster_handler_class)
+                for listener_tuple in existing_listeners.values()
+                if isinstance(listener_tuple, tuple) and len(listener_tuple) > 0
+            )
+            if has_existing_handler:
+                _LOGGER.debug(
+                    "Handler already registered for OUTPUT cluster %s:%s on %s - skipping",
+                    endpoint.id,
+                    cluster_id,
+                    endpoint.device.ieee,
+                )
+                continue
+
             cluster_handler = cluster_handler_class(cluster, endpoint)
             cluster_handler.on_add()
 
