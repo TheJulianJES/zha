@@ -80,12 +80,12 @@ async def test_alarm_control_panel(
     # test that the state is STATE_ALARM_DISARMED
     assert alarm_entity.state["state"] == AlarmState.DISARMED
 
-    # arm_away
+    # arm_away from ZHA - only sends panel_status_changed (not arm_response)
     cluster.client_command.reset_mock()
     await alarm_entity.async_alarm_arm_away("4321")
     await zha_gateway.async_block_till_done()
-    assert cluster.client_command.call_count == 2
-    assert cluster.client_command.await_count == 2
+    assert cluster.client_command.call_count == 1
+    assert cluster.client_command.await_count == 1
     assert cluster.client_command.call_args == call(
         4,
         security.IasAce.PanelStatus.Armed_Away,
@@ -105,15 +105,16 @@ async def test_alarm_control_panel(
     assert alarm_entity.state["state"] == AlarmState.ARMED_AWAY
     cluster.client_command.reset_mock()
 
-    # now simulate a faulty code entry sequence
+    # now simulate a faulty code entry sequence from ZHA
+    # panel_status_changed is only sent on 3rd attempt when alarm triggers
     await alarm_entity.async_alarm_disarm("0000")
     await alarm_entity.async_alarm_disarm("0000")
     await alarm_entity.async_alarm_disarm("0000")
     await zha_gateway.async_block_till_done()
 
     assert alarm_entity.state["state"] == AlarmState.TRIGGERED
-    assert cluster.client_command.call_count == 6
-    assert cluster.client_command.await_count == 6
+    assert cluster.client_command.call_count == 1
+    assert cluster.client_command.await_count == 1
     assert cluster.client_command.call_args == call(
         4,
         security.IasAce.PanelStatus.In_Alarm,
@@ -125,12 +126,12 @@ async def test_alarm_control_panel(
     # reset the panel
     await reset_alarm_panel(zha_gateway, cluster, alarm_entity)
 
-    # arm_home
+    # arm_home from ZHA - only sends panel_status_changed
     await alarm_entity.async_alarm_arm_home("4321")
     await zha_gateway.async_block_till_done()
     assert alarm_entity.state["state"] == AlarmState.ARMED_HOME
-    assert cluster.client_command.call_count == 2
-    assert cluster.client_command.await_count == 2
+    assert cluster.client_command.call_count == 1
+    assert cluster.client_command.await_count == 1
     assert cluster.client_command.call_args == call(
         4,
         security.IasAce.PanelStatus.Armed_Stay,
@@ -142,12 +143,12 @@ async def test_alarm_control_panel(
     # reset the panel
     await reset_alarm_panel(zha_gateway, cluster, alarm_entity)
 
-    # arm_night
+    # arm_night from ZHA - only sends panel_status_changed
     await alarm_entity.async_alarm_arm_night("4321")
     await zha_gateway.async_block_till_done()
     assert alarm_entity.state["state"] == AlarmState.ARMED_NIGHT
-    assert cluster.client_command.call_count == 2
-    assert cluster.client_command.await_count == 2
+    assert cluster.client_command.call_count == 1
+    assert cluster.client_command.await_count == 1
     assert cluster.client_command.call_args == call(
         4,
         security.IasAce.PanelStatus.Armed_Night,
@@ -265,8 +266,9 @@ async def reset_alarm_panel(
     await entity.async_alarm_disarm("4321")
     await zha_gateway.async_block_till_done()
     assert entity.state["state"] == AlarmState.DISARMED
-    assert cluster.client_command.call_count == 2
-    assert cluster.client_command.await_count == 2
+    # ZHA-initiated disarm only sends panel_status_changed (not arm_response)
+    assert cluster.client_command.call_count == 1
+    assert cluster.client_command.await_count == 1
     assert cluster.client_command.call_args == call(
         4,
         security.IasAce.PanelStatus.Panel_Disarmed,

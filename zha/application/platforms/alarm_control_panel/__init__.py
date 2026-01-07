@@ -7,8 +7,6 @@ import functools
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
-from zigpy.zcl.clusters.security import IasAce
-
 from zha.application import Platform
 from zha.application.platforms import BaseEntityInfo, PlatformEntity
 from zha.application.platforms.alarm_control_panel.const import (
@@ -135,22 +133,22 @@ class AlarmControlPanel(PlatformEntity):
 
     async def async_alarm_disarm(self, code: str | None = None) -> None:
         """Send disarm command."""
-        self._cluster_handler.arm(IasAce.ArmMode.Disarm, code, 0)
+        self._cluster_handler.disarm(code)
         self.maybe_emit_state_changed_event()
 
     async def async_alarm_arm_home(self, code: str | None = None) -> None:
         """Send arm home command."""
-        self._cluster_handler.arm(IasAce.ArmMode.Arm_Day_Home_Only, code, 0)
+        self._cluster_handler.arm_home(code)
         self.maybe_emit_state_changed_event()
 
     async def async_alarm_arm_away(self, code: str | None = None) -> None:
         """Send arm away command."""
-        self._cluster_handler.arm(IasAce.ArmMode.Arm_All_Zones, code, 0)
+        self._cluster_handler.arm_away(code)
         self.maybe_emit_state_changed_event()
 
     async def async_alarm_arm_night(self, code: str | None = None) -> None:
         """Send arm night command."""
-        self._cluster_handler.arm(IasAce.ArmMode.Arm_Night_Sleep_Only, code, 0)
+        self._cluster_handler.arm_night(code)
         self.maybe_emit_state_changed_event()
 
     async def async_alarm_trigger(self, code: str | None = None) -> None:  # pylint: disable=unused-argument

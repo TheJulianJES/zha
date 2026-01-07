@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 import dataclasses
 from typing import TYPE_CHECKING, Any, Final
 
@@ -75,7 +75,8 @@ class IasAceClusterHandler(ClusterHandler):
     def cluster_command(self, tsn, command_id, args) -> None:
         """Handle commands received to this cluster."""
         self.debug(
-            "received command %s", self._cluster.server_commands[command_id].name
+            "received command %s",
+            self._cluster.server_commands[command_id].name,
         )
         self.command_map[command_id](*args)
 
@@ -104,7 +105,7 @@ class IasAceClusterHandler(ClusterHandler):
             self.emit_zha_event(f"{self.unique_id}_{SIGNAL_ARMED_STATE_CHANGED}", [])
         self._emit_panel_status_changed()
 
-    def _disarm(self, code: str):
+    def _disarm(self, code: str | None) -> Coroutine[Any, Any, None]:
         """Test the code and disarm the panel if the code is correct."""
         if (
             code != self.panel_code
@@ -135,7 +136,7 @@ class IasAceClusterHandler(ClusterHandler):
             self.alarm_status = AceCluster.AlarmStatus.No_Alarm
         return zigbee_reply
 
-    def _arm_day(self, code: str) -> None:
+    def _arm_day(self, code: str | None) -> Coroutine[Any, Any, None]:
         """Arm the panel for day / home zones."""
         return self._handle_arm(
             code,
@@ -143,7 +144,7 @@ class IasAceClusterHandler(ClusterHandler):
             AceCluster.ArmNotification.Only_Day_Home_Zones_Armed,
         )
 
-    def _arm_night(self, code: str) -> None:
+    def _arm_night(self, code: str | None) -> Coroutine[Any, Any, None]:
         """Arm the panel for night / sleep zones."""
         return self._handle_arm(
             code,
@@ -151,7 +152,7 @@ class IasAceClusterHandler(ClusterHandler):
             AceCluster.ArmNotification.Only_Night_Sleep_Zones_Armed,
         )
 
-    def _arm_away(self, code: str) -> None:
+    def _arm_away(self, code: str | None) -> Coroutine[Any, Any, None]:
         """Arm the panel for away mode."""
         return self._handle_arm(
             code,
@@ -161,10 +162,10 @@ class IasAceClusterHandler(ClusterHandler):
 
     def _handle_arm(
         self,
-        code: str,
+        code: str | None,
         panel_status: AceCluster.PanelStatus,
         armed_type: AceCluster.ArmNotification,
-    ) -> None:
+    ) -> Coroutine[Any, Any, None]:
         """Arm the panel with the specified statuses."""
         if self.code_required_arm_actions and code != self.panel_code:
             self.debug("Invalid code supplied to IAS ACE")
@@ -202,14 +203,84 @@ class IasAceClusterHandler(ClusterHandler):
         self.armed_state = AceCluster.PanelStatus.In_Alarm
         self._emit_panel_status_changed()
 
-    def _get_zone_id_map(self):
+    def disarm(self, code: str | None) -> bool:
+        """Disarm the panel from ZHA side.
+
+        Returns True if disarm succeeded, False if code validation failed.
+        Only sends panel_status_changed (not arm_response).
+        """
+        if (
+            code != self.panel_code
+            and self.armed_state != AceCluster.PanelStatus.Panel_Disarmed
+        ):
+            self.debug("Invalid code supplied to IAS ACE")
+            self.invalid_tries += 1
+            if (
+                self.invalid_tries >= self.max_invalid_tries
+                and self.armed_state != AceCluster.PanelStatus.In_Alarm
+            ):
+                # Only trigger alarm if not already in alarm state
+                self.alarm_status = AceCluster.AlarmStatus.Emergency
+                self.armed_state = AceCluster.PanelStatus.In_Alarm
+                self._emit_panel_status_changed()
+            return False
+
+        self.invalid_tries = 0
+        self.armed_state = AceCluster.PanelStatus.Panel_Disarmed
+        self.alarm_status = AceCluster.AlarmStatus.No_Alarm
+        self._emit_panel_status_changed()
+        return True
+
+    def arm_away(self, code: str | None) -> bool:
+        """Arm the panel in away mode from ZHA side.
+
+        Returns True if arm succeeded, False if code validation failed.
+        Only sends panel_status_changed (not arm_response).
+        """
+        return self._arm(code, AceCluster.PanelStatus.Armed_Away)
+
+    def arm_home(self, code: str | None) -> bool:
+        """Arm the panel in home/day mode from ZHA side.
+
+        Returns True if arm succeeded, False if code validation failed.
+        Only sends panel_status_changed (not arm_response).
+        """
+        return self._arm(code, AceCluster.PanelStatus.Armed_Stay)
+
+    def arm_night(self, code: str | None) -> bool:
+        """Arm the panel in night mode from ZHA side.
+
+        Returns True if arm succeeded, False if code validation failed.
+        Only sends panel_status_changed (not arm_response).
+        """
+        return self._arm(code, AceCluster.PanelStatus.Armed_Night)
+
+    def _arm(self, code: str | None, panel_status: AceCluster.PanelStatus) -> bool:
+        """Arm the panel from ZHA side with validation.
+
+        Returns True if arm succeeded, False if code validation failed.
+        """
+        if self.code_required_arm_actions and code != self.panel_code:
+            self.debug("Invalid code supplied to IAS ACE")
+            return False
+
+        self.armed_state = panel_status
+        self._emit_panel_status_changed()
+        return True
+
+    def _get_zone_id_map(self) -> None:
         """Handle the IAS ACE zone id map command."""
 
-    def _get_zone_info(self, zone_id):
+    def _get_zone_info(self, zone_id: int) -> None:
         """Handle the IAS ACE zone info command."""
 
     def _send_panel_status_response(self) -> None:
-        """Handle the IAS ACE panel status response command."""
+        """Handle the IAS ACE get_panel_status command by sending panel_status_response."""
+        self.debug(
+            "Sending panel status response: armed_state=%s, alarm_status=%s",
+            self.armed_state.name,
+            self.alarm_status.name,
+        )
         response = self.panel_status_response(
             self.armed_state,
             0x00,
@@ -232,12 +303,16 @@ class IasAceClusterHandler(ClusterHandler):
             ClusterHandlerStateChangedEvent(),
         )
 
-    def _get_bypassed_zone_list(self):
+    def _get_bypassed_zone_list(self) -> None:
         """Handle the IAS ACE bypassed zone list command."""
 
     def _get_zone_status(
-        self, starting_zone_id, max_zone_ids, zone_status_mask_flag, zone_status_mask
-    ):
+        self,
+        starting_zone_id: int,
+        max_zone_ids: int,
+        zone_status_mask_flag: int,
+        zone_status_mask: int,
+    ) -> None:
         """Handle the IAS ACE zone status command."""
 
 
@@ -247,15 +322,16 @@ class IasWdClusterHandler(ClusterHandler):
     """IAS Warning Device cluster handler."""
 
     @staticmethod
-    def set_bit(destination_value, destination_bit, source_value, source_bit):
+    def set_bit(
+        destination_value: int, destination_bit: int, source_value: int, source_bit: int
+    ) -> int:
         """Set the specified bit in the value."""
-
         if IasWdClusterHandler.get_bit(source_value, source_bit):
             return destination_value | (1 << destination_bit)
         return destination_value
 
     @staticmethod
-    def get_bit(value, bit):
+    def get_bit(value: int, bit: int) -> bool:
         """Get the specified bit from the value."""
         return (value & (1 << bit)) != 0
 
