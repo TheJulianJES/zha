@@ -1219,6 +1219,7 @@ class SmartEnergyMetering(PollableSensor):
 
     entity_description: SmartEnergyMeteringEntityDescription
     _use_custom_polling: bool = False
+    _attr_suggested_display_precision = 1
     _attribute_name = "instantaneous_demand"
     _attr_translation_key: str = "instantaneous_demand"
     _attr_extra_state_attribute_names: set[str] = {
