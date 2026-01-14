@@ -3071,7 +3071,7 @@
           "endpoint_id": 5,
           "available": true,
           "group_id": null,
-          "suggested_display_precision": null,
+          "suggested_display_precision": 1,
           "unit": "W"
         },
         "state": {

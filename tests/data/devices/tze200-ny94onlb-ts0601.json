@@ -1178,7 +1178,7 @@
           "endpoint_id": 1,
           "available": true,
           "group_id": null,
-          "suggested_display_precision": 1,
+          "suggested_display_precision": 2,
           "unit": "A"
         },
         "state": {
@@ -1226,7 +1226,7 @@
           "endpoint_id": 1,
           "available": true,
           "group_id": null,
-          "suggested_display_precision": 1,
+          "suggested_display_precision": 2,
           "unit": "A"
         },
         "state": {
@@ -1274,7 +1274,7 @@
           "endpoint_id": 1,
           "available": true,
           "group_id": null,
-          "suggested_display_precision": 1,
+          "suggested_display_precision": 2,
           "unit": "A"
         },
         "state": {
@@ -1514,7 +1514,7 @@
           "endpoint_id": 10,
           "available": true,
           "group_id": null,
-          "suggested_display_precision": 1,
+          "suggested_display_precision": 2,
           "unit": "A"
         },
         "state": {
@@ -1658,7 +1658,7 @@
           "endpoint_id": 20,
           "available": true,
           "group_id": null,
-          "suggested_display_precision": 1,
+          "suggested_display_precision": 2,
           "unit": "A"
         },
         "state": {
@@ -1802,7 +1802,7 @@
           "endpoint_id": 30,
           "available": true,
           "group_id": null,
-          "suggested_display_precision": 1,
+          "suggested_display_precision": 2,
           "unit": "A"
         },
         "state": {
