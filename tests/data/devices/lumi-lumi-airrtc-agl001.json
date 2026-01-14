@@ -12,9 +12,9 @@
   "exposes_features": [],
   "manufacturer_code": 4447,
   "power_source": "Battery or Unknown",
-  "lqi": 132,
-  "rssi": -67,
-  "last_seen": "2026-01-12T21:06:46.129234+00:00",
+  "lqi": 140,
+  "rssi": -65,
+  "last_seen": "2026-01-14T04:37:29.927773+00:00",
   "available": true,
   "device_type": "EndDevice",
   "active_coordinator": false,
@@ -143,7 +143,7 @@
               "id": "0x0000",
               "name": "local_temperature",
               "zcl_type": "int16",
-              "value": 2190
+              "value": 2090
             },
             {
               "id": "0x0010",
@@ -185,7 +185,7 @@
               "id": "0x0012",
               "name": "occupied_heating_setpoint",
               "zcl_type": "int16",
-              "value": 500
+              "value": 2300
             },
             {
               "id": "0x0030",
@@ -197,7 +197,7 @@
               "id": "0x001c",
               "name": "system_mode",
               "zcl_type": "enum8",
-              "value": 0
+              "value": 4
             },
             {
               "id": "0x0013",
@@ -272,7 +272,7 @@
               "id": "0x0271",
               "name": "system_mode",
               "zcl_type": "uint8",
-              "value": 0
+              "value": 1
             },
             {
               "id": "0x0275",
@@ -638,19 +638,19 @@
         "state": {
           "class_name": "Thermostat",
           "available": true,
-          "current_temperature": 21.9,
+          "current_temperature": 20.9,
           "outdoor_temperature": null,
-          "target_temperature": null,
+          "target_temperature": 23.0,
           "target_temperature_high": null,
           "target_temperature_low": null,
           "hvac_action": null,
-          "hvac_mode": "off",
+          "hvac_mode": "heat",
           "preset_mode": "none",
           "fan_mode": "auto",
-          "system_mode": "[0]/off",
+          "system_mode": "[4]/heat",
           "occupancy": null,
           "occupied_cooling_setpoint": 2600,
-          "occupied_heating_setpoint": 500,
+          "occupied_heating_setpoint": 2300,
           "pi_heating_demand": null,
           "pi_cooling_demand": null,
           "unoccupied_cooling_setpoint": null,
@@ -809,7 +809,7 @@
         "state": {
           "class_name": "LQISensor",
           "available": true,
-          "state": 132
+          "state": 140
         }
       },
       {
@@ -853,7 +853,7 @@
         "state": {
           "class_name": "RSSISensor",
           "available": true,
-          "state": -67
+          "state": -65
         }
       },
       {
