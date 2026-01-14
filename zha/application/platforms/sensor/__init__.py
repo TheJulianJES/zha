@@ -907,6 +907,7 @@ class ElectricalMeasurementApparentPower(BaseElectricalMeasurement):
 class ElectricalMeasurementRMSCurrent(BaseElectricalMeasurement):
     """RMS current measurement."""
 
+    _attr_suggested_display_precision = 2
     _attribute_name = "rms_current"
     _unique_id_suffix = "rms_current"
     _attr_max_attribute_name = "rms_current_max"
