@@ -202,20 +202,15 @@ class BaseFirmwareUpdateEntity(PlatformEntity):
             self._attr_release_url = latest_firmware.metadata.release_url or None
 
             # Combine release notes from all upgrades (newest to oldest)
-            if len(images_result.upgrades) > 1:
-                release_notes_parts = []
-                for firmware in images_result.upgrades:
-                    if firmware.metadata.release_notes:
-                        release_notes_parts.append(
-                            f"## 0x{firmware.version:08x}\n{firmware.metadata.release_notes}"
-                        )
-                self._attr_release_notes = (
-                    "\n\n".join(release_notes_parts) if release_notes_parts else None
-                )
-            else:
-                self._attr_release_notes = (
-                    latest_firmware.metadata.release_notes or None
-                )
+            release_notes_parts = []
+            for firmware in images_result.upgrades:
+                if firmware.metadata.release_notes:
+                    release_notes_parts.append(
+                        f"## 0x{firmware.version:08x}\n{firmware.metadata.release_notes}"
+                    )
+            self._attr_release_notes = (
+                "\n\n".join(release_notes_parts) if release_notes_parts else None
+            )
         elif images_result.downgrades:
             # If not, note the version of the most recent firmware
             latest_firmware = None

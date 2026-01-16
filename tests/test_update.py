@@ -671,8 +671,11 @@ async def test_firmware_update_metadata(zha_gateway: Gateway) -> None:
     assert entity.state[ATTR_RELEASE_URL] == "https://example.com/releases/v1.0"
     assert entity.state[ATTR_RELEASE_SUMMARY] == "This is a test changelog!"
 
-    # release notes should NOT have version header with a single upgrade
-    assert entity.state[ATTR_RELEASE_NOTES] == "These are the full release notes."
+    # release notes include version header
+    assert entity.state[ATTR_RELEASE_NOTES] == (
+        f"## 0x{fw_image.firmware.header.file_version:08x}\n"
+        "These are the full release notes."
+    )
 
 
 async def test_firmware_update_multiple_upgrades_combined_release_notes(
