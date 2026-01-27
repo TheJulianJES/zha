@@ -215,8 +215,20 @@ class BaseFirmwareUpdateEntity(PlatformEntity, ABC):
             )
         elif images_result.downgrades:
             # If not, note the version of the most recent firmware
-            latest_firmware = None
-            self._attr_latest_version = f"0x{images_result.downgrades[0].version:08x}"
+            # latest_firmware = images_result.downgrades[0]
+            # self._attr_latest_version = f"0x{latest_firmware.version:08x}"
+            # self._attr_release_notes = latest_firmware.metadata.release_notes or None
+            # self._attr_release_url = latest_firmware.metadata.release_url or None
+            latest_firmware = images_result.downgrades[0]
+            self._attr_latest_version = f"0x{latest_firmware.version:08x}"
+            self._attr_release_url = latest_firmware.metadata.release_url or None
+            if latest_firmware.metadata.release_notes:
+                self._attr_release_notes = (
+                    f"## 0x{latest_firmware.version:08x}\n"
+                    f"{latest_firmware.metadata.release_notes}"
+                )
+            else:
+                self._attr_release_notes = None
 
         self.maybe_emit_state_changed_event()
 
