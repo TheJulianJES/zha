@@ -14,7 +14,7 @@ from zhaquirks.const import (
 )
 from zigpy.exceptions import ZigbeeException
 from zigpy.profiles import zha
-from zigpy.quirks import _DEVICE_REGISTRY, CustomCluster, CustomDevice
+from zigpy.quirks import DEVICE_REGISTRY, CustomCluster, CustomDevice
 from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder
 import zigpy.types as t
 from zigpy.zcl.clusters import closures, general
@@ -146,7 +146,6 @@ async def test_switch(zha_gateway: Gateway) -> None:
             cluster.commands_by_name["on"].schema,
             expect_reply=True,
             manufacturer=None,
-            tsn=None,
         )
 
     # Fail turn off from client
@@ -167,7 +166,6 @@ async def test_switch(zha_gateway: Gateway) -> None:
             cluster.commands_by_name["off"].schema,
             expect_reply=True,
             manufacturer=None,
-            tsn=None,
         )
 
     # turn off from client
@@ -185,7 +183,6 @@ async def test_switch(zha_gateway: Gateway) -> None:
             cluster.commands_by_name["off"].schema,
             expect_reply=True,
             manufacturer=None,
-            tsn=None,
         )
 
     # Fail turn on from client
@@ -206,7 +203,6 @@ async def test_switch(zha_gateway: Gateway) -> None:
             cluster.commands_by_name["on"].schema,
             expect_reply=True,
             manufacturer=None,
-            tsn=None,
         )
 
     # test updating entity state from client
@@ -269,7 +265,6 @@ async def test_zha_group_switch_entity(zha_gateway: Gateway) -> None:
             group_cluster_on_off.commands_by_name["on"].schema,
             expect_reply=True,
             manufacturer=None,
-            tsn=None,
         )
     assert bool(entity.state["state"]) is True
 
@@ -288,7 +283,6 @@ async def test_zha_group_switch_entity(zha_gateway: Gateway) -> None:
             group_cluster_on_off.commands_by_name["off"].schema,
             expect_reply=True,
             manufacturer=None,
-            tsn=None,
         )
     assert bool(entity.state["state"]) is False
 
@@ -516,7 +510,7 @@ async def test_switch_configurable_custom_on_off_values(zha_gateway: Gateway) ->
         .add_to_registry()
     )
 
-    zigpy_device_ = _DEVICE_REGISTRY.get_device(zigpy_dev)
+    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
 
     assert isinstance(zigpy_device_, CustomDeviceV2)
     cluster = zigpy_device_.endpoints[1].tuya_manufacturer
@@ -597,7 +591,7 @@ async def test_switch_configurable_custom_on_off_values_force_inverted(
         .add_to_registry()
     )
 
-    zigpy_device_ = _DEVICE_REGISTRY.get_device(zigpy_dev)
+    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
 
     assert isinstance(zigpy_device_, CustomDeviceV2)
     cluster = zigpy_device_.endpoints[1].tuya_manufacturer
@@ -678,7 +672,7 @@ async def test_switch_configurable_custom_on_off_values_inverter_attribute(
         .add_to_registry()
     )
 
-    zigpy_device_ = _DEVICE_REGISTRY.get_device(zigpy_dev)
+    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
 
     assert isinstance(zigpy_device_, CustomDeviceV2)
     cluster = zigpy_device_.endpoints[1].tuya_manufacturer

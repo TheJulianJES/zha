@@ -375,6 +375,8 @@ def zigpy_device_from_device_data(
             for cluster in ep["out_clusters"]:
                 endpoint.add_output_cluster(int(cluster["cluster_id"], 16))
 
+    device.original_signature = device.get_signature()
+
     if quirk:
         device = quirk(app, device.ieee, device.nwk, device)
     else:
@@ -415,16 +417,26 @@ def zigpy_device_from_device_data(
 
                 for attr in cluster["attributes"]:
                     attrid = int(attr["id"], 16)
+                    attr_name = attr.get("name")
+
+                    # Look up by name to avoid ambiguity with manufacturer-specific attrs
+                    if attr_name is not None:
+                        attr_def = real_cluster.find_attribute(attr_name)
+                        assert attr_def.id == attrid
+                    else:
+                        attr_def = real_cluster.find_attribute(attrid)
+
+                    # Quirks can mark attributes as unsupported during cluster init so
+                    # the attribute both has a cached value and is unsupported. We need
+                    # to preserve the "unsupported" state.
+                    was_unsupported = real_cluster.is_attribute_unsupported(attr_def)
 
                     if attr.get("value", None) is not None:
-                        real_cluster._attr_cache[attrid] = attr["value"]
+                        real_cluster._attr_cache.set_value(attr_def, attr["value"])
                         real_cluster.PLUGGED_ATTR_READS[attrid] = attr["value"]
 
-                    if attr.get("unsupported", False):
-                        real_cluster.unsupported_attributes.add(attrid)
-
-                        if attr["name"] is not None:
-                            real_cluster.unsupported_attributes.add(attr["name"])
+                    if attr.get("unsupported", False) or was_unsupported:
+                        real_cluster.add_unsupported_attribute(attr_def)
 
     for obj in device_data["neighbors"]:
         app.topology.neighbors[device.ieee].append(
