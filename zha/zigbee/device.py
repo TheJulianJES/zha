@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable
 import copy
 import dataclasses
 from dataclasses import dataclass
@@ -31,7 +31,7 @@ from zigpy.zcl.foundation import (
     ZCLCommandDef,
 )
 import zigpy.zdo.types as zdo_types
-from zigpy.zdo.types import RouteStatus, _NeighborEnums
+from zigpy.zdo.types import Neighbor, RouteStatus
 
 from zha.application import Platform, discovery
 from zha.application.const import (
@@ -202,13 +202,13 @@ class DeviceInfo:
 class NeighborInfo:
     """Describes a neighbor."""
 
-    device_type: _NeighborEnums.DeviceType
-    rx_on_when_idle: _NeighborEnums.RxOnWhenIdle
-    relationship: _NeighborEnums.Relationship
+    device_type: Neighbor.DeviceType
+    rx_on_when_idle: Neighbor.RxOnWhenIdle
+    relationship: Neighbor.Relationship
     extended_pan_id: ExtendedPanId
     ieee: EUI64
     nwk: NWK
-    permit_joining: _NeighborEnums.PermitJoins
+    permit_joining: Neighbor.PermitJoins
     depth: uint8_t
     lqi: uint8_t
 
@@ -948,14 +948,15 @@ class Device(LogMixin, EventBase):
                 entity._attr_fallback_name = meta.new_fallback_name
 
     def _discover_new_entities(self) -> None:
-        new_entities: Iterator[BaseEntity]
+        new_entities: Iterable[BaseEntity]
 
         if self.is_active_coordinator:
-            new_entities = discovery.DEVICE_PROBE.discover_coordinator_device_entities(
-                self
-            )
+            new_entities = discovery.discover_coordinator_device_entities(self)
+        elif self.is_coordinator:
+            # TODO: purge old coordinator entities
+            new_entities = []
         else:
-            new_entities = discovery.DEVICE_PROBE.discover_device_entities(self)
+            new_entities = discovery.discover_device_entities(self)
 
         # Discover all applicable entities
         for entity in new_entities:

@@ -20,7 +20,29 @@ from zigpy.quirks.v2 import ZCLEnumMetadata, ZCLSensorMetadata
 from zigpy.state import Counter, State
 from zigpy.zcl import foundation
 from zigpy.zcl.clusters.closures import WindowCovering
-from zigpy.zcl.clusters.general import Basic
+from zigpy.zcl.clusters.general import (
+    AnalogInput,
+    Basic,
+    DeviceTemperature as DeviceTemperatureCluster,
+    PowerConfiguration,
+)
+from zigpy.zcl.clusters.homeautomation import Diagnostic, ElectricalMeasurement
+from zigpy.zcl.clusters.hvac import Thermostat
+from zigpy.zcl.clusters.measurement import (
+    PM25 as PM25Cluster,
+    CarbonDioxideConcentration as CarbonDioxideConcentrationCluster,
+    CarbonMonoxideConcentration as CarbonMonoxideConcentrationCluster,
+    ElectricalConductivity as ElectricalConductivityCluster,
+    FlowMeasurement,
+    FormaldehydeConcentration as FormaldehydeConcentrationCluster,
+    IlluminanceMeasurement,
+    LeafWetness as LeafWetnessCluster,
+    PressureMeasurement,
+    RelativeHumidity,
+    SoilMoisture as SoilMoistureCluster,
+    TemperatureMeasurement,
+    WindSpeed as WindSpeedCluster,
+)
 from zigpy.zcl.clusters.smartenergy import (
     Metering,
     MeteringUnitofMeasure,
@@ -32,8 +54,11 @@ from zha.application.platforms import (
     BaseEntity,
     BaseEntityInfo,
     BaseIdentifiers,
+    ClusterHandlerMatch,
     EntityCategory,
     PlatformEntity,
+    PlatformFeatureGroup,
+    register_entity,
 )
 from zha.application.platforms.climate.const import HVACAction
 from zha.application.platforms.helpers import validate_device_class
@@ -49,7 +74,6 @@ from zha.application.platforms.sensor.helpers import (
     create_number_formatter,
     resolution_to_decimal_precision,
 )
-from zha.application.registries import PLATFORM_ENTITIES
 from zha.decorators import periodic
 from zha.units import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
@@ -75,6 +99,7 @@ from zha.units import (
 )
 from zha.zigbee.cluster_handlers import ClusterAttributeUpdatedEvent
 from zha.zigbee.cluster_handlers.const import (
+    AQARA_OPPLE_CLUSTER,
     CLUSTER_HANDLER_ANALOG_INPUT,
     CLUSTER_HANDLER_ATTRIBUTE_UPDATED,
     CLUSTER_HANDLER_BASIC,
@@ -95,7 +120,11 @@ from zha.zigbee.cluster_handlers.const import (
     CLUSTER_HANDLER_TEMPERATURE,
     CLUSTER_HANDLER_THERMOSTAT,
     CLUSTER_HANDLER_WIND_SPEED,
+    IKEA_AIR_PURIFIER_CLUSTER,
+    INOVELLI_CLUSTER,
     SMARTTHINGS_HUMIDITY_CLUSTER,
+    SONOFF_CLUSTER,
+    TUYA_MANUFACTURER_CLUSTER,
 )
 
 if TYPE_CHECKING:
@@ -126,15 +155,6 @@ BATTERY_SIZES = {
 }
 
 _LOGGER = logging.getLogger(__name__)
-
-CLUSTER_HANDLER_ST_HUMIDITY_CLUSTER = (
-    f"cluster_handler_0x{SMARTTHINGS_HUMIDITY_CLUSTER:04x}"
-)
-STRICT_MATCH = functools.partial(PLATFORM_ENTITIES.strict_match, Platform.SENSOR)
-MULTI_MATCH = functools.partial(PLATFORM_ENTITIES.multipass_match, Platform.SENSOR)
-CONFIG_DIAGNOSTIC_MATCH = functools.partial(
-    PLATFORM_ENTITIES.config_diagnostic_match, Platform.SENSOR
-)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -569,25 +589,30 @@ class EnumSensor(Sensor):
         return self._enum(value).name
 
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_ANALOG_INPUT,
-    manufacturers="Digi",
-    stop_on_match_group=CLUSTER_HANDLER_ANALOG_INPUT,
-)
+@register_entity(AnalogInput.cluster_id)
 class DigiAnalogInput(Sensor):
     """Sensor that displays analog input values."""
 
     _attribute_name = "present_value"
     _attr_translation_key: str = "analog_input"
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ANALOG_INPUT}),
+        manufacturers=frozenset({"Digi"}),
+    )
 
-@CONFIG_DIAGNOSTIC_MATCH(cluster_handler_names=CLUSTER_HANDLER_ANALOG_INPUT)
+
+@register_entity(AnalogInput.cluster_id)
 class AnalogInputSensor(Sensor):
     """Sensor that displays analog input values."""
 
     _attribute_name = "present_value"
     _unique_id_suffix = "analog_input"
     _attr_state_class = SensorStateClass.MEASUREMENT
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ANALOG_INPUT}),
+    )
 
     def recompute_capabilities(self) -> None:
         """Recompute capabilities."""
@@ -631,7 +656,7 @@ class AnalogInputSensor(Sensor):
         return super()._is_supported()
 
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_POWER_CONFIGURATION)
+@register_entity(PowerConfiguration.cluster_id)
 class Battery(Sensor):
     """Battery sensor of power configuration cluster."""
 
@@ -646,6 +671,10 @@ class Battery(Sensor):
         "battery_quantity",
         "battery_voltage",
     }
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_POWER_CONFIGURATION}),
+    )
 
     def _is_supported(self) -> bool:
         # XXX: We intentionally ignore the presence of this attribute
@@ -750,28 +779,28 @@ class ElectricalMeasurementActivePower(BaseElectricalMeasurement):
     _attr_native_unit_of_measurement: str = UnitOfPower.WATT
 
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT,
-    stop_on_match_group=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT,
-    models={"VZM31-SN", "SP 234", "outletv4", "INSPELNING Smart plug"},
-)
+@register_entity(ElectricalMeasurement.cluster_id)
 class ReportingElectricalMeasurement(ElectricalMeasurementActivePower):
     """Unpolled active power measurement."""
 
-    pass
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+        models=frozenset({"VZM31-SN", "SP 234", "outletv4", "INSPELNING Smart plug"}),
+    )
 
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT,
-    stop_on_match_group=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT,
-)
+@register_entity(ElectricalMeasurement.cluster_id)
 class PolledElectricalMeasurement(ElectricalMeasurementActivePower):
     """Polled active power measurement that polls all relevant EM attributes."""
 
     _use_custom_polling: bool = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementActivePowerPhB(ElectricalMeasurementActivePower):
     """Active power phase B measurement."""
 
@@ -781,8 +810,12 @@ class ElectricalMeasurementActivePowerPhB(ElectricalMeasurementActivePower):
     _attr_max_attribute_name = "active_power_max_ph_b"
     _skip_creation_if_no_attr_cache = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementActivePowerPhC(ElectricalMeasurementActivePower):
     """Active power phase C measurement."""
 
@@ -792,8 +825,12 @@ class ElectricalMeasurementActivePowerPhC(ElectricalMeasurementActivePower):
     _attr_max_attribute_name = "active_power_max_ph_c"
     _skip_creation_if_no_attr_cache = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementTotalActivePower(ElectricalMeasurementActivePower):
     """Total active power measurement."""
 
@@ -802,8 +839,12 @@ class ElectricalMeasurementTotalActivePower(ElectricalMeasurementActivePower):
     _attr_translation_key: str = "total_active_power"
     _skip_creation_if_no_attr_cache = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementApparentPower(BaseElectricalMeasurement):
     """Apparent power measurement."""
 
@@ -814,8 +855,12 @@ class ElectricalMeasurementApparentPower(BaseElectricalMeasurement):
     _attr_device_class: SensorDeviceClass = SensorDeviceClass.APPARENT_POWER
     _attr_native_unit_of_measurement = UnitOfApparentPower.VOLT_AMPERE
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementRMSCurrent(BaseElectricalMeasurement):
     """RMS current measurement."""
 
@@ -827,8 +872,12 @@ class ElectricalMeasurementRMSCurrent(BaseElectricalMeasurement):
     _attr_device_class: SensorDeviceClass = SensorDeviceClass.CURRENT
     _attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementRMSCurrentPhB(ElectricalMeasurementRMSCurrent):
     """RMS current phase B measurement."""
 
@@ -838,8 +887,12 @@ class ElectricalMeasurementRMSCurrentPhB(ElectricalMeasurementRMSCurrent):
     _attr_max_attribute_name: str = "rms_current_max_ph_b"
     _skip_creation_if_no_attr_cache = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementRMSCurrentPhC(ElectricalMeasurementRMSCurrent):
     """RMS current phase C measurement."""
 
@@ -849,8 +902,12 @@ class ElectricalMeasurementRMSCurrentPhC(ElectricalMeasurementRMSCurrent):
     _attr_max_attribute_name: str = "rms_current_max_ph_c"
     _skip_creation_if_no_attr_cache = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementRMSVoltage(BaseElectricalMeasurement):
     """RMS Voltage measurement."""
 
@@ -862,8 +919,12 @@ class ElectricalMeasurementRMSVoltage(BaseElectricalMeasurement):
     _attr_device_class: SensorDeviceClass = SensorDeviceClass.VOLTAGE
     _attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementRMSVoltagePhB(ElectricalMeasurementRMSVoltage):
     """RMS voltage phase B measurement."""
 
@@ -873,8 +934,12 @@ class ElectricalMeasurementRMSVoltagePhB(ElectricalMeasurementRMSVoltage):
     _attr_max_attribute_name = "rms_voltage_max_ph_b"
     _skip_creation_if_no_attr_cache = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementRMSVoltagePhC(ElectricalMeasurementRMSVoltage):
     """RMS voltage phase C measurement."""
 
@@ -884,8 +949,12 @@ class ElectricalMeasurementRMSVoltagePhC(ElectricalMeasurementRMSVoltage):
     _attr_max_attribute_name = "rms_voltage_max_ph_c"
     _skip_creation_if_no_attr_cache = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementFrequency(BaseElectricalMeasurement):
     """Frequency measurement."""
 
@@ -898,8 +967,12 @@ class ElectricalMeasurementFrequency(BaseElectricalMeasurement):
     _attr_device_class: SensorDeviceClass = SensorDeviceClass.FREQUENCY
     _attr_native_unit_of_measurement = UnitOfFrequency.HERTZ
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementPowerFactor(BaseElectricalMeasurement):
     """Power Factor measurement."""
 
@@ -908,8 +981,12 @@ class ElectricalMeasurementPowerFactor(BaseElectricalMeasurement):
     _attr_device_class: SensorDeviceClass = SensorDeviceClass.POWER_FACTOR
     _attr_native_unit_of_measurement = PERCENTAGE
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementPowerFactorPhB(ElectricalMeasurementPowerFactor):
     """Power factor phase B measurement."""
 
@@ -918,8 +995,12 @@ class ElectricalMeasurementPowerFactorPhB(ElectricalMeasurementPowerFactor):
     _attr_translation_key: str = "power_factor_ph_b"
     _skip_creation_if_no_attr_cache = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementPowerFactorPhC(ElectricalMeasurementPowerFactor):
     """Power factor phase C measurement."""
 
@@ -928,8 +1009,12 @@ class ElectricalMeasurementPowerFactorPhC(ElectricalMeasurementPowerFactor):
     _attr_translation_key: str = "power_factor_ph_c"
     _skip_creation_if_no_attr_cache = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementDCVoltage(BaseElectricalMeasurement):
     """DC Voltage measurement."""
 
@@ -942,8 +1027,12 @@ class ElectricalMeasurementDCVoltage(BaseElectricalMeasurement):
     _multiplier_attribute_name = "dc_voltage_multiplier"
     _skip_creation_if_no_attr_cache = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementDCCurrent(BaseElectricalMeasurement):
     """DC Current measurement."""
 
@@ -956,8 +1045,12 @@ class ElectricalMeasurementDCCurrent(BaseElectricalMeasurement):
     _multiplier_attribute_name = "dc_current_multiplier"
     _skip_creation_if_no_attr_cache = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT)
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementDCPower(BaseElectricalMeasurement):
     """DC Power measurement."""
 
@@ -970,15 +1063,12 @@ class ElectricalMeasurementDCPower(BaseElectricalMeasurement):
     _multiplier_attribute_name = "dc_power_multiplier"
     _skip_creation_if_no_attr_cache = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
 
-@MULTI_MATCH(
-    generic_ids=CLUSTER_HANDLER_ST_HUMIDITY_CLUSTER,
-    stop_on_match_group=CLUSTER_HANDLER_HUMIDITY,
-)
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_HUMIDITY,
-    stop_on_match_group=CLUSTER_HANDLER_HUMIDITY,
-)
+
+@register_entity(RelativeHumidity.cluster_id)
 class Humidity(Sensor):
     """Humidity sensor."""
 
@@ -989,8 +1079,30 @@ class Humidity(Sensor):
     _attr_native_unit_of_measurement = PERCENTAGE
     _attr_primary_weight = 1
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_HUMIDITY}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_SOIL_MOISTURE)
+
+@register_entity(SMARTTHINGS_HUMIDITY_CLUSTER)
+class SmartThingsHumidity(Sensor):
+    """Humidity sensor."""
+
+    _attribute_name = "measured_value"
+    _attr_device_class: SensorDeviceClass = SensorDeviceClass.HUMIDITY
+    _attr_state_class: SensorStateClass = SensorStateClass.MEASUREMENT
+    _divisor = 100
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_primary_weight = 1
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset(
+            {f"cluster_handler_0x{SMARTTHINGS_HUMIDITY_CLUSTER:04x}"}
+        ),
+    )
+
+
+@register_entity(SoilMoistureCluster.cluster_id)
 class SoilMoisture(Sensor):
     """Soil Moisture sensor."""
 
@@ -1002,8 +1114,12 @@ class SoilMoisture(Sensor):
     _attr_native_unit_of_measurement = PERCENTAGE
     _attr_primary_weight = 1
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SOIL_MOISTURE}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_LEAF_WETNESS)
+
+@register_entity(LeafWetnessCluster.cluster_id)
 class LeafWetness(Sensor):
     """Leaf Wetness sensor."""
 
@@ -1015,8 +1131,12 @@ class LeafWetness(Sensor):
     _attr_native_unit_of_measurement = PERCENTAGE
     _attr_primary_weight = 1
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_LEAF_WETNESS}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ILLUMINANCE)
+
+@register_entity(IlluminanceMeasurement.cluster_id)
 class Illuminance(Sensor):
     """Illuminance Sensor."""
 
@@ -1025,6 +1145,10 @@ class Illuminance(Sensor):
     _attr_state_class: SensorStateClass = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = LIGHT_LUX
     _attr_primary_weight = 1
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ILLUMINANCE}),
+    )
 
     def formatter(self, value: int) -> int | None:
         """Convert illumination data."""
@@ -1046,10 +1170,7 @@ class SmartEnergyMeteringEntityDescription:
     device_class: SensorDeviceClass | None = None
 
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_SMARTENERGY_METERING,
-    stop_on_match_group=CLUSTER_HANDLER_SMARTENERGY_METERING,
-)
+@register_entity(Metering.cluster_id)
 class SmartEnergyMetering(PollableSensor):
     """Metering sensor."""
 
@@ -1063,6 +1184,10 @@ class SmartEnergyMetering(PollableSensor):
         "zcl_unit_of_measurement",
     }
     _attr_primary_weight = 1
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+    )
 
     _ENTITY_DESCRIPTION_MAP = {
         0x00: SmartEnergyMeteringEntityDescription(
@@ -1202,10 +1327,7 @@ class SmartEnergySummationEntityDescription(SmartEnergyMeteringEntityDescription
     state_class: SensorStateClass | None = SensorStateClass.TOTAL_INCREASING
 
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_SMARTENERGY_METERING,
-    stop_on_match_group=CLUSTER_HANDLER_SMARTENERGY_METERING,
-)
+@register_entity(Metering.cluster_id)
 class SmartEnergySummation(SmartEnergyMetering):
     """Smart Energy Metering summation sensor."""
 
@@ -1214,6 +1336,11 @@ class SmartEnergySummation(SmartEnergyMetering):
     _unique_id_suffix = "summation_delivered"
     _attr_translation_key: str = "summation_delivered"
     _attr_suggested_display_precision: int = 3
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+        feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION, 0),
+    )
 
     _ENTITY_DESCRIPTION_MAP = {
         0x00: SmartEnergySummationEntityDescription(
@@ -1291,21 +1418,20 @@ class SmartEnergySummation(SmartEnergyMetering):
         return float(summation_formater.format(scaled_value))
 
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_SMARTENERGY_METERING,
-    models={"TS011F", "ZLinky_TIC", "TICMeter"},
-    stop_on_match_group=CLUSTER_HANDLER_SMARTENERGY_METERING,
-)
+@register_entity(Metering.cluster_id)
 class PolledSmartEnergySummation(SmartEnergySummation):
     """Polled Smart Energy Metering summation sensor."""
 
     _use_custom_polling: bool = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+        models=frozenset({"TS011F", "ZLinky_TIC", "TICMeter"}),
+        feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION, 1),
+    )
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_SMARTENERGY_METERING,
-    models={"ZLinky_TIC", "TICMeter"},
-)
+
+@register_entity(Metering.cluster_id)
 class Tier1SmartEnergySummation(PolledSmartEnergySummation):
     """Tier 1 Smart Energy Metering summation sensor."""
 
@@ -1314,11 +1440,14 @@ class Tier1SmartEnergySummation(PolledSmartEnergySummation):
     _unique_id_suffix = "tier1_summation_delivered"
     _attr_translation_key: str = "tier1_summation_delivered"
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+        models=frozenset({"ZLinky_TIC", "TICMeter"}),
+        feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION, 1),
+    )
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_SMARTENERGY_METERING,
-    models={"ZLinky_TIC", "TICMeter"},
-)
+
+@register_entity(Metering.cluster_id)
 class Tier2SmartEnergySummation(PolledSmartEnergySummation):
     """Tier 2 Smart Energy Metering summation sensor."""
 
@@ -1327,11 +1456,14 @@ class Tier2SmartEnergySummation(PolledSmartEnergySummation):
     _unique_id_suffix = "tier2_summation_delivered"
     _attr_translation_key: str = "tier2_summation_delivered"
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+        models=frozenset({"ZLinky_TIC", "TICMeter"}),
+        feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION, 1),
+    )
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_SMARTENERGY_METERING,
-    models={"ZLinky_TIC", "TICMeter"},
-)
+
+@register_entity(Metering.cluster_id)
 class Tier3SmartEnergySummation(PolledSmartEnergySummation):
     """Tier 3 Smart Energy Metering summation sensor."""
 
@@ -1340,11 +1472,14 @@ class Tier3SmartEnergySummation(PolledSmartEnergySummation):
     _unique_id_suffix = "tier3_summation_delivered"
     _attr_translation_key: str = "tier3_summation_delivered"
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+        models=frozenset({"ZLinky_TIC", "TICMeter"}),
+        feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION, 1),
+    )
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_SMARTENERGY_METERING,
-    models={"ZLinky_TIC", "TICMeter"},
-)
+
+@register_entity(Metering.cluster_id)
 class Tier4SmartEnergySummation(PolledSmartEnergySummation):
     """Tier 4 Smart Energy Metering summation sensor."""
 
@@ -1353,11 +1488,14 @@ class Tier4SmartEnergySummation(PolledSmartEnergySummation):
     _unique_id_suffix = "tier4_summation_delivered"
     _attr_translation_key: str = "tier4_summation_delivered"
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+        models=frozenset({"ZLinky_TIC", "TICMeter"}),
+        feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION, 1),
+    )
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_SMARTENERGY_METERING,
-    models={"ZLinky_TIC", "TICMeter"},
-)
+
+@register_entity(Metering.cluster_id)
 class Tier5SmartEnergySummation(PolledSmartEnergySummation):
     """Tier 5 Smart Energy Metering summation sensor."""
 
@@ -1366,11 +1504,14 @@ class Tier5SmartEnergySummation(PolledSmartEnergySummation):
     _unique_id_suffix = "tier5_summation_delivered"
     _attr_translation_key: str = "tier5_summation_delivered"
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+        models=frozenset({"ZLinky_TIC", "TICMeter"}),
+        feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION, 1),
+    )
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_SMARTENERGY_METERING,
-    models={"ZLinky_TIC", "TICMeter"},
-)
+
+@register_entity(Metering.cluster_id)
 class Tier6SmartEnergySummation(PolledSmartEnergySummation):
     """Tier 6 Smart Energy Metering summation sensor."""
 
@@ -1379,10 +1520,14 @@ class Tier6SmartEnergySummation(PolledSmartEnergySummation):
     _unique_id_suffix = "tier6_summation_delivered"
     _attr_translation_key: str = "tier6_summation_delivered"
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+        models=frozenset({"ZLinky_TIC", "TICMeter"}),
+        feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION, 1),
+    )
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_SMARTENERGY_METERING,
-)
+
+@register_entity(Metering.cluster_id)
 class SmartEnergySummationReceived(PolledSmartEnergySummation):
     """Smart Energy Metering summation received sensor."""
 
@@ -1400,8 +1545,12 @@ class SmartEnergySummationReceived(PolledSmartEnergySummation):
     """
     _skip_creation_if_no_attr_cache = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_PRESSURE)
+
+@register_entity(PressureMeasurement.cluster_id)
 class Pressure(Sensor):
     """Pressure sensor."""
 
@@ -1412,8 +1561,12 @@ class Pressure(Sensor):
     _attr_native_unit_of_measurement = UnitOfPressure.HPA
     _attr_primary_weight = 1
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_PRESSURE}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_FLOW)
+
+@register_entity(FlowMeasurement.cluster_id)
 class Flow(Sensor):
     """Flow Measurement sensor."""
 
@@ -1424,8 +1577,12 @@ class Flow(Sensor):
     _attr_native_unit_of_measurement = UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR
     _attr_primary_weight = 1
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_FLOW}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_TEMPERATURE)
+
+@register_entity(TemperatureMeasurement.cluster_id)
 class Temperature(Sensor):
     """Temperature Sensor."""
 
@@ -1436,8 +1593,12 @@ class Temperature(Sensor):
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
     _attr_primary_weight = 1
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_TEMPERATURE}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_DEVICE_TEMPERATURE)
+
+@register_entity(DeviceTemperatureCluster.cluster_id)
 class DeviceTemperature(Sensor):
     """Device Temperature Sensor."""
 
@@ -1450,8 +1611,12 @@ class DeviceTemperature(Sensor):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_primary_weight = 1
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_DEVICE_TEMPERATURE}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_INOVELLI)
+
+@register_entity(INOVELLI_CLUSTER)
 class InovelliInternalTemperature(Sensor):
     """Switch Internal Temperature Sensor."""
 
@@ -1462,6 +1627,10 @@ class InovelliInternalTemperature(Sensor):
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_INOVELLI}),
+    )
+
 
 class InovelliOverheatedState(types.enum8):
     """Inovelli overheat protection state."""
@@ -1470,7 +1639,7 @@ class InovelliOverheatedState(types.enum8):
     Overheated = 0x01
 
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_INOVELLI)
+@register_entity(INOVELLI_CLUSTER)
 class InovelliOverheated(EnumSensor):
     """Sensor that displays the overheat protection state."""
 
@@ -1480,8 +1649,12 @@ class InovelliOverheated(EnumSensor):
     _enum = InovelliOverheatedState
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_INOVELLI}),
+    )
 
-@MULTI_MATCH(cluster_handler_names="carbon_dioxide_concentration")
+
+@register_entity(CarbonDioxideConcentrationCluster.cluster_id)
 class CarbonDioxideConcentration(Sensor):
     """Carbon Dioxide Concentration sensor."""
 
@@ -1493,8 +1666,12 @@ class CarbonDioxideConcentration(Sensor):
     _attr_native_unit_of_measurement = CONCENTRATION_PARTS_PER_MILLION
     _attr_primary_weight = 1
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"carbon_dioxide_concentration"}),
+    )
 
-@MULTI_MATCH(cluster_handler_names="carbon_monoxide_concentration")
+
+@register_entity(CarbonMonoxideConcentrationCluster.cluster_id)
 class CarbonMonoxideConcentration(Sensor):
     """Carbon Monoxide Concentration sensor."""
 
@@ -1506,9 +1683,12 @@ class CarbonMonoxideConcentration(Sensor):
     _attr_native_unit_of_measurement = CONCENTRATION_PARTS_PER_MILLION
     _attr_primary_weight = 1
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"carbon_monoxide_concentration"}),
+    )
 
-@MULTI_MATCH(generic_ids="cluster_handler_0x042e", stop_on_match_group="voc_level")
-@MULTI_MATCH(cluster_handler_names="voc_level", stop_on_match_group="voc_level")
+
+@register_entity(0x042E)
 class VOCLevel(Sensor):
     """VOC Level sensor."""
 
@@ -1520,12 +1700,30 @@ class VOCLevel(Sensor):
     _attr_native_unit_of_measurement = CONCENTRATION_MICROGRAMS_PER_CUBIC_METER
     _attr_primary_weight = 1
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"voc_level"}),
+        feature_priority=(PlatformFeatureGroup.VOC_LEVEL, 0),
+    )
 
-@MULTI_MATCH(
-    cluster_handler_names="voc_level",
-    models="lumi.airmonitor.acn01",
-    stop_on_match_group="voc_level",
-)
+
+@register_entity(0x042E)
+class GenericVOCLevel(Sensor):
+    """VOC Level sensor."""
+
+    _attribute_name = "measured_value"
+    _attr_device_class: SensorDeviceClass = SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS
+    _attr_state_class: SensorStateClass = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 0
+    _multiplier = 1e6
+    _attr_native_unit_of_measurement = CONCENTRATION_MICROGRAMS_PER_CUBIC_METER
+    _attr_primary_weight = 1
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"cluster_handler_0x042e"}),
+    )
+
+
+@register_entity(0x042E)
 class PPBVOCLevel(Sensor):
     """VOC Level sensor."""
 
@@ -1539,8 +1737,14 @@ class PPBVOCLevel(Sensor):
     _attr_native_unit_of_measurement = CONCENTRATION_PARTS_PER_BILLION
     _attr_primary_weight = 1
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"voc_level"}),
+        models=frozenset({"lumi.airmonitor.acn01"}),
+        feature_priority=(PlatformFeatureGroup.VOC_LEVEL, 1),
+    )
 
-@MULTI_MATCH(cluster_handler_names="pm25")
+
+@register_entity(PM25Cluster.cluster_id)
 class PM25(Sensor):
     """Particulate Matter 2.5 microns or less sensor."""
 
@@ -1551,8 +1755,12 @@ class PM25(Sensor):
     _attr_native_unit_of_measurement = CONCENTRATION_MICROGRAMS_PER_CUBIC_METER
     _attr_primary_weight = 1
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"pm25"}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_ELECTRICAL_CONDUCTIVITY)
+
+@register_entity(ElectricalConductivityCluster.cluster_id)
 class ElectricalConductivity(Sensor):
     """Electrical Conductivity sensor."""
 
@@ -1561,8 +1769,12 @@ class ElectricalConductivity(Sensor):
     _attr_state_class: SensorStateClass = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfConductivity.MICROSIEMENS_PER_CM
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_CONDUCTIVITY}),
+    )
 
-@MULTI_MATCH(cluster_handler_names="formaldehyde_concentration")
+
+@register_entity(FormaldehydeConcentrationCluster.cluster_id)
 class FormaldehydeConcentration(Sensor):
     """Formaldehyde Concentration sensor."""
 
@@ -1574,16 +1786,22 @@ class FormaldehydeConcentration(Sensor):
     _attr_native_unit_of_measurement = CONCENTRATION_PARTS_PER_MILLION
     _attr_primary_weight = 1
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"formaldehyde_concentration"}),
+    )
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_THERMOSTAT,
-    stop_on_match_group=CLUSTER_HANDLER_THERMOSTAT,
-)
+
+@register_entity(Thermostat.cluster_id)
 class ThermostatHVACAction(Sensor):
     """Thermostat HVAC action sensor."""
 
     _unique_id_suffix = "hvac_action"
     _attr_translation_key: str = "hvac_action"
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_THERMOSTAT}),
+        feature_priority=(PlatformFeatureGroup.HVAC_ACTION, 0),
+    )
 
     def _is_supported(self) -> bool:
         return PlatformEntity._is_supported(self)
@@ -1664,13 +1882,15 @@ class ThermostatHVACAction(Sensor):
         return HVACAction.OFF
 
 
-@MULTI_MATCH(
-    cluster_handler_names={CLUSTER_HANDLER_THERMOSTAT},
-    manufacturers="Sinope Technologies",
-    stop_on_match_group=CLUSTER_HANDLER_THERMOSTAT,
-)
+@register_entity(Thermostat.cluster_id)
 class SinopeHVACAction(ThermostatHVACAction):
     """Sinope Thermostat HVAC action sensor."""
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_THERMOSTAT}),
+        manufacturers=frozenset({"Sinope Technologies"}),
+        feature_priority=(PlatformFeatureGroup.HVAC_ACTION, 1),
+    )
 
     @property
     def _rm_rs_action(self) -> HVACAction:
@@ -1697,7 +1917,7 @@ class SinopeHVACAction(ThermostatHVACAction):
         return HVACAction.OFF
 
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_BASIC)
+@register_entity(Basic.cluster_id)
 class RSSISensor(Sensor):
     """RSSI sensor for a device."""
 
@@ -1709,6 +1929,10 @@ class RSSISensor(Sensor):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
     _attr_translation_key: str = "rssi"
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_BASIC}),
+    )
 
     def __init__(
         self,
@@ -1775,7 +1999,7 @@ class RSSISensor(Sensor):
             )
 
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_BASIC)
+@register_entity(Basic.cluster_id)
 class LQISensor(RSSISensor):
     """LQI sensor for a device."""
 
@@ -1784,6 +2008,10 @@ class LQISensor(RSSISensor):
     _attr_device_class = None
     _attr_native_unit_of_measurement = None
     _attr_translation_key = "lqi"
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_BASIC}),
+    )
 
     @property
     def state(self) -> dict:
@@ -1798,12 +2026,7 @@ class LQISensor(RSSISensor):
         return self._device.device.lqi
 
 
-@MULTI_MATCH(
-    cluster_handler_names="tuya_manufacturer",
-    manufacturers={
-        "_TZE200_htnnfasr",
-    },
-)
+@register_entity(TUYA_MANUFACTURER_CLUSTER)
 class TimeLeft(Sensor):
     """Sensor that displays time left value."""
 
@@ -1813,8 +2036,13 @@ class TimeLeft(Sensor):
     _attr_translation_key: str = "timer_time_left"
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"tuya_manufacturer"}),
+        manufacturers=frozenset({"_TZE200_htnnfasr"}),
+    )
 
-@MULTI_MATCH(cluster_handler_names="ikea_airpurifier")
+
+@register_entity(IKEA_AIR_PURIFIER_CLUSTER)
 class IkeaDeviceRunTime(Sensor):
     """Sensor that displays device run time (in minutes)."""
 
@@ -1825,8 +2053,12 @@ class IkeaDeviceRunTime(Sensor):
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_entity_category: EntityCategory = EntityCategory.DIAGNOSTIC
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"ikea_airpurifier"}),
+    )
 
-@MULTI_MATCH(cluster_handler_names="ikea_airpurifier")
+
+@register_entity(IKEA_AIR_PURIFIER_CLUSTER)
 class IkeaFilterRunTime(Sensor):
     """Sensor that displays run time of the current filter (in minutes)."""
 
@@ -1837,6 +2069,10 @@ class IkeaFilterRunTime(Sensor):
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_entity_category: EntityCategory = EntityCategory.DIAGNOSTIC
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"ikea_airpurifier"}),
+    )
+
 
 class AqaraFeedingSource(types.enum8):
     """Aqara pet feeder feeding source."""
@@ -1845,7 +2081,7 @@ class AqaraFeedingSource(types.enum8):
     HomeAssistant = 0x02
 
 
-@MULTI_MATCH(cluster_handler_names="opple_cluster", models={"aqara.feeder.acn001"})
+@register_entity(AQARA_OPPLE_CLUSTER)
 class AqaraPetFeederLastFeedingSource(EnumSensor):
     """Sensor that displays the last feeding source of pet feeder."""
 
@@ -1854,8 +2090,13 @@ class AqaraPetFeederLastFeedingSource(EnumSensor):
     _attr_translation_key: str = "last_feeding_source"
     _enum = AqaraFeedingSource
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"opple_cluster"}),
+        models=frozenset({"aqara.feeder.acn001"}),
+    )
 
-@MULTI_MATCH(cluster_handler_names="opple_cluster", models={"aqara.feeder.acn001"})
+
+@register_entity(AQARA_OPPLE_CLUSTER)
 class AqaraPetFeederLastFeedingSize(Sensor):
     """Sensor that displays the last feeding size of the pet feeder."""
 
@@ -1863,8 +2104,13 @@ class AqaraPetFeederLastFeedingSize(Sensor):
     _unique_id_suffix = "last_feeding_size"
     _attr_translation_key: str = "last_feeding_size"
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"opple_cluster"}),
+        models=frozenset({"aqara.feeder.acn001"}),
+    )
 
-@MULTI_MATCH(cluster_handler_names="opple_cluster", models={"aqara.feeder.acn001"})
+
+@register_entity(AQARA_OPPLE_CLUSTER)
 class AqaraPetFeederPortionsDispensed(Sensor):
     """Sensor that displays the number of portions dispensed by the pet feeder."""
 
@@ -1873,8 +2119,13 @@ class AqaraPetFeederPortionsDispensed(Sensor):
     _attr_translation_key: str = "portions_dispensed_today"
     _attr_state_class: SensorStateClass = SensorStateClass.TOTAL_INCREASING
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"opple_cluster"}),
+        models=frozenset({"aqara.feeder.acn001"}),
+    )
 
-@MULTI_MATCH(cluster_handler_names="opple_cluster", models={"aqara.feeder.acn001"})
+
+@register_entity(AQARA_OPPLE_CLUSTER)
 class AqaraPetFeederWeightDispensed(Sensor):
     """Sensor that displays the weight dispensed by the pet feeder."""
 
@@ -1884,8 +2135,13 @@ class AqaraPetFeederWeightDispensed(Sensor):
     _attr_native_unit_of_measurement = UnitOfMass.GRAMS
     _attr_state_class: SensorStateClass = SensorStateClass.TOTAL_INCREASING
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"opple_cluster"}),
+        models=frozenset({"aqara.feeder.acn001"}),
+    )
 
-@MULTI_MATCH(cluster_handler_names="opple_cluster", models={"lumi.sensor_smoke.acn03"})
+
+@register_entity(AQARA_OPPLE_CLUSTER)
 class AqaraSmokeDensityDbm(Sensor):
     """Sensor that displays the smoke density of an Aqara smoke sensor in dB/m."""
 
@@ -1896,6 +2152,11 @@ class AqaraSmokeDensityDbm(Sensor):
     _attr_state_class: SensorStateClass = SensorStateClass.MEASUREMENT
     _attr_suggested_display_precision = 3
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"opple_cluster"}),
+        models=frozenset({"lumi.sensor_smoke.acn03"}),
+    )
+
 
 class SonoffIlluminationStates(types.enum8):
     """Enum for displaying last Illumination state."""
@@ -1904,7 +2165,7 @@ class SonoffIlluminationStates(types.enum8):
     Light = 0x01
 
 
-@MULTI_MATCH(cluster_handler_names="sonoff_manufacturer", models={"SNZB-06P"})
+@register_entity(SONOFF_CLUSTER)
 class SonoffPresenceSenorIlluminationStatus(EnumSensor):
     """Sensor that displays the illumination status the last time peresence was detected."""
 
@@ -1913,8 +2174,13 @@ class SonoffPresenceSenorIlluminationStatus(EnumSensor):
     _attr_translation_key: str = "last_illumination_state"
     _enum = SonoffIlluminationStates
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"sonoff_manufacturer"}),
+        models=frozenset({"SNZB-06P"}),
+    )
 
-@CONFIG_DIAGNOSTIC_MATCH(cluster_handler_names=CLUSTER_HANDLER_THERMOSTAT)
+
+@register_entity(Thermostat.cluster_id)
 class PiHeatingDemand(Sensor):
     """Sensor that displays the percentage of heating power demanded.
 
@@ -1925,9 +2191,14 @@ class PiHeatingDemand(Sensor):
     _attribute_name = "pi_heating_demand"
     _attr_translation_key: str = "pi_heating_demand"
     _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
     _attr_suggested_display_precision = 0
     _attr_state_class: SensorStateClass = SensorStateClass.MEASUREMENT
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_THERMOSTAT}),
+    )
 
 
 class SetpointChangeSourceEnum(types.enum8):
@@ -1938,7 +2209,7 @@ class SetpointChangeSourceEnum(types.enum8):
     External = 0x02
 
 
-@CONFIG_DIAGNOSTIC_MATCH(cluster_handler_names=CLUSTER_HANDLER_THERMOSTAT)
+@register_entity(Thermostat.cluster_id)
 class SetpointChangeSource(EnumSensor):
     """Sensor that displays the source of the setpoint change.
 
@@ -1951,8 +2222,12 @@ class SetpointChangeSource(EnumSensor):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _enum = SetpointChangeSourceEnum
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_THERMOSTAT}),
+    )
 
-@CONFIG_DIAGNOSTIC_MATCH(cluster_handler_names=CLUSTER_HANDLER_THERMOSTAT)
+
+@register_entity(Thermostat.cluster_id)
 class SetpointChangeSourceTimestamp(TimestampSensor):
     """Sensor that displays the timestamp the setpoint change.
 
@@ -1965,12 +2240,16 @@ class SetpointChangeSourceTimestamp(TimestampSensor):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_device_class = SensorDeviceClass.TIMESTAMP
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_THERMOSTAT}),
+    )
+
     def formatter(self, value: types.UTCTime) -> datetime:
         """Pass-through formatter."""
         return ZCL_EPOCH + timedelta(seconds=value)
 
 
-@CONFIG_DIAGNOSTIC_MATCH(cluster_handler_names=CLUSTER_HANDLER_COVER)
+@register_entity(WindowCovering.cluster_id)
 class WindowCoveringTypeSensor(EnumSensor):
     """Sensor that displays the type of a cover device."""
 
@@ -1980,10 +2259,12 @@ class WindowCoveringTypeSensor(EnumSensor):
     _attr_translation_key: str = "window_covering_type"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_COVER}),
+    )
 
-@CONFIG_DIAGNOSTIC_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_BASIC, models={"lumi.curtain.agl001"}
-)
+
+@register_entity(Basic.cluster_id)
 class AqaraCurtainMotorPowerSourceSensor(EnumSensor):
     """Sensor that displays the power source of the Aqara E1 curtain motor device."""
 
@@ -1992,6 +2273,11 @@ class AqaraCurtainMotorPowerSourceSensor(EnumSensor):
     _unique_id_suffix: str = "power_source"
     _attr_translation_key: str = "power_source"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_BASIC}),
+        models=frozenset({"lumi.curtain.agl001"}),
+    )
 
 
 class AqaraE1HookState(types.enum8):
@@ -2003,9 +2289,7 @@ class AqaraE1HookState(types.enum8):
     Unlocking = 0x03
 
 
-@CONFIG_DIAGNOSTIC_MATCH(
-    cluster_handler_names="opple_cluster", models={"lumi.curtain.agl001"}
-)
+@register_entity(AQARA_OPPLE_CLUSTER)
 class AqaraCurtainHookStateSensor(EnumSensor):
     """Representation of a ZHA curtain mode configuration entity."""
 
@@ -2014,6 +2298,11 @@ class AqaraCurtainHookStateSensor(EnumSensor):
     _unique_id_suffix = "hooks_state"
     _attr_translation_key: str = "hooks_state"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({"opple_cluster"}),
+        models=frozenset({"lumi.curtain.agl001"}),
+    )
 
 
 class BitMapSensor(Sensor):
@@ -2067,10 +2356,7 @@ class BitMapSensor(Sensor):
         return "something" if binary_state_attributes else "nothing"
 
 
-@MULTI_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_THERMOSTAT,
-    exposed_features={DANFOSS_ALLY_THERMOSTAT},
-)
+@register_entity(Thermostat.cluster_id)
 class DanfossOpenWindowDetection(EnumSensor):
     """Danfoss proprietary attribute.
 
@@ -2082,11 +2368,13 @@ class DanfossOpenWindowDetection(EnumSensor):
     _attr_translation_key: str = "open_window_detected"
     _enum = danfoss_thermostat.DanfossOpenWindowDetectionEnum
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_THERMOSTAT}),
+        exposed_features=frozenset({DANFOSS_ALLY_THERMOSTAT}),
+    )
 
-@CONFIG_DIAGNOSTIC_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_THERMOSTAT,
-    exposed_features={DANFOSS_ALLY_THERMOSTAT},
-)
+
+@register_entity(Thermostat.cluster_id)
 class DanfossLoadEstimate(Sensor):
     """Danfoss proprietary attribute for communicating its estimate of the radiator load."""
 
@@ -2095,11 +2383,13 @@ class DanfossLoadEstimate(Sensor):
     _attr_translation_key: str = "load_estimate"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_THERMOSTAT}),
+        exposed_features=frozenset({DANFOSS_ALLY_THERMOSTAT}),
+    )
 
-@CONFIG_DIAGNOSTIC_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_THERMOSTAT,
-    exposed_features={DANFOSS_ALLY_THERMOSTAT},
-)
+
+@register_entity(Thermostat.cluster_id)
 class DanfossAdaptationRunStatus(BitMapSensor):
     """Danfoss proprietary attribute for showing the status of the adaptation run."""
 
@@ -2109,11 +2399,13 @@ class DanfossAdaptationRunStatus(BitMapSensor):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _bitmap = danfoss_thermostat.DanfossAdaptationRunStatusBitmap
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_THERMOSTAT}),
+        exposed_features=frozenset({DANFOSS_ALLY_THERMOSTAT}),
+    )
 
-@CONFIG_DIAGNOSTIC_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_THERMOSTAT,
-    exposed_features={DANFOSS_ALLY_THERMOSTAT},
-)
+
+@register_entity(Thermostat.cluster_id)
 class DanfossPreheatTime(Sensor):
     """Danfoss proprietary attribute for communicating the time when it starts pre-heating."""
 
@@ -2123,11 +2415,13 @@ class DanfossPreheatTime(Sensor):
     _attr_entity_registry_enabled_default = False
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_THERMOSTAT}),
+        exposed_features=frozenset({DANFOSS_ALLY_THERMOSTAT}),
+    )
 
-@CONFIG_DIAGNOSTIC_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_DIAGNOSTIC,
-    exposed_features={DANFOSS_ALLY_THERMOSTAT},
-)
+
+@register_entity(Diagnostic.cluster_id)
 class DanfossSoftwareErrorCode(BitMapSensor):
     """Danfoss proprietary attribute for communicating the error code."""
 
@@ -2137,11 +2431,13 @@ class DanfossSoftwareErrorCode(BitMapSensor):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _bitmap = danfoss_thermostat.DanfossSoftwareErrorCodeBitmap
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_DIAGNOSTIC}),
+        exposed_features=frozenset({DANFOSS_ALLY_THERMOSTAT}),
+    )
 
-@CONFIG_DIAGNOSTIC_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_DIAGNOSTIC,
-    exposed_features={DANFOSS_ALLY_THERMOSTAT},
-)
+
+@register_entity(Diagnostic.cluster_id)
 class DanfossMotorStepCounter(Sensor):
     """Danfoss proprietary attribute for communicating the motor step counter."""
 
@@ -2150,8 +2446,13 @@ class DanfossMotorStepCounter(Sensor):
     _attr_translation_key: str = "motor_stepcount"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_DIAGNOSTIC}),
+        exposed_features=frozenset({DANFOSS_ALLY_THERMOSTAT}),
+    )
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_WIND_SPEED)
+
+@register_entity(WindSpeedCluster.cluster_id)
 class WindSpeed(Sensor):
     """Wind Speed sensor."""
 
@@ -2161,3 +2462,7 @@ class WindSpeed(Sensor):
     _divisor = 100
     _attr_native_unit_of_measurement = UnitOfSpeed.METERS_PER_SECOND
     _attr_primary_weight = 2
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_WIND_SPEED}),
+    )

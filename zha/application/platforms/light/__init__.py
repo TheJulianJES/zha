@@ -24,8 +24,12 @@ from zha.application.platforms import (
     DEFAULT_UPDATE_GROUP_FROM_CHILD_DELAY,
     BaseEntity,
     BaseEntityInfo,
+    ClusterHandlerMatch,
     GroupEntity,
     PlatformEntity,
+    PlatformFeatureGroup,
+    register_entity,
+    register_group_entity,
 )
 from zha.application.platforms.helpers import (
     find_state_attributes,
@@ -53,6 +57,7 @@ from zha.application.platforms.light.const import (
     EFFECT_COLORLOOP,
     EFFECT_OFF,
     FLASH_EFFECTS,
+    LIGHT_PROFILE_DEVICE_TYPES,
     ColorMode,
     FlashMode,
     LightEntityFeature,
@@ -61,7 +66,6 @@ from zha.application.platforms.light.helpers import (
     filter_supported_color_modes,
     is_brightness_supported,
 )
-from zha.application.registries import PLATFORM_ENTITIES
 from zha.debounce import Debouncer
 from zha.decorators import periodic
 from zha.zigbee.cluster_handlers import ClusterAttributeUpdatedEvent
@@ -88,9 +92,6 @@ if TYPE_CHECKING:
     from zha.zigbee.group import Group
 
 _LOGGER = logging.getLogger(__name__)
-
-STRICT_MATCH = functools.partial(PLATFORM_ENTITIES.strict_match, Platform.LIGHT)
-GROUP_MATCH = functools.partial(PLATFORM_ENTITIES.group_match, Platform.LIGHT)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -743,16 +744,22 @@ class BaseClusterHandlerLight(BaseLight):
         await super().on_remove()
 
 
-@STRICT_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_ON_OFF,
-    aux_cluster_handlers={CLUSTER_HANDLER_COLOR, CLUSTER_HANDLER_LEVEL},
-)
+@register_entity(OnOff.cluster_id)
 class Light(BaseClusterHandlerLight, PlatformEntity):
     """Representation of a ZHA or ZLL light."""
 
     _attr_translation_key: str = "light"
     _REFRESH_INTERVAL = (2700, 4500)
     __polling_interval: int
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ON_OFF}),
+        optional_cluster_handlers=frozenset(
+            {CLUSTER_HANDLER_COLOR, CLUSTER_HANDLER_LEVEL}
+        ),
+        profile_device_types=LIGHT_PROFILE_DEVICE_TYPES,
+        feature_priority=(PlatformFeatureGroup.LIGHT_OR_SWITCH_OR_SHADE, 0),
+    )
 
     def __init__(
         self,
@@ -762,7 +769,13 @@ class Light(BaseClusterHandlerLight, PlatformEntity):
         **kwargs,
     ) -> None:
         """Initialize the light."""
-        super().__init__(cluster_handlers, endpoint, device, **kwargs)
+        super().__init__(
+            cluster_handlers,
+            endpoint,
+            device,
+            **kwargs,
+            legacy_discovery_unique_id=f"{endpoint.device.ieee}-{endpoint.id}",
+        )
         self._on_off_cluster_handler: OnOffClusterHandler = cast(
             OnOffClusterHandler, self.cluster_handlers[CLUSTER_HANDLER_ON_OFF]
         )
@@ -1023,41 +1036,70 @@ class Light(BaseClusterHandlerLight, PlatformEntity):
         self.maybe_emit_state_changed_event()
 
 
-@STRICT_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_ON_OFF,
-    aux_cluster_handlers={CLUSTER_HANDLER_COLOR, CLUSTER_HANDLER_LEVEL},
-    manufacturers={"Philips", "Signify Netherlands B.V."},
-)
+@register_entity(OnOff.cluster_id)
 class HueLight(Light):
     """Representation of a HUE light which does not report attributes."""
 
     _REFRESH_INTERVAL = (180, 300)
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ON_OFF}),
+        optional_cluster_handlers=frozenset(
+            {CLUSTER_HANDLER_COLOR, CLUSTER_HANDLER_LEVEL}
+        ),
+        manufacturers=frozenset({"Philips", "Signify Netherlands B.V."}),
+        profile_device_types=LIGHT_PROFILE_DEVICE_TYPES,
+        # We want this entity to be preferred over the base light
+        feature_priority=(PlatformFeatureGroup.LIGHT_OR_SWITCH_OR_SHADE, 1),
+    )
 
-@STRICT_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_ON_OFF,
-    aux_cluster_handlers={CLUSTER_HANDLER_COLOR, CLUSTER_HANDLER_LEVEL},
-    manufacturers={"Jasco", "Jasco Products", "Quotra-Vision", "eWeLight", "eWeLink"},
-)
+
+@register_entity(OnOff.cluster_id)
 class ForceOnLight(Light):
     """Representation of a light which does not respect on/off for move_to_level_with_on_off commands."""
 
     _FORCE_ON = True
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ON_OFF}),
+        optional_cluster_handlers=frozenset(
+            {CLUSTER_HANDLER_COLOR, CLUSTER_HANDLER_LEVEL}
+        ),
+        manufacturers=frozenset(
+            {
+                "Jasco",
+                "Jasco Products",
+                "Quotra-Vision",
+                "eWeLight",
+                "eWeLink",
+            }
+        ),
+        profile_device_types=LIGHT_PROFILE_DEVICE_TYPES,
+        # We want this entity to be preferred over the base light
+        feature_priority=(PlatformFeatureGroup.LIGHT_OR_SWITCH_OR_SHADE, 1),
+    )
 
-@STRICT_MATCH(
-    cluster_handler_names=CLUSTER_HANDLER_ON_OFF,
-    aux_cluster_handlers={CLUSTER_HANDLER_COLOR, CLUSTER_HANDLER_LEVEL},
-    manufacturers=DEFAULT_MIN_TRANSITION_MANUFACTURERS,
-)
+
+@register_entity(OnOff.cluster_id)
 class MinTransitionLight(Light):
     """Representation of a light which does not react to any "move to" calls with 0 as a transition."""
 
     # Transitions are counted in 1/10th of a second increments, so this is the smallest
     _DEFAULT_MIN_TRANSITION_TIME = 0.1
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ON_OFF}),
+        optional_cluster_handlers=frozenset(
+            {CLUSTER_HANDLER_COLOR, CLUSTER_HANDLER_LEVEL}
+        ),
+        manufacturers=DEFAULT_MIN_TRANSITION_MANUFACTURERS,
+        profile_device_types=LIGHT_PROFILE_DEVICE_TYPES,
+        # We want this entity to be preferred over the base light
+        feature_priority=(PlatformFeatureGroup.LIGHT_OR_SWITCH_OR_SHADE, 1),
+    )
 
-@GROUP_MATCH()
+
+@register_group_entity
 class LightGroup(BaseClusterHandlerLight, GroupEntity):
     """Representation of a light group."""
 

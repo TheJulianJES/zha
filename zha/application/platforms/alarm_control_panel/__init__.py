@@ -7,10 +7,16 @@ import functools
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
+from zigpy.profiles import zha
 from zigpy.zcl.clusters.security import IasAce
 
 from zha.application import Platform
-from zha.application.platforms import BaseEntityInfo, PlatformEntity
+from zha.application.platforms import (
+    BaseEntityInfo,
+    ClusterHandlerMatch,
+    PlatformEntity,
+    register_entity,
+)
 from zha.application.platforms.alarm_control_panel.const import (
     IAS_ACE_STATE_MAP,
     SUPPORT_ALARM_ARM_AWAY,
@@ -20,24 +26,19 @@ from zha.application.platforms.alarm_control_panel.const import (
     AlarmState,
     CodeFormat,
 )
-from zha.application.registries import PLATFORM_ENTITIES
 from zha.zigbee.cluster_handlers.const import (
     CLUSTER_HANDLER_IAS_ACE,
     CLUSTER_HANDLER_STATE_CHANGED,
 )
 from zha.zigbee.cluster_handlers.security import (
     ClusterHandlerStateChangedEvent,
-    IasAceClusterHandler,
+    IasAceClientClusterHandler,
 )
 
 if TYPE_CHECKING:
     from zha.zigbee.cluster_handlers import ClusterHandler
     from zha.zigbee.device import Device
     from zha.zigbee.endpoint import Endpoint
-
-STRICT_MATCH = functools.partial(
-    PLATFORM_ENTITIES.strict_match, Platform.ALARM_CONTROL_PANEL
-)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,12 +53,16 @@ class AlarmControlPanelEntityInfo(BaseEntityInfo):
     translation_key: str
 
 
-@STRICT_MATCH(cluster_handler_names=CLUSTER_HANDLER_IAS_ACE)
+@register_entity(IasAce.cluster_id)
 class AlarmControlPanel(PlatformEntity):
     """Entity for ZHA alarm control devices."""
 
     _attr_translation_key: str = "alarm_control_panel"
     PLATFORM = Platform.ALARM_CONTROL_PANEL
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        client_cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_ACE}),
+    )
 
     def __init__(
         self,
@@ -67,10 +72,25 @@ class AlarmControlPanel(PlatformEntity):
         **kwargs,
     ) -> None:
         """Initialize the ZHA alarm control device."""
-        super().__init__(cluster_handlers, endpoint, device, **kwargs)
+        legacy_discovery_unique_id = (
+            f"{endpoint.device.ieee}-{endpoint.id}-{int(IasAce.cluster_id)}"
+            if (
+                endpoint.zigpy_endpoint.device_type
+                == zha.DeviceType.IAS_ANCILLARY_CONTROL
+            )
+            else f"{endpoint.device.ieee}-{endpoint.id}-{int(IasAce.cluster_id)}"
+        )
+        super().__init__(
+            cluster_handlers,
+            endpoint,
+            device,
+            **kwargs,
+            legacy_discovery_unique_id=legacy_discovery_unique_id,
+        )
+
         alarm_options = device.gateway.config.config.alarm_control_panel_options
-        self._cluster_handler: IasAceClusterHandler = cast(
-            IasAceClusterHandler, cluster_handlers[0]
+        self._cluster_handler: IasAceClientClusterHandler = cast(
+            IasAceClientClusterHandler, cluster_handlers[0]
         )
         self._cluster_handler.panel_code = alarm_options.master_code
         self._cluster_handler.code_required_arm_actions = (

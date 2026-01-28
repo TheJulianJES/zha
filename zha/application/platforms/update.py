@@ -14,14 +14,18 @@ from zigpy.zcl.clusters.general import Ota, QueryNextImageCommand
 from zigpy.zcl.foundation import Status
 
 from zha.application import Platform
-from zha.application.platforms import BaseEntityInfo, EntityCategory, PlatformEntity
-from zha.application.registries import PLATFORM_ENTITIES
+from zha.application.platforms import (
+    BaseEntityInfo,
+    ClusterHandlerMatch,
+    EntityCategory,
+    PlatformEntity,
+    register_entity,
+)
 from zha.exceptions import ZHAException
 from zha.zigbee.cluster_handlers import ClusterAttributeUpdatedEvent
 from zha.zigbee.cluster_handlers.const import (
     CLUSTER_HANDLER_ATTRIBUTE_UPDATED,
     CLUSTER_HANDLER_OTA,
-    CLUSTER_HANDLER_OTA_SERVER,
 )
 from zha.zigbee.endpoint import Endpoint
 
@@ -30,10 +34,6 @@ if TYPE_CHECKING:
     from zha.zigbee.device import Device
 
 _LOGGER = logging.getLogger(__name__)
-
-CONFIG_DIAGNOSTIC_MATCH = functools.partial(
-    PLATFORM_ENTITIES.config_diagnostic_match, Platform.UPDATE
-)
 
 
 class UpdateDeviceClass(StrEnum):
@@ -277,11 +277,15 @@ class BaseFirmwareUpdateEntity(PlatformEntity):
         await super().on_remove()
 
 
-@CONFIG_DIAGNOSTIC_MATCH(cluster_handler_names=CLUSTER_HANDLER_OTA)
+@register_entity(Ota.cluster_id)
 class FirmwareUpdateEntity(BaseFirmwareUpdateEntity):
     """Representation of a ZHA firmware update entity."""
 
     _unique_id_suffix = "firmware_update"
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        client_cluster_handlers=frozenset({CLUSTER_HANDLER_OTA})
+    )
 
     def __init__(
         self,
@@ -324,11 +328,14 @@ class FirmwareUpdateEntity(BaseFirmwareUpdateEntity):
         return None
 
 
-@CONFIG_DIAGNOSTIC_MATCH(cluster_handler_names=CLUSTER_HANDLER_OTA_SERVER)
+@register_entity(Ota.cluster_id)
 class FirmwareUpdateServerEntity(BaseFirmwareUpdateEntity):
     """Representation of a ZHA firmware update entity."""
 
     _unique_id_suffix = "firmware_update"
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_OTA})
+    )
 
     def __init__(
         self,
@@ -342,7 +349,7 @@ class FirmwareUpdateServerEntity(BaseFirmwareUpdateEntity):
 
         # Some devices make it a server cluster, not a client cluster...
         self._ota_cluster_handler: ClusterHandler = self.cluster_handlers[
-            CLUSTER_HANDLER_OTA_SERVER
+            CLUSTER_HANDLER_OTA
         ]
         self._attr_installed_version: str | None = self._get_cluster_version()
         self._compatible_images: OtaImagesResult = OtaImagesResult(

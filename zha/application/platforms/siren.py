@@ -9,7 +9,8 @@ from enum import IntFlag
 import functools
 from typing import TYPE_CHECKING, Any, Final, cast
 
-from zigpy.zcl.clusters.security import IasWd as WD
+from zigpy.profiles import zha
+from zigpy.zcl.clusters.security import IasWd
 
 from zha.application import Platform
 from zha.application.const import (
@@ -25,8 +26,12 @@ from zha.application.const import (
     WARNING_DEVICE_STROBE_NO,
     Strobe,
 )
-from zha.application.platforms import BaseEntityInfo, PlatformEntity
-from zha.application.registries import PLATFORM_ENTITIES
+from zha.application.platforms import (
+    BaseEntityInfo,
+    ClusterHandlerMatch,
+    PlatformEntity,
+    register_entity,
+)
 from zha.zigbee.cluster_handlers.const import CLUSTER_HANDLER_IAS_WD
 from zha.zigbee.cluster_handlers.security import IasWdClusterHandler
 
@@ -35,7 +40,6 @@ if TYPE_CHECKING:
     from zha.zigbee.device import Device
     from zha.zigbee.endpoint import Endpoint
 
-MULTI_MATCH = functools.partial(PLATFORM_ENTITIES.multipass_match, Platform.SIREN)
 DEFAULT_DURATION = 5  # seconds
 
 ATTR_AVAILABLE_TONES: Final[str] = "available_tones"
@@ -62,13 +66,17 @@ class SirenEntityInfo(BaseEntityInfo):
     supported_features: SirenEntityFeature
 
 
-@MULTI_MATCH(cluster_handler_names=CLUSTER_HANDLER_IAS_WD)
+@register_entity(IasWd.cluster_id)
 class Siren(PlatformEntity):
     """Representation of a ZHA siren."""
 
     PLATFORM = Platform.SIREN
     _attr_fallback_name: str = "Siren"
-    _attr_primary_weight = 10
+    _attr_primary_weight = 4
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_WD}),
+    )
 
     def __init__(
         self,
@@ -78,6 +86,25 @@ class Siren(PlatformEntity):
         **kwargs: Any,
     ) -> None:
         """Init this siren."""
+        self._cluster_handler: IasWdClusterHandler = cast(
+            IasWdClusterHandler, cluster_handlers[0]
+        )
+
+        legacy_discovery_unique_id = (
+            f"{endpoint.device.ieee}-{endpoint.id}"
+            if (
+                endpoint.zigpy_endpoint.device_type == zha.DeviceType.IAS_WARNING_DEVICE
+            )
+            else f"{endpoint.device.ieee}-{endpoint.id}-{int(IasWd.cluster_id)}"
+        )
+
+        super().__init__(
+            cluster_handlers,
+            endpoint,
+            device,
+            **kwargs,
+            legacy_discovery_unique_id=legacy_discovery_unique_id,
+        )
         self._attr_supported_features = (
             SirenEntityFeature.TURN_ON
             | SirenEntityFeature.TURN_OFF
@@ -93,10 +120,6 @@ class Siren(PlatformEntity):
             WARNING_DEVICE_MODE_FIRE_PANIC: "Fire Panic",
             WARNING_DEVICE_MODE_EMERGENCY_PANIC: "Emergency Panic",
         }
-        self._cluster_handler: IasWdClusterHandler = cast(
-            IasWdClusterHandler, cluster_handlers[0]
-        )
-        super().__init__(cluster_handlers, endpoint, device, **kwargs)
         self._attr_is_on: bool = False
         self._off_listener: asyncio.TimerHandle | None = None
 
@@ -132,7 +155,7 @@ class Siren(PlatformEntity):
             self._off_listener.cancel()
             self._off_listener = None
         tone_cache = self._cluster_handler.data_cache.get(
-            WD.Warning.WarningMode.__name__
+            IasWd.Warning.WarningMode.__name__
         )
         siren_tone = (
             tone_cache.value
@@ -141,7 +164,7 @@ class Siren(PlatformEntity):
         )
         siren_duration = DEFAULT_DURATION
         level_cache = self._cluster_handler.data_cache.get(
-            WD.Warning.SirenLevel.__name__
+            IasWd.Warning.SirenLevel.__name__
         )
         siren_level = (
             level_cache.value if level_cache is not None else WARNING_DEVICE_SOUND_HIGH
@@ -151,7 +174,7 @@ class Siren(PlatformEntity):
             strobe_cache.value if strobe_cache is not None else Strobe.No_Strobe
         )
         strobe_level_cache = self._cluster_handler.data_cache.get(
-            WD.StrobeLevel.__name__
+            IasWd.StrobeLevel.__name__
         )
         strobe_level = (
             strobe_level_cache.value

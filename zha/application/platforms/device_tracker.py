@@ -7,12 +7,16 @@ import functools
 import time
 from typing import TYPE_CHECKING, Any, cast
 
+from zigpy.profiles import zha
 from zigpy.zcl.clusters.general import PowerConfiguration
 
 from zha.application import Platform
-from zha.application.platforms import PlatformEntity
+from zha.application.platforms import (
+    ClusterHandlerMatch,
+    PlatformEntity,
+    register_entity,
+)
 from zha.application.platforms.sensor import Battery
-from zha.application.registries import PLATFORM_ENTITIES
 from zha.decorators import periodic
 from zha.zigbee.cluster_handlers import ClusterAttributeUpdatedEvent
 from zha.zigbee.cluster_handlers.const import (
@@ -26,9 +30,10 @@ if TYPE_CHECKING:
     from zha.zigbee.device import Device
     from zha.zigbee.endpoint import Endpoint
 
-STRICT_MATCH = functools.partial(
-    PLATFORM_ENTITIES.strict_match, Platform.DEVICE_TRACKER
-)
+
+# TODO: this is a fake device type that is used by a single quirk to match against this
+# platform. This needs to be reworked.
+SMARTTHINGS_ARRIVAL_SENSOR_DEVICE_TYPE = 0x8000
 
 
 class SourceType(StrEnum):
@@ -40,7 +45,7 @@ class SourceType(StrEnum):
     BLUETOOTH_LE = "bluetooth_le"
 
 
-@STRICT_MATCH(cluster_handler_names=CLUSTER_HANDLER_POWER_CONFIGURATION)
+@register_entity(PowerConfiguration.cluster_id)
 class DeviceScannerEntity(PlatformEntity):
     """Represent a tracked device."""
 
@@ -50,6 +55,13 @@ class DeviceScannerEntity(PlatformEntity):
     _attr_fallback_name: str = "Device scanner"
     __polling_interval: int
 
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_POWER_CONFIGURATION}),
+        profile_device_types=frozenset(
+            {(zha.PROFILE_ID, SMARTTHINGS_ARRIVAL_SENSOR_DEVICE_TYPE)}
+        ),
+    )
+
     def __init__(
         self,
         cluster_handlers: list[ClusterHandler],
@@ -58,7 +70,13 @@ class DeviceScannerEntity(PlatformEntity):
         **kwargs,
     ):
         """Initialize the ZHA device tracker."""
-        super().__init__(cluster_handlers, endpoint, device, **kwargs)
+        super().__init__(
+            cluster_handlers,
+            endpoint,
+            device,
+            **kwargs,
+            legacy_discovery_unique_id=f"{endpoint.device.ieee}-{endpoint.id}",
+        )
         self._battery_cluster_handler: PowerConfigurationClusterHandler = cast(
             PowerConfigurationClusterHandler,
             self.cluster_handlers[CLUSTER_HANDLER_POWER_CONFIGURATION],
