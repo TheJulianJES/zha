@@ -611,7 +611,6 @@ class OnOffClusterHandler(ClusterHandler):
     def __init__(self, cluster: zigpy.zcl.Cluster, endpoint: Endpoint) -> None:
         """Initialize OnOffClusterHandler."""
         super().__init__(cluster, endpoint)
-        self._off_listener: asyncio.TimerHandle | None = None
 
         if TUYA_PLUG_ONOFF in endpoint.device.exposes_features:
             self.ZCL_INIT_ATTRS = self.ZCL_INIT_ATTRS.copy()
@@ -645,46 +644,6 @@ class OnOffClusterHandler(ClusterHandler):
         result = await self.off()
         if result[1] is not Status.SUCCESS:
             raise ZHAException(f"Failed to turn off: {result[1]}")
-        self.cluster.update_attribute(OnOff.AttributeDefs.on_off.id, t.Bool.false)
-
-    def cluster_command(self, tsn, command_id, args):
-        """Handle commands received to this cluster."""
-        cmd = parse_and_log_command(self, tsn, command_id, args)
-
-        if cmd in (
-            OnOff.ServerCommandDefs.off.name,
-            OnOff.ServerCommandDefs.off_with_effect.name,
-        ):
-            self.cluster.update_attribute(OnOff.AttributeDefs.on_off.id, t.Bool.false)
-        elif cmd in (
-            OnOff.ServerCommandDefs.on.name,
-            OnOff.ServerCommandDefs.on_with_recall_global_scene.name,
-        ):
-            self.cluster.update_attribute(OnOff.AttributeDefs.on_off.id, t.Bool.true)
-        elif cmd == OnOff.ServerCommandDefs.on_with_timed_off.name:
-            should_accept = args[0]
-            on_time = args[1]
-            # 0 is always accept 1 is only accept when already on
-            if should_accept == 0 or (should_accept == 1 and bool(self.on_off)):
-                if self._off_listener is not None:
-                    self._off_listener.cancel()
-                    self._off_listener = None
-                self.cluster.update_attribute(
-                    OnOff.AttributeDefs.on_off.id, t.Bool.true
-                )
-                if on_time > 0:
-                    self._off_listener = asyncio.get_running_loop().call_later(
-                        (on_time / 10),  # value is in 10ths of a second
-                        self.set_to_off,
-                    )
-        elif cmd == "toggle":
-            self.cluster.update_attribute(
-                OnOff.AttributeDefs.on_off.id, not bool(self.on_off)
-            )
-
-    def set_to_off(self, *_):
-        """Set the state to off."""
-        self._off_listener = None
         self.cluster.update_attribute(OnOff.AttributeDefs.on_off.id, t.Bool.false)
 
     async def async_update(self):
