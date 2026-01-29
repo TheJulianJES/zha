@@ -341,8 +341,17 @@ async def test_onoff_client_binary_sensor_on_with_timed_off(
     # Binary sensor should now be on
     assert entity.is_on is True
 
-    # Advance time past the timeout (180 seconds)
-    await asyncio.sleep(200)
+    # Send another on_with_timed_off while timer is active (covers timer cancel logic)
+    on_off_ch.cluster_command(
+        107,
+        OnOff.ServerCommandDefs.on_with_timed_off.id,
+        [0, 500, 0],  # 50 seconds
+    )
+    await zha_gateway.async_block_till_done()
+    assert entity.is_on is True
+
+    # Advance time past the new timeout (50 seconds)
+    await asyncio.sleep(60)
     await zha_gateway.async_block_till_done()
 
     # Binary sensor should now be off
