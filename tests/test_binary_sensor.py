@@ -234,7 +234,7 @@ async def test_smarttthings_multi(
 
     st_ch.emit_zha_event = MagicMock(wraps=st_ch.emit_zha_event)
 
-    await send_attributes_report(zha_gateway, st_ch.cluster, {0x0012: 120})
+    await send_attributes_report(zha_gateway, st_ch.cluster, {"x_axis": 120})
 
     assert st_ch.emit_zha_event.call_count == 1
     assert st_ch.emit_zha_event.mock_calls == [
