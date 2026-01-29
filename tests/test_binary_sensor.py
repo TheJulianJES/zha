@@ -23,6 +23,7 @@ from tests.common import (
     join_zigpy_device,
     send_attributes_report,
     update_attribute_cache,
+    zigpy_device_from_json,
 )
 from zha.application import Platform
 from zha.application.gateway import Gateway
@@ -298,23 +299,9 @@ async def test_onoff_client_binary_sensor_on_with_timed_off(
     This tests motion sensors that use output/client OnOff clusters and send
     on_with_timed_off commands when motion is detected.
     """
-    zigpy_device = create_mock_zigpy_device(
-        zha_gateway,
-        {
-            1: {
-                SIG_EP_INPUT: [
-                    general.Basic.cluster_id,
-                    general.PowerConfiguration.cluster_id,
-                ],
-                SIG_EP_OUTPUT: [
-                    general.OnOff.cluster_id,
-                ],
-                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.ON_OFF_SENSOR,
-                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
-            }
-        },
-        model="Motion Sensor",
-        manufacturer="Test",
+    zigpy_device = await zigpy_device_from_json(
+        zha_gateway.application_controller,
+        "tests/data/devices/ikea-of-sweden-tradfri-motion-sensor.json",
     )
 
     zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
