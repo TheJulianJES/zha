@@ -347,3 +347,37 @@ async def test_onoff_client_binary_sensor_on_with_timed_off(
 
     # Binary sensor should now be off
     assert entity.is_on is False
+
+    # Test toggle command
+    on_off_ch.cluster_command(
+        108,
+        OnOff.ServerCommandDefs.toggle.id,
+        [],
+    )
+    await zha_gateway.async_block_till_done()
+    assert entity.is_on is True
+
+    on_off_ch.cluster_command(
+        109,
+        OnOff.ServerCommandDefs.toggle.id,
+        [],
+    )
+    await zha_gateway.async_block_till_done()
+    assert entity.is_on is False
+
+    # Test off command
+    on_off_ch.cluster_command(
+        110,
+        OnOff.ServerCommandDefs.on.id,
+        [],
+    )
+    await zha_gateway.async_block_till_done()
+    assert entity.is_on is True
+
+    on_off_ch.cluster_command(
+        111,
+        OnOff.ServerCommandDefs.off.id,
+        [],
+    )
+    await zha_gateway.async_block_till_done()
+    assert entity.is_on is False
