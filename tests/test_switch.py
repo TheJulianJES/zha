@@ -17,6 +17,7 @@ from zigpy.profiles import zha
 from zigpy.quirks import DEVICE_REGISTRY, CustomCluster, CustomDevice
 from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder
 import zigpy.types as t
+from zigpy.typing import UNDEFINED
 from zigpy.zcl.clusters import closures, general
 from zigpy.zcl.clusters.general import BinaryOutput
 from zigpy.zcl.clusters.manufacturer_specific import ManufacturerSpecificCluster
@@ -213,7 +214,7 @@ async def test_switch(zha_gateway: Gateway) -> None:
     await zha_gateway.async_block_till_done()
     assert cluster.read_attributes.await_count == 1
     assert cluster.read_attributes.await_args == call(
-        ["on_off"], allow_cache=False, only_cache=False, manufacturer=None
+        ["on_off"], allow_cache=False, only_cache=False, manufacturer=UNDEFINED
     )
     assert bool(entity.state["state"]) is True
 
@@ -412,7 +413,7 @@ async def test_switch_configurable(
         await entity.async_turn_on()
         await zha_gateway.async_block_till_done()
         assert cluster.write_attributes.mock_calls == [
-            call({"window_detection_function": True}, manufacturer=None)
+            call({"window_detection_function": True}, manufacturer=UNDEFINED)
         ]
 
     cluster.write_attributes.reset_mock()
@@ -426,7 +427,7 @@ async def test_switch_configurable(
         await entity.async_turn_off()
         await zha_gateway.async_block_till_done()
         assert cluster.write_attributes.mock_calls == [
-            call({"window_detection_function": False}, manufacturer=None)
+            call({"window_detection_function": False}, manufacturer=UNDEFINED)
         ]
 
     cluster.read_attributes.reset_mock()
@@ -442,7 +443,7 @@ async def test_switch_configurable(
             ],
             allow_cache=False,
             only_cache=False,
-            manufacturer=None,
+            manufacturer=UNDEFINED,
         )
     ] == cluster.read_attributes.call_args_list
 
@@ -454,9 +455,9 @@ async def test_switch_configurable(
         await zha_gateway.async_block_till_done()
 
     assert cluster.write_attributes.mock_calls == [
-        call({"window_detection_function": False}, manufacturer=None),
-        call({"window_detection_function": False}, manufacturer=None),
-        call({"window_detection_function": False}, manufacturer=None),
+        call({"window_detection_function": False}, manufacturer=UNDEFINED),
+        call({"window_detection_function": False}, manufacturer=UNDEFINED),
+        call({"window_detection_function": False}, manufacturer=UNDEFINED),
     ]
 
     cluster.write_attributes.side_effect = None
@@ -468,14 +469,14 @@ async def test_switch_configurable(
     await entity.async_turn_off()
     await zha_gateway.async_block_till_done()
     assert cluster.write_attributes.mock_calls == [
-        call({"window_detection_function": True}, manufacturer=None)
+        call({"window_detection_function": True}, manufacturer=UNDEFINED)
     ]
 
     cluster.write_attributes.reset_mock()
     await entity.async_turn_on()
     await zha_gateway.async_block_till_done()
     assert cluster.write_attributes.mock_calls == [
-        call({"window_detection_function": False}, manufacturer=None)
+        call({"window_detection_function": False}, manufacturer=UNDEFINED)
     ]
 
 
@@ -540,7 +541,7 @@ async def test_switch_configurable_custom_on_off_values(zha_gateway: Gateway) ->
         await entity.async_turn_on()
         await zha_gateway.async_block_till_done()
         assert cluster.write_attributes.mock_calls == [
-            call({"window_detection_function": 3}, manufacturer=None)
+            call({"window_detection_function": 3}, manufacturer=UNDEFINED)
         ]
         cluster.write_attributes.reset_mock()
 
@@ -553,7 +554,7 @@ async def test_switch_configurable_custom_on_off_values(zha_gateway: Gateway) ->
         await entity.async_turn_off()
         await zha_gateway.async_block_till_done()
         assert cluster.write_attributes.mock_calls == [
-            call({"window_detection_function": 5}, manufacturer=None)
+            call({"window_detection_function": 5}, manufacturer=UNDEFINED)
         ]
 
 
@@ -621,7 +622,7 @@ async def test_switch_configurable_custom_on_off_values_force_inverted(
         await entity.async_turn_on()
         await zha_gateway.async_block_till_done()
         assert cluster.write_attributes.mock_calls == [
-            call({"window_detection_function": 5}, manufacturer=None)
+            call({"window_detection_function": 5}, manufacturer=UNDEFINED)
         ]
         cluster.write_attributes.reset_mock()
 
@@ -634,7 +635,7 @@ async def test_switch_configurable_custom_on_off_values_force_inverted(
         await entity.async_turn_off()
         await zha_gateway.async_block_till_done()
         assert cluster.write_attributes.mock_calls == [
-            call({"window_detection_function": 3}, manufacturer=None)
+            call({"window_detection_function": 3}, manufacturer=UNDEFINED)
         ]
 
 
@@ -705,7 +706,7 @@ async def test_switch_configurable_custom_on_off_values_inverter_attribute(
         await entity.async_turn_on()
         await zha_gateway.async_block_till_done()
         assert cluster.write_attributes.mock_calls == [
-            call({"window_detection_function": 5}, manufacturer=None)
+            call({"window_detection_function": 5}, manufacturer=UNDEFINED)
         ]
         cluster.write_attributes.reset_mock()
 
@@ -718,7 +719,7 @@ async def test_switch_configurable_custom_on_off_values_inverter_attribute(
         await entity.async_turn_off()
         await zha_gateway.async_block_till_done()
         assert cluster.write_attributes.mock_calls == [
-            call({"window_detection_function": 3}, manufacturer=None)
+            call({"window_detection_function": 3}, manufacturer=UNDEFINED)
         ]
 
 
@@ -789,7 +790,7 @@ async def test_cover_inversion_switch(zha_gateway: Gateway) -> None:
                 WCAttrs.window_covering_mode.name: WCM.Motor_direction_reversed
                 | WCM.LEDs_display_feedback
             },
-            manufacturer=None,
+            manufacturer=UNDEFINED,
         )
 
         assert bool(entity.state["state"]) is True
@@ -805,7 +806,7 @@ async def test_cover_inversion_switch(zha_gateway: Gateway) -> None:
         assert cluster.write_attributes.call_count == 1
         assert cluster.write_attributes.call_args_list[0] == call(
             {WCAttrs.window_covering_mode.name: WCM.LEDs_display_feedback},
-            manufacturer=None,
+            manufacturer=UNDEFINED,
         )
 
         assert bool(entity.state["state"]) is False
@@ -870,7 +871,7 @@ async def test_binary_output_cluster(zha_gateway: Gateway) -> None:
     cluster.write_attributes.reset_mock()
     await switch_entity.async_turn_on()
     assert cluster.write_attributes.mock_calls == [
-        call({"present_value": True}, manufacturer=None)
+        call({"present_value": True}, manufacturer=UNDEFINED)
     ]
     assert switch_entity.state["state"] is True
 
@@ -878,7 +879,7 @@ async def test_binary_output_cluster(zha_gateway: Gateway) -> None:
     cluster.write_attributes.reset_mock()
     await switch_entity.async_turn_off()
     assert cluster.write_attributes.mock_calls == [
-        call({"present_value": False}, manufacturer=None)
+        call({"present_value": False}, manufacturer=UNDEFINED)
     ]
     assert switch_entity.state["state"] is False
 
@@ -902,6 +903,6 @@ async def test_binary_output_cluster(zha_gateway: Gateway) -> None:
             [BinaryOutput.AttributeDefs.present_value.name],
             allow_cache=False,
             only_cache=False,
-            manufacturer=None,
+            manufacturer=UNDEFINED,
         )
     ]
