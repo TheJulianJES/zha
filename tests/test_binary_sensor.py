@@ -1,5 +1,6 @@
 """Test zhaws binary sensor."""
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from unittest.mock import MagicMock, call
 
@@ -287,3 +288,62 @@ async def test_quirks_binary_sensor_attr_converter(zha_gateway: Gateway) -> None
 
     await send_attributes_report(zha_gateway, cluster, {"on_off": 0})
     assert entity.is_on is True
+
+
+async def test_onoff_client_binary_sensor_on_with_timed_off(
+    zha_gateway: Gateway,
+) -> None:
+    """Test binary sensor with client OnOff cluster handles on_with_timed_off.
+
+    This tests motion sensors that use output/client OnOff clusters and send
+    on_with_timed_off commands when motion is detected.
+    """
+    zigpy_device = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [
+                    general.Basic.cluster_id,
+                    general.PowerConfiguration.cluster_id,
+                ],
+                SIG_EP_OUTPUT: [
+                    general.OnOff.cluster_id,
+                ],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.ON_OFF_SENSOR,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+        model="Motion Sensor",
+        manufacturer="Test",
+    )
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+    entity = find_entity(zha_device, Platform.BINARY_SENSOR)
+    assert entity is not None
+    assert isinstance(entity, BinarySensor)
+
+    # Initial state should be off
+    assert entity.is_on is False
+
+    # Get the client cluster handler
+    on_off_ch = zha_device.endpoints[1].client_cluster_handlers["1:0x0006_client"]
+    assert on_off_ch is not None
+
+    # Simulate motion sensor sending on_with_timed_off command
+    # on_off_control=0 means always accept, on_time=1800 (180 seconds in 10ths)
+    on_off_ch.cluster_command(
+        106,  # tsn
+        OnOff.ServerCommandDefs.on_with_timed_off.id,
+        [0, 1800, 0],  # on_off_control, on_time, off_wait_time
+    )
+    await zha_gateway.async_block_till_done()
+
+    # Binary sensor should now be on
+    assert entity.is_on is True
+
+    # Advance time past the timeout (180 seconds)
+    await asyncio.sleep(200)
+    await zha_gateway.async_block_till_done()
+
+    # Binary sensor should now be off
+    assert entity.is_on is False
