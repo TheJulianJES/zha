@@ -21,6 +21,7 @@ from tests.common import (
     find_entity,
     get_entity,
     join_zigpy_device,
+    make_zcl_header,
     send_attributes_report,
     update_attribute_cache,
     zigpy_device_from_json,
@@ -312,28 +313,25 @@ async def test_onoff_client_binary_sensor_on_with_timed_off(
     # Initial state should be off
     assert entity.is_on is False
 
-    # Get the client cluster handler
-    on_off_ch = zha_device.endpoints[1].client_cluster_handlers["1:0x0006_client"]
-    assert on_off_ch is not None
+    # Get the client/output cluster
+    cluster = zigpy_device.endpoints[1].out_clusters[OnOff.cluster_id]
 
     # Simulate motion sensor sending on_with_timed_off command
     # on_off_control=0 means always accept, on_time=1800 (180 seconds in 10ths)
-    on_off_ch.cluster_command(
-        106,  # tsn
-        OnOff.ServerCommandDefs.on_with_timed_off.id,
-        [0, 1800, 0],  # on_off_control, on_time, off_wait_time
+    hdr = make_zcl_header(
+        OnOff.ServerCommandDefs.on_with_timed_off.id, global_command=False
     )
+    cluster.handle_message(hdr, [0, 1800, 0])
     await zha_gateway.async_block_till_done()
 
     # Binary sensor should now be on
     assert entity.is_on is True
 
     # Send another on_with_timed_off while timer is active (covers timer cancel logic)
-    on_off_ch.cluster_command(
-        107,
-        OnOff.ServerCommandDefs.on_with_timed_off.id,
-        [0, 500, 0],  # 50 seconds
+    hdr = make_zcl_header(
+        OnOff.ServerCommandDefs.on_with_timed_off.id, global_command=False
     )
+    cluster.handle_message(hdr, [0, 500, 0])  # 50 seconds
     await zha_gateway.async_block_till_done()
     assert entity.is_on is True
 
@@ -345,35 +343,23 @@ async def test_onoff_client_binary_sensor_on_with_timed_off(
     assert entity.is_on is False
 
     # Test toggle command
-    on_off_ch.cluster_command(
-        108,
-        OnOff.ServerCommandDefs.toggle.id,
-        [],
-    )
+    hdr = make_zcl_header(OnOff.ServerCommandDefs.toggle.id, global_command=False)
+    cluster.handle_message(hdr, [])
     await zha_gateway.async_block_till_done()
     assert entity.is_on is True
 
-    on_off_ch.cluster_command(
-        109,
-        OnOff.ServerCommandDefs.toggle.id,
-        [],
-    )
+    hdr = make_zcl_header(OnOff.ServerCommandDefs.toggle.id, global_command=False)
+    cluster.handle_message(hdr, [])
     await zha_gateway.async_block_till_done()
     assert entity.is_on is False
 
-    # Test off command
-    on_off_ch.cluster_command(
-        110,
-        OnOff.ServerCommandDefs.on.id,
-        [],
-    )
+    # Test on/off command
+    hdr = make_zcl_header(OnOff.ServerCommandDefs.on.id, global_command=False)
+    cluster.handle_message(hdr, [])
     await zha_gateway.async_block_till_done()
     assert entity.is_on is True
 
-    on_off_ch.cluster_command(
-        111,
-        OnOff.ServerCommandDefs.off.id,
-        [],
-    )
+    hdr = make_zcl_header(OnOff.ServerCommandDefs.off.id, global_command=False)
+    cluster.handle_message(hdr, [])
     await zha_gateway.async_block_till_done()
     assert entity.is_on is False
