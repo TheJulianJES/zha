@@ -1,5 +1,6 @@
 """Test zhaws binary sensor."""
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from unittest.mock import MagicMock, call
 
@@ -20,8 +21,10 @@ from tests.common import (
     find_entity,
     get_entity,
     join_zigpy_device,
+    make_zcl_header,
     send_attributes_report,
     update_attribute_cache,
+    zigpy_device_from_json,
 )
 from zha.application import Platform
 from zha.application.gateway import Gateway
@@ -287,3 +290,76 @@ async def test_quirks_binary_sensor_attr_converter(zha_gateway: Gateway) -> None
 
     await send_attributes_report(zha_gateway, cluster, {"on_off": 0})
     assert entity.is_on is True
+
+
+async def test_onoff_client_binary_sensor_on_with_timed_off(
+    zha_gateway: Gateway,
+) -> None:
+    """Test binary sensor with client OnOff cluster handles on_with_timed_off.
+
+    This tests motion sensors that use output/client OnOff clusters and send
+    on_with_timed_off commands when motion is detected.
+    """
+    zigpy_device = await zigpy_device_from_json(
+        zha_gateway.application_controller,
+        "tests/data/devices/ikea-of-sweden-tradfri-motion-sensor.json",
+    )
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+    entity = find_entity(zha_device, Platform.BINARY_SENSOR)
+    assert entity is not None
+    assert isinstance(entity, BinarySensor)
+
+    # Initial state should be off
+    assert entity.is_on is False
+
+    # Get the client/output cluster
+    cluster = zigpy_device.endpoints[1].out_clusters[OnOff.cluster_id]
+
+    # Simulate motion sensor sending on_with_timed_off command
+    # on_off_control=0 means always accept, on_time=1800 (180 seconds in 10ths)
+    hdr = make_zcl_header(
+        OnOff.ServerCommandDefs.on_with_timed_off.id, global_command=False
+    )
+    cluster.handle_message(hdr, [0, 1800, 0])
+    await zha_gateway.async_block_till_done()
+
+    # Binary sensor should now be on
+    assert entity.is_on is True
+
+    # Send another on_with_timed_off while timer is active (covers timer cancel logic)
+    hdr = make_zcl_header(
+        OnOff.ServerCommandDefs.on_with_timed_off.id, global_command=False
+    )
+    cluster.handle_message(hdr, [0, 500, 0])  # 50 seconds
+    await zha_gateway.async_block_till_done()
+    assert entity.is_on is True
+
+    # Advance time past the new timeout (50 seconds)
+    await asyncio.sleep(60)
+    await zha_gateway.async_block_till_done()
+
+    # Binary sensor should now be off
+    assert entity.is_on is False
+
+    # Test toggle command
+    hdr = make_zcl_header(OnOff.ServerCommandDefs.toggle.id, global_command=False)
+    cluster.handle_message(hdr, [])
+    await zha_gateway.async_block_till_done()
+    assert entity.is_on is True
+
+    hdr = make_zcl_header(OnOff.ServerCommandDefs.toggle.id, global_command=False)
+    cluster.handle_message(hdr, [])
+    await zha_gateway.async_block_till_done()
+    assert entity.is_on is False
+
+    # Test on/off command
+    hdr = make_zcl_header(OnOff.ServerCommandDefs.on.id, global_command=False)
+    cluster.handle_message(hdr, [])
+    await zha_gateway.async_block_till_done()
+    assert entity.is_on is True
+
+    hdr = make_zcl_header(OnOff.ServerCommandDefs.off.id, global_command=False)
+    cluster.handle_message(hdr, [])
+    await zha_gateway.async_block_till_done()
+    assert entity.is_on is False

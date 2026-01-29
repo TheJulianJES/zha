@@ -540,62 +540,21 @@ class MultistateValueClusterHandler(ClusterHandler):
 class OnOffClientClusterHandler(ClientClusterHandler):
     """OnOff client cluster handler."""
 
-
-@registries.BINDABLE_CLUSTERS.register(OnOff.cluster_id)
-@registries.CLUSTER_HANDLER_REGISTRY.register(OnOff.cluster_id)
-class OnOffClusterHandler(ClusterHandler):
-    """Cluster handler for the OnOff Zigbee cluster."""
-
-    REPORT_CONFIG = (
-        AttrReportConfig(
-            attr=OnOff.AttributeDefs.on_off.name, config=REPORT_CONFIG_IMMEDIATE
-        ),
-    )
-    ZCL_INIT_ATTRS = {
-        OnOff.AttributeDefs.start_up_on_off.name: True,
-    }
-
     def __init__(self, cluster: zigpy.zcl.Cluster, endpoint: Endpoint) -> None:
-        """Initialize OnOffClusterHandler."""
+        """Initialize OnOffClientClusterHandler."""
         super().__init__(cluster, endpoint)
         self._off_listener: asyncio.TimerHandle | None = None
-
-        if TUYA_PLUG_ONOFF in endpoint.device.exposes_features:
-            self.ZCL_INIT_ATTRS = self.ZCL_INIT_ATTRS.copy()
-            self.ZCL_INIT_ATTRS["backlight_mode"] = True
-            self.ZCL_INIT_ATTRS["power_on_state"] = True
-            self.ZCL_INIT_ATTRS["child_lock"] = True
-
-    @classmethod
-    def matches(cls, cluster: zigpy.zcl.Cluster, endpoint: Endpoint) -> bool:
-        """Filter the cluster match for specific devices."""
-        return not (
-            cluster.endpoint.device.manufacturer == "Konke"
-            and cluster.endpoint.device.model
-            in ("3AFE280100510001", "3AFE170100510001")
-        )
 
     @property
     def on_off(self) -> bool | None:
         """Return cached value of on/off attribute."""
         return self.cluster.get(OnOff.AttributeDefs.on_off.name)
 
-    async def turn_on(self) -> None:
-        """Turn the on off cluster on."""
-        result = await self.on()
-        if result[1] is not Status.SUCCESS:
-            raise ZHAException(f"Failed to turn on: {result[1]}")
-        self.cluster.update_attribute(OnOff.AttributeDefs.on_off.id, t.Bool.true)
-
-    async def turn_off(self) -> None:
-        """Turn the on off cluster off."""
-        result = await self.off()
-        if result[1] is not Status.SUCCESS:
-            raise ZHAException(f"Failed to turn off: {result[1]}")
-        self.cluster.update_attribute(OnOff.AttributeDefs.on_off.id, t.Bool.false)
-
     def cluster_command(self, tsn, command_id, args):
         """Handle commands received to this cluster."""
+        # for emitting ZHA event
+        super().cluster_command(tsn, command_id, args)
+
         cmd = parse_and_log_command(self, tsn, command_id, args)
 
         if cmd in (
@@ -632,6 +591,59 @@ class OnOffClusterHandler(ClusterHandler):
     def set_to_off(self, *_):
         """Set the state to off."""
         self._off_listener = None
+        self.cluster.update_attribute(OnOff.AttributeDefs.on_off.id, t.Bool.false)
+
+
+@registries.BINDABLE_CLUSTERS.register(OnOff.cluster_id)
+@registries.CLUSTER_HANDLER_REGISTRY.register(OnOff.cluster_id)
+class OnOffClusterHandler(ClusterHandler):
+    """Cluster handler for the OnOff Zigbee cluster."""
+
+    REPORT_CONFIG = (
+        AttrReportConfig(
+            attr=OnOff.AttributeDefs.on_off.name, config=REPORT_CONFIG_IMMEDIATE
+        ),
+    )
+    ZCL_INIT_ATTRS = {
+        OnOff.AttributeDefs.start_up_on_off.name: True,
+    }
+
+    def __init__(self, cluster: zigpy.zcl.Cluster, endpoint: Endpoint) -> None:
+        """Initialize OnOffClusterHandler."""
+        super().__init__(cluster, endpoint)
+
+        if TUYA_PLUG_ONOFF in endpoint.device.exposes_features:
+            self.ZCL_INIT_ATTRS = self.ZCL_INIT_ATTRS.copy()
+            self.ZCL_INIT_ATTRS["backlight_mode"] = True
+            self.ZCL_INIT_ATTRS["power_on_state"] = True
+            self.ZCL_INIT_ATTRS["child_lock"] = True
+
+    @classmethod
+    def matches(cls, cluster: zigpy.zcl.Cluster, endpoint: Endpoint) -> bool:
+        """Filter the cluster match for specific devices."""
+        return not (
+            cluster.endpoint.device.manufacturer == "Konke"
+            and cluster.endpoint.device.model
+            in ("3AFE280100510001", "3AFE170100510001")
+        )
+
+    @property
+    def on_off(self) -> bool | None:
+        """Return cached value of on/off attribute."""
+        return self.cluster.get(OnOff.AttributeDefs.on_off.name)
+
+    async def turn_on(self) -> None:
+        """Turn the on off cluster on."""
+        result = await self.on()
+        if result[1] is not Status.SUCCESS:
+            raise ZHAException(f"Failed to turn on: {result[1]}")
+        self.cluster.update_attribute(OnOff.AttributeDefs.on_off.id, t.Bool.true)
+
+    async def turn_off(self) -> None:
+        """Turn the on off cluster off."""
+        result = await self.off()
+        if result[1] is not Status.SUCCESS:
+            raise ZHAException(f"Failed to turn off: {result[1]}")
         self.cluster.update_attribute(OnOff.AttributeDefs.on_off.id, t.Bool.false)
 
     async def async_update(self):

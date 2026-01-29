@@ -1241,8 +1241,19 @@ async def test_zha_send_event_from_quirk(zha_gateway: Gateway):
 
     on_off_ch.cluster_command(1, OnOff.ServerCommandDefs.on.id, [])
 
-    assert on_off_ch.emit_zha_event.call_count == 1
-    assert on_off_ch.emit_zha_event.mock_calls == [call("on", [])]
+    assert on_off_ch.emit_zha_event.call_count == 2
+    assert on_off_ch.emit_zha_event.mock_calls == [
+        call("on", []),
+        call(
+            "attribute_updated",
+            {
+                "attribute_id": 0,
+                "attribute_name": "on_off",
+                "attribute_value": t.Bool.true,
+                "value": t.Bool.true,
+            },
+        ),
+    ]
     on_off_ch.emit_zha_event.reset_mock()
 
     await send_attributes_report(
