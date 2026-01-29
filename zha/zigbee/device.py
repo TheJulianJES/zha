@@ -22,6 +22,7 @@ import zigpy.quirks
 from zigpy.quirks.v2 import DeviceAlertMetadata, QuirksV2RegistryEntry
 from zigpy.types import uint1_t, uint8_t, uint16_t
 from zigpy.types.named import EUI64, NWK, ExtendedPanId
+from zigpy.typing import UNDEFINED, UndefinedType
 from zigpy.zcl.clusters import Cluster
 from zigpy.zcl.clusters.general import Groups, Identify
 from zigpy.zcl.foundation import (
@@ -1142,7 +1143,7 @@ class Device(LogMixin, EventBase):
         attribute: int | str,
         value: Any,
         cluster_type: str = CLUSTER_TYPE_IN,
-        manufacturer: int | None = None,
+        manufacturer: int | UndefinedType | None = UNDEFINED,
     ) -> WriteAttributesResponse | None:
         """Write a value to a zigbee attribute for a cluster in this entity."""
         try:
