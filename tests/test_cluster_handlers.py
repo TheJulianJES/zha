@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import math
 from typing import TYPE_CHECKING, Any
@@ -1325,3 +1326,111 @@ async def test_zdo_cluster_handler(zha_gateway: Gateway):
         zha_device.zdo_cluster_handler.unique_id
         == f"{str(zha_device.ieee)}:{zha_device.name}_ZDO"
     )
+
+
+async def test_onoff_client_cluster_handler_on_with_timed_off(zha_gateway: Gateway):
+    """Test that OnOffClientClusterHandler handles on_with_timed_off command.
+
+    This test verifies that motion sensors with output/client OnOff clusters
+    properly update the on_off attribute when sending on_with_timed_off commands,
+    and that the attribute is automatically set to off after the timer expires.
+    """
+    zigpy_device = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [
+                    Basic.cluster_id,
+                    PowerConfiguration.cluster_id,
+                    Identify.cluster_id,
+                ],
+                SIG_EP_OUTPUT: [
+                    OnOff.cluster_id,
+                ],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.LEVEL_CONTROL_SWITCH,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+        model="Motion Sensor",
+        manufacturer="Test",
+        ieee="00:15:8e:01:01:02:03:05",
+    )
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+
+    on_off_ch = zha_device.endpoints[1].client_cluster_handlers["1:0x0006_client"]
+    assert on_off_ch is not None
+
+    # Verify initial state - on_off should be None (not set)
+    assert on_off_ch.on_off is None
+
+    # Simulate motion sensor sending on_with_timed_off command
+    # on_off_control=0 means always accept, on_time=1800 (180 seconds in 10ths)
+    on_off_ch.cluster_command(
+        106,  # tsn
+        OnOff.ServerCommandDefs.on_with_timed_off.id,
+        [0, 1800, 0],  # on_off_control, on_time, off_wait_time
+    )
+
+    # Verify on_off is now True
+    assert on_off_ch.on_off == t.Bool.true
+
+    # Advance time by less than the timeout - should still be on
+    await asyncio.sleep(100)
+    assert on_off_ch.on_off == t.Bool.true
+
+    # Advance time past the timeout (180 seconds total)
+    await asyncio.sleep(100)
+    assert on_off_ch.on_off == t.Bool.false
+
+    # Test that a new on_with_timed_off resets the timer
+    on_off_ch.cluster_command(
+        107,
+        OnOff.ServerCommandDefs.on_with_timed_off.id,
+        [0, 500, 0],  # 50 seconds
+    )
+    assert on_off_ch.on_off == t.Bool.true
+
+    # Send another command before timer expires - should reset
+    await asyncio.sleep(30)
+    on_off_ch.cluster_command(
+        108,
+        OnOff.ServerCommandDefs.on_with_timed_off.id,
+        [0, 500, 0],  # 50 seconds from now
+    )
+    assert on_off_ch.on_off == t.Bool.true
+
+    # Wait 40 seconds - old timer would have fired, but new one shouldn't
+    await asyncio.sleep(40)
+    assert on_off_ch.on_off == t.Bool.true
+
+    # Wait for new timer to expire
+    await asyncio.sleep(20)
+    assert on_off_ch.on_off == t.Bool.false
+
+    # Test on_off_control=1 (only accept when already on)
+    # When off, should not accept
+    on_off_ch.cluster_command(
+        109,
+        OnOff.ServerCommandDefs.on_with_timed_off.id,
+        [1, 500, 0],  # on_off_control=1
+    )
+    assert on_off_ch.on_off == t.Bool.false
+
+    # Turn on first, then on_off_control=1 should work
+    on_off_ch.cluster_command(
+        110,
+        OnOff.ServerCommandDefs.on.id,
+        [],
+    )
+    assert on_off_ch.on_off == t.Bool.true
+
+    on_off_ch.cluster_command(
+        111,
+        OnOff.ServerCommandDefs.on_with_timed_off.id,
+        [1, 300, 0],  # on_off_control=1, 30 seconds
+    )
+    assert on_off_ch.on_off == t.Bool.true
+
+    await asyncio.sleep(35)
+    assert on_off_ch.on_off == t.Bool.false
