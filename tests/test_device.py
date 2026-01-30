@@ -19,6 +19,7 @@ from zigpy.quirks.v2 import (
 from zigpy.quirks.v2.homeassistant import EntityType
 from zigpy.quirks.v2.homeassistant.sensor import SensorDeviceClass, SensorStateClass
 import zigpy.types
+from zigpy.typing import UNDEFINED
 from zigpy.zcl import ClusterType
 from zigpy.zcl.clusters import general
 from zigpy.zcl.clusters.general import Ota, PowerConfiguration
@@ -554,7 +555,7 @@ async def test_write_zigbee_attribute(
         {
             general.OnOff.AttributeDefs.start_up_on_off.id: general.OnOff.StartUpOnOff.PreviousValue
         },
-        manufacturer=None,
+        manufacturer=UNDEFINED,
     )
 
     cluster.write_attributes.reset_mock()

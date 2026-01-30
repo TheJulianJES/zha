@@ -11,6 +11,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Final, ParamSpec, TypedDict
 
 import zigpy.exceptions
+from zigpy.typing import UNDEFINED, UndefinedType
 import zigpy.util
 import zigpy.zcl
 from zigpy.zcl import (
@@ -588,16 +589,11 @@ class ClusterHandler(LogMixin, EventBase):
 
     async def get_attribute_value(self, attribute, from_cache=True) -> Any:
         """Get the value for an attribute."""
-        manufacturer = None
-        manufacturer_code = self._endpoint.device.manufacturer_code
-        if self.cluster.cluster_id >= 0xFC00 and manufacturer_code:
-            manufacturer = manufacturer_code
         result = await safe_read(
             self._cluster,
             [attribute],
             allow_cache=from_cache,
             only_cache=from_cache,
-            manufacturer=manufacturer,
         )
         return result.get(attribute)
 
@@ -609,10 +605,6 @@ class ClusterHandler(LogMixin, EventBase):
         only_cache: bool = True,
     ) -> dict[int | str, Any]:
         """Get the values for a list of attributes."""
-        manufacturer = None
-        manufacturer_code = self._endpoint.device.manufacturer_code
-        if self.cluster.cluster_id >= 0xFC00 and manufacturer_code:
-            manufacturer = manufacturer_code
         chunk = attributes[:CLUSTER_READS_PER_REQ]
         rest = attributes[CLUSTER_READS_PER_REQ:]
         result = {}
@@ -625,7 +617,7 @@ class ClusterHandler(LogMixin, EventBase):
                     chunk,
                     allow_cache=from_cache,
                     only_cache=only_cache,
-                    manufacturer=manufacturer,
+                    manufacturer=UNDEFINED,  # some quirks override default with None
                 )
                 self.debug("Got attributes: %s", read)
                 result.update(read)
@@ -652,7 +644,9 @@ class ClusterHandler(LogMixin, EventBase):
         return await self._get_attributes(False, attributes, from_cache, only_cache)
 
     async def write_attributes_safe(
-        self, attributes: dict[str, Any], manufacturer: int | None = None
+        self,
+        attributes: dict[str, Any],
+        manufacturer: int | UndefinedType | None = UNDEFINED,
     ) -> None:
         """Wrap `write_attributes` to throw an exception on attribute write failure."""
 

@@ -9,6 +9,7 @@ from zigpy.profiles import zha
 import zigpy.profiles.zha
 from zigpy.quirks import DeviceRegistry
 from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder
+from zigpy.typing import UNDEFINED
 from zigpy.zcl.clusters import general, measurement, security
 from zigpy.zcl.clusters.general import OnOff
 
@@ -107,7 +108,7 @@ async def async_test_binary_sensor_occupancy(
     await zha_gateway.async_block_till_done()
     assert cluster.read_attributes.await_count == 1
     assert cluster.read_attributes.await_args == call(
-        ["occupancy"], allow_cache=True, only_cache=True, manufacturer=None
+        ["occupancy"], allow_cache=True, only_cache=True, manufacturer=UNDEFINED
     )
     assert entity.is_on
 
@@ -143,7 +144,7 @@ async def async_test_iaszone_on_off(
     await zha_gateway.async_block_till_done()
     assert cluster.read_attributes.await_count == 1
     assert cluster.read_attributes.await_args == call(
-        ["zone_status"], allow_cache=False, only_cache=False, manufacturer=None
+        ["zone_status"], allow_cache=False, only_cache=False, manufacturer=UNDEFINED
     )
     assert entity.is_on
 
@@ -234,7 +235,7 @@ async def test_smarttthings_multi(
 
     st_ch.emit_zha_event = MagicMock(wraps=st_ch.emit_zha_event)
 
-    await send_attributes_report(zha_gateway, st_ch.cluster, {0x0012: 120})
+    await send_attributes_report(zha_gateway, st_ch.cluster, {"x_axis": 120})
 
     assert st_ch.emit_zha_event.call_count == 1
     assert st_ch.emit_zha_event.mock_calls == [
