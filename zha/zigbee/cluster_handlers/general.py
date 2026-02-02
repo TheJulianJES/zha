@@ -552,11 +552,9 @@ class OnOffClientClusterHandler(ClientClusterHandler):
 
     def cluster_command(self, tsn, command_id, args):
         """Handle commands received to this cluster."""
-        # for emitting ZHA event
-        super().cluster_command(tsn, command_id, args)
-
         cmd = parse_and_log_command(self, tsn, command_id, args)
 
+        # Process cluster commands, so attribute_updated events fire first
         if cmd in (
             OnOff.ServerCommandDefs.off.name,
             OnOff.ServerCommandDefs.off_with_effect.name,
@@ -587,6 +585,9 @@ class OnOffClientClusterHandler(ClientClusterHandler):
             self.cluster.update_attribute(
                 OnOff.AttributeDefs.on_off.id, not bool(self.on_off)
             )
+
+        # Emit ZHA event with cluster command
+        super().cluster_command(tsn, command_id, args)
 
     def set_to_off(self, *_):
         """Set the state to off."""
