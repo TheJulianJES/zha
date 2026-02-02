@@ -1242,8 +1242,8 @@ async def test_zha_send_event_from_quirk(zha_gateway: Gateway):
     on_off_ch.cluster_command(1, OnOff.ServerCommandDefs.on.id, [])
 
     assert on_off_ch.emit_zha_event.call_count == 2
+    # attribute_updated is emitted first, then the cluster command is forwarded
     assert on_off_ch.emit_zha_event.mock_calls == [
-        call("on", []),
         call(
             "attribute_updated",
             {
@@ -1253,6 +1253,7 @@ async def test_zha_send_event_from_quirk(zha_gateway: Gateway):
                 "value": t.Bool.true,
             },
         ),
+        call("on", []),
     ]
     on_off_ch.emit_zha_event.reset_mock()
 
