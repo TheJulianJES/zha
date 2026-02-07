@@ -33,6 +33,7 @@ from zigpy.zcl.clusters.general import (
 )
 from zigpy.zcl.clusters.homeautomation import Diagnostic
 from zigpy.zcl.clusters.measurement import TemperatureMeasurement
+from zigpy.zcl.helpers import ReportingConfig
 import zigpy.zdo.types as zdo_t
 
 from tests.common import (
@@ -303,7 +304,7 @@ async def test_in_cluster_handler_config(
     reported_attrs = set()
 
     for mock_call in cluster.configure_reporting_multiple.mock_calls:
-        reported_attrs.update(mock_call.args[0].keys())
+        reported_attrs.update(attr_def.name for attr_def in mock_call.args[0])
 
     assert attrs == reported_attrs
     assert cluster.configure_reporting.call_count == 0
@@ -941,18 +942,19 @@ async def test_configure_reporting(zha_gateway: Gateway) -> None:
     cluster_handler = TestZigbeeClusterHandler(cluster, endpoint)
     await cluster_handler.async_configure()
 
-    # Since we request reporting for five attributes, we need to make two calls (3 + 1)
+    # Since we request reporting for four attributes, we need to make two calls (3 + 1)
+    Color = zigpy.zcl.clusters.lighting.Color
     assert cluster.configure_reporting_multiple.mock_calls == [
         mock.call(
             {
-                "current_x": (1, 60, 1),
-                "current_hue": (1, 60, 2),
-                "color_temperature": (1, 60, 3),
+                Color.AttributeDefs.current_x: ReportingConfig(1, 60, 1),
+                Color.AttributeDefs.current_hue: ReportingConfig(1, 60, 2),
+                Color.AttributeDefs.color_temperature: ReportingConfig(1, 60, 3),
             }
         ),
         mock.call(
             {
-                "current_y": (1, 60, 4),
+                Color.AttributeDefs.current_y: ReportingConfig(1, 60, 4),
             }
         ),
     ]
