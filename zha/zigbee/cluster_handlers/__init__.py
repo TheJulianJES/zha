@@ -446,7 +446,7 @@ class ClusterHandler(LogMixin, EventBase):
             for attr_name in attr_names:
                 event_data[attr_name]["status"] = Status.FAILURE.name
             return
-        if res[0].status == Status.SUCCESS and len(res) == 1:
+        if len(res) == 1 and res[0].status == Status.SUCCESS:
             self.debug(
                 "Successfully configured reporting for '%s' on '%s' cluster: %s",
                 attr_names,
