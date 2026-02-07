@@ -2151,3 +2151,70 @@ async def test_enum_sensor(zha_gateway: Gateway) -> None:
     )
 
     assert entity.state["state"] == "undefined_0xab"  # TODO: should this be `None`?
+
+
+async def test_lumi_illuminance_battery_voltage_to_percentage(
+    zha_gateway: Gateway,
+) -> None:
+    """Test that the Lumi illuminance sensor quirk converts battery voltage to percentage.
+
+    The device marks battery_percentage_remaining as unsupported. When a battery_voltage
+    attribute report is received, the quirk's PowerConfigurationCluster converts the
+    voltage to a percentage and updates battery_percentage_remaining via
+    _update_attribute. This should also remove battery_percentage_remaining from the
+    unsupported attributes set.
+    """
+    zigpy_dev = await zigpy_device_from_json(
+        zha_gateway.application_controller,
+        "tests/data/devices/lumi-lumi-sen-ill-mgl01.json",
+    )
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+    battery_entity = get_entity(
+        zha_device, platform=Platform.SENSOR, entity_type=sensor.Battery
+    )
+    power_cluster = zigpy_dev.endpoints[1].power
+
+    # Re-mark battery_percentage_remaining as unsupported. During join, the mocked
+    # configure_reporting returns SUCCESS which clears the unsupported flag. In the real
+    # world, this attribute stays unsupported because the device does not support it
+    # natively (the quirk derives it from voltage).
+    power_cluster.add_unsupported_attribute("battery_percentage_remaining")
+    assert power_cluster.is_attribute_unsupported("battery_percentage_remaining")
+
+    # Send a battery voltage attribute report (raw value 30 = 3.0V, clamped to MAX 2.8V)
+    await send_attributes_report(
+        zha_gateway,
+        power_cluster,
+        {PowerConfiguration.AttributeDefs.battery_voltage.id: 30},
+    )
+
+    # The quirk's PowerConfigurationCluster._update_attribute converts the voltage to a
+    # percentage via _calculate_battery_percentage and calls super()._update_attribute
+    # for battery_percentage_remaining. This should clear the unsupported flag since
+    # _update_attribute -> set_value -> remove_unsupported.
+    # TODO: the unsupported flag is cleared in this test scenario, but in the real world
+    #  the attribute remains marked as unsupported after the quirk updates it. This may
+    #  be caused by a bug in zigpy's attribute report handling path.
+    assert not power_cluster.is_attribute_unsupported("battery_percentage_remaining")
+
+    # Voltage: 30 / 10 = 3.0V
+    assert battery_entity.state["battery_voltage"] == 3.0
+
+    # Percentage: voltage 3.0V clamped to MAX_VOLTS (2.8V)
+    # ((2.8 - 1.5) / (2.8 - 1.5)) * 200 = 200
+    # Battery sensor divides by 2: 200 / 2 = 100.0%
+    assert battery_entity.state["state"] == 100.0
+
+    # Test with a mid-range voltage: 21 = 2.1V
+    await send_attributes_report(
+        zha_gateway,
+        power_cluster,
+        {PowerConfiguration.AttributeDefs.battery_voltage.id: 21},
+    )
+
+    assert battery_entity.state["battery_voltage"] == 2.1
+
+    # ((2.1 - 1.5) / (2.8 - 1.5)) * 200 = (0.6 / 1.3) * 200 = 92.307... → round = 92
+    # Battery sensor divides by 2: 92 / 2 = 46.0%
+    assert battery_entity.state["state"] == 46.0
