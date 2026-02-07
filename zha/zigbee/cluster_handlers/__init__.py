@@ -370,11 +370,6 @@ class ClusterHandler(LogMixin, EventBase):
         """
         event_data = {}
         kwargs = {}
-        if (
-            self.cluster.cluster_id >= 0xFC00
-            and self._endpoint.device.manufacturer_code
-        ):
-            kwargs["manufacturer"] = self._endpoint.device.manufacturer_code
 
         for attr_report in self.REPORT_CONFIG:
             attr, config = attr_report["attr"], attr_report["config"]
