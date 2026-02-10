@@ -50,13 +50,19 @@ from tests.common import (
     zigpy_device_from_json,
 )
 from zha.application import Platform
-from zha.application.const import ATTR_QUIRK_ID, ZHA_CLUSTER_HANDLER_MSG_CFG_RPT
+from zha.application.const import (
+    ATTR_QUIRK_ID,
+    ZHA_CLUSTER_HANDLER_MSG_BIND,
+    ZHA_CLUSTER_HANDLER_MSG_CFG_RPT,
+)
 from zha.application.gateway import Gateway
 from zha.application.platforms.button import IdentifyButton
 from zha.exceptions import ZHAException
 from zha.zigbee.cluster_handlers import (
     AttrReportConfig,
     ClientClusterHandler,
+    ClusterBindEvent,
+    ClusterConfigureReportingEvent,
     ClusterHandler,
     ClusterHandlerStatus,
     parse_and_log_command,
@@ -1049,16 +1055,38 @@ async def test_configure_reporting_status(
 
     await cluster_handler.async_configure()
 
-    cfg_rpt_calls = [
-        c
-        for c in mock_emit.call_args_list
-        if c.args[0] == ZHA_CLUSTER_HANDLER_MSG_CFG_RPT
+    assert mock_emit.call_args_list == [
+        mock.call(
+            ZHA_CLUSTER_HANDLER_MSG_BIND,
+            ClusterBindEvent(
+                cluster_name=cluster.name,
+                cluster_id=cluster.cluster_id,
+                cluster_handler_unique_id=cluster_handler.unique_id,
+                success=True,
+            ),
+        ),
+        mock.call(
+            ZHA_CLUSTER_HANDLER_MSG_CFG_RPT,
+            ClusterConfigureReportingEvent(
+                cluster_name=cluster.name,
+                cluster_id=cluster.cluster_id,
+                cluster_handler_unique_id=cluster_handler.unique_id,
+                attributes={
+                    attr_name: {
+                        "min": 1,
+                        "max": 60,
+                        "id": attr_name,
+                        "name": attr_name,
+                        "change": idx + 1,
+                        "status": expected_status,
+                    }
+                    for idx, (attr_name, expected_status) in enumerate(
+                        expected_statuses.items()
+                    )
+                },
+            ),
+        ),
     ]
-    assert len(cfg_rpt_calls) == 1
-    attributes = cfg_rpt_calls[0].args[1].attributes
-
-    for attr_name, expected_status in expected_statuses.items():
-        assert attributes[attr_name]["status"] == expected_status
 
 
 async def test_invalid_cluster_handler(zha_gateway: Gateway, caplog) -> None:  # pylint: disable=unused-argument
