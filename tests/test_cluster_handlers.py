@@ -1006,6 +1006,13 @@ async def test_configure_reporting(zha_gateway: Gateway) -> None:
             {"current_x": "SUCCESS", "current_y": "UNSUPPORTED_ATTRIBUTE"},
         ),
     ],
+    ids=[
+        "exception",
+        "single_record",
+        "single_success_list",
+        "empty_list",
+        "mixed_per_attribute",
+    ],
 )
 async def test_configure_reporting_status(
     zha_gateway: Gateway, response, expected_statuses
