@@ -968,14 +968,14 @@ async def test_configure_reporting(zha_gateway: Gateway) -> None:
         # Exception result: all attributes marked as FAILURE
         (
             zigpy.exceptions.ZigbeeException("timeout"),
-            {"on_off": "FAILURE"},
+            {"current_x": "FAILURE", "current_y": "FAILURE"},
         ),
         # Single ConfigureReportingResponseRecord: all attributes marked as FAILURE
         (
             foundation.ConfigureReportingResponseRecord(
                 status=foundation.Status.SUCCESS
             ),
-            {"on_off": "FAILURE"},
+            {"current_x": "FAILURE", "current_y": "FAILURE"},
         ),
         # Single SUCCESS in a list: all attributes marked as SUCCESS (ZCL 2.5.8.1.3)
         (
@@ -984,19 +984,27 @@ async def test_configure_reporting(zha_gateway: Gateway) -> None:
                     status=foundation.Status.SUCCESS
                 )
             ],
-            {"on_off": "SUCCESS"},
+            {"current_x": "SUCCESS", "current_y": "SUCCESS"},
         ),
         # Empty list: all attributes assumed successful (no failures reported)
         (
             [],
-            {"on_off": "SUCCESS"},
+            {"current_x": "SUCCESS", "current_y": "SUCCESS"},
         ),
-    ],
-    ids=[
-        "exception",
-        "single_record",
-        "single_success_list",
-        "empty_list",
+        # Per-attribute results: mixed success/failure
+        (
+            [
+                foundation.ConfigureReportingResponseRecord(
+                    status=foundation.Status.SUCCESS,
+                    attrid=Color.AttributeDefs.current_x.id,
+                ),
+                foundation.ConfigureReportingResponseRecord(
+                    status=foundation.Status.UNSUPPORTED_ATTRIBUTE,
+                    attrid=Color.AttributeDefs.current_y.id,
+                ),
+            ],
+            {"current_x": "SUCCESS", "current_y": "UNSUPPORTED_ATTRIBUTE"},
+        ),
     ],
 )
 async def test_configure_reporting_status(
@@ -1006,11 +1014,18 @@ async def test_configure_reporting_status(
     zigpy_coordinator_device: ZigpyDevice = zigpy_coordinator_device_mock(zha_gateway)
     endpoint: Endpoint = endpoint_mock(zigpy_coordinator_device)
 
+    class TestClusterHandler(ClusterHandler):
+        BIND = True
+        REPORT_CONFIG = (
+            AttrReportConfig(attr="current_x", config=(1, 60, 1)),
+            AttrReportConfig(attr="current_y", config=(1, 60, 2)),
+        )
+
     mock_ep = mock.AsyncMock()
     mock_ep.profile_id = zigpy.profiles.zha.PROFILE_ID
     mock_ep.device.zdo = AsyncMock()
 
-    cluster = OnOff(mock_ep)
+    cluster = Color(mock_ep)
     cluster.bind = AsyncMock(
         spec_set=cluster.bind,
         return_value=[zdo_t.Status.SUCCESS],
@@ -1020,11 +1035,7 @@ async def test_configure_reporting_status(
         return_value=response,
     )
 
-    cluster_handler_class = CLUSTER_HANDLER_REGISTRY.get(
-        OnOff.cluster_id, {None, ClusterHandler}
-    ).get(None)
-    assert cluster_handler_class is not None
-    cluster_handler = cluster_handler_class(cluster, endpoint)
+    cluster_handler = TestClusterHandler(cluster, endpoint)
 
     mock_emit = MagicMock()
     cluster_handler._endpoint.device.emit = mock_emit
