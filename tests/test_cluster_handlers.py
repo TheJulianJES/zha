@@ -15,6 +15,7 @@ from zhaquirks.centralite.cl_3130 import CentraLite3130
 from zhaquirks.xiaomi.aqara.sensor_switch_aq3 import BUTTON_DEVICE_TYPE, SwitchAQ3
 from zigpy.device import Device as ZigpyDevice
 from zigpy.endpoint import Endpoint as ZigpyEndpoint
+import zigpy.exceptions
 import zigpy.profiles.zha
 from zigpy.quirks import DEVICE_REGISTRY
 import zigpy.types as t
@@ -48,7 +49,7 @@ from tests.common import (
     zigpy_device_from_json,
 )
 from zha.application import Platform
-from zha.application.const import ATTR_QUIRK_ID
+from zha.application.const import ATTR_QUIRK_ID, ZHA_CLUSTER_HANDLER_MSG_CFG_RPT
 from zha.application.gateway import Gateway
 from zha.application.platforms.button import IdentifyButton
 from zha.exceptions import ZHAException
@@ -958,6 +959,87 @@ async def test_configure_reporting(zha_gateway: Gateway) -> None:
             }
         ),
     ]
+
+
+@pytest.mark.parametrize(
+    ("response", "expected_statuses"),
+    [
+        # Exception result: all attributes marked as FAILURE
+        (
+            zigpy.exceptions.ZigbeeException("timeout"),
+            {"on_off": "FAILURE"},
+        ),
+        # Single ConfigureReportingResponseRecord: all attributes marked as FAILURE
+        (
+            foundation.ConfigureReportingResponseRecord(
+                status=foundation.Status.SUCCESS
+            ),
+            {"on_off": "FAILURE"},
+        ),
+        # Single SUCCESS in a list: all attributes marked as SUCCESS (ZCL 2.5.8.1.3)
+        (
+            [
+                foundation.ConfigureReportingResponseRecord(
+                    status=foundation.Status.SUCCESS
+                )
+            ],
+            {"on_off": "SUCCESS"},
+        ),
+        # Empty list: all attributes assumed successful (no failures reported)
+        (
+            [],
+            {"on_off": "SUCCESS"},
+        ),
+    ],
+    ids=[
+        "exception",
+        "single_record",
+        "single_success_list",
+        "empty_list",
+    ],
+)
+async def test_configure_reporting_status(
+    zha_gateway: Gateway, response, expected_statuses
+) -> None:
+    """Test configure reporting status parsing via async_configure."""
+    zigpy_coordinator_device: ZigpyDevice = zigpy_coordinator_device_mock(zha_gateway)
+    endpoint: Endpoint = endpoint_mock(zigpy_coordinator_device)
+
+    mock_ep = mock.AsyncMock()
+    mock_ep.profile_id = zigpy.profiles.zha.PROFILE_ID
+    mock_ep.device.zdo = AsyncMock()
+
+    cluster = OnOff(mock_ep)
+    cluster.bind = AsyncMock(
+        spec_set=cluster.bind,
+        return_value=[zdo_t.Status.SUCCESS],
+    )
+    cluster.configure_reporting_multiple = AsyncMock(
+        spec_set=cluster.configure_reporting_multiple,
+        return_value=response,
+    )
+
+    cluster_handler_class = CLUSTER_HANDLER_REGISTRY.get(
+        OnOff.cluster_id, {None, ClusterHandler}
+    ).get(None)
+    assert cluster_handler_class is not None
+    cluster_handler = cluster_handler_class(cluster, endpoint)
+
+    mock_emit = MagicMock()
+    cluster_handler._endpoint.device.emit = mock_emit
+
+    await cluster_handler.async_configure()
+
+    cfg_rpt_calls = [
+        c
+        for c in mock_emit.call_args_list
+        if c.args[0] == ZHA_CLUSTER_HANDLER_MSG_CFG_RPT
+    ]
+    assert len(cfg_rpt_calls) == 1
+    attributes = cfg_rpt_calls[0].args[1].attributes
+
+    for attr_name, expected_status in expected_statuses.items():
+        assert attributes[attr_name]["status"] == expected_status
 
 
 async def test_invalid_cluster_handler(zha_gateway: Gateway, caplog) -> None:  # pylint: disable=unused-argument
