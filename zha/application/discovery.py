@@ -455,12 +455,20 @@ def discover_entities_for_endpoint(endpoint: Endpoint) -> Iterator[PlatformEntit
             if (
                 match.profile_device_types is not None
                 and profile_device_type not in match.profile_device_types
+                and not (
+                    platform_override is not None
+                    and platform_override == entity_class.PLATFORM
+                )
             ):
                 continue
 
             if (
                 match.not_profile_device_types is not None
                 and profile_device_type in match.not_profile_device_types
+                and not (
+                    platform_override is not None
+                    and platform_override == entity_class.PLATFORM
+                )
             ):
                 continue
 
@@ -470,14 +478,6 @@ def discover_entities_for_endpoint(endpoint: Endpoint) -> Iterator[PlatformEntit
                 feature = None
                 priority = 0
 
-            # Finally, account for `platform_override` by boosting the priority of
-            # matching platforms
-            if (
-                platform_override is not None
-                and platform_override == entity_class.PLATFORM
-            ):
-                priority += 1000
-
             matches_by_feature_and_priority[feature][priority].append(
                 (match, entity_class)
             )
@@ -485,6 +485,26 @@ def discover_entities_for_endpoint(endpoint: Endpoint) -> Iterator[PlatformEntit
     # Then, we process the matches and discard entities with lower weights (when
     # feature groups are used)
     for feature, matches_by_priority in matches_by_feature_and_priority.items():
+        # Use platform overrides to replace the results of the normal priority scoring
+        # system when competing entities are part of the same feature group
+        if platform_override is not None and feature is not None:
+            override_by_priority: defaultdict[
+                int, list[tuple[ClusterHandlerMatch, type[PlatformEntity]]]
+            ] = defaultdict(list)
+
+            for priority, priority_matches in matches_by_priority.items():
+                platform_matches = [
+                    (match, entity)
+                    for match, entity in priority_matches
+                    if platform_override == entity.PLATFORM
+                ]
+                if platform_matches:
+                    override_by_priority[priority] = platform_matches
+
+            # Replace matches with overrides
+            if override_by_priority:
+                matches_by_priority = override_by_priority
+
         highest_priority = max(matches_by_priority.keys())
 
         if _LOGGER.getEffectiveLevel() <= logging.DEBUG:
@@ -501,7 +521,9 @@ def discover_entities_for_endpoint(endpoint: Endpoint) -> Iterator[PlatformEntit
                     ignored_matches,
                 )
 
-        for match, entity_class in matches_by_priority[highest_priority]:
+        matches = matches_by_priority[highest_priority]
+
+        for match, entity_class in matches:
             server_handlers = set(match.cluster_handlers)
 
             for optional in match.optional_cluster_handlers:

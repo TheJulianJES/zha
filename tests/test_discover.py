@@ -54,9 +54,11 @@ from tests.common import (
     zigpy_device_from_json,
 )
 from zha.application import Platform
+from zha.application.discovery import discover_device_entities
 from zha.application.gateway import Gateway
 from zha.application.helpers import DeviceOverridesConfiguration
 from zha.application.platforms import PlatformEntity, binary_sensor, sensor
+from zha.application.platforms.light import HueLight
 from zha.application.platforms.number import BaseNumber, NumberMode
 
 
@@ -84,17 +86,16 @@ async def test_device_override(
     zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
 
     # The overridden entity exists
-    assert (
-        get_entity(
-            zha_device,
-            platform=override_platform,
-            qualifier_func=(
-                lambda entity: entity.cluster_handlers["on_off"].cluster
-                == zigpy_device.endpoints[1].on_off
-            ),
-        )
-        is not None
+    entity = get_entity(
+        zha_device,
+        platform=override_platform,
+        qualifier_func=(
+            lambda entity: entity.cluster_handlers["on_off"].cluster
+            == zigpy_device.endpoints[1].on_off
+        ),
     )
+    assert entity is not None
+    assert entity.unique_id == f"{zigpy_device.ieee}-1"
 
     # The original one does not
     with pytest.raises(KeyError):
@@ -108,6 +109,99 @@ async def test_device_override(
             qualifier_func=lambda entity: entity.cluster_handlers["on_off"].cluster
             == zigpy_device.endpoints[1].on_off,
         )
+
+
+async def test_device_override_entities(zha_gateway: Gateway) -> None:
+    """Test device discovery entity changes."""
+    device_data_text = await asyncio.get_running_loop().run_in_executor(
+        None, pathlib.Path("tests/data/devices/tz3000-tqlv4ug4-ts0001.json").read_text
+    )
+    device_data = json.loads(device_data_text)
+
+    zigpy_device = zigpy_device_from_device_data(
+        app=zha_gateway.application_controller, device_data=device_data
+    )
+
+    zha_gateway.config.config.device_overrides = {
+        f"{zigpy_device.ieee}-1": DeviceOverridesConfiguration(type=Platform.SWITCH)
+    }
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+
+    # The light is gone
+    with pytest.raises(KeyError):
+        get_entity(zha_device, platform=Platform.LIGHT)
+
+    # And has been replaced by a switch with the same unique ID
+    switch = get_entity(zha_device, platform=Platform.SWITCH)
+    assert switch.unique_id == f"{zigpy_device.ieee}-1"
+
+    # All other entities and diagnostics stay the same
+    loaded_device_data = json.loads(
+        json.dumps(zha_device.get_diagnostics_json(), cls=ZhaJsonEncoder)
+    )
+
+    expected_loaded_device_data = device_data
+    expected_loaded_device_data["zha_lib_entities"].pop("light")
+    expected_loaded_device_data["zha_lib_entities"]["switch"] = [
+        loaded_device_data["zha_lib_entities"]["switch"][0]
+    ]
+
+    assert loaded_device_data == expected_loaded_device_data
+
+
+async def test_device_override_picks_highest_priority(
+    zha_gateway: Gateway,
+) -> None:
+    """Test that a device override selects only the highest-priority match."""
+
+    # A Philips light matches both Light (priority 0) and HueLight (priority 1) in the
+    # LIGHT_OR_SWITCH_OR_SHADE feature group. With a SWITCH override, only one Switch
+    # entity should be created, not duplicates from collecting all priority levels.
+    zigpy_device = await zigpy_device_from_json(
+        zha_gateway.application_controller,
+        "tests/data/devices/philips-lct014.json",
+    )
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+
+    # Only one light entity will be discovered
+    entities = list(discover_device_entities(zha_device))
+    light_entities = [e for e in entities if e.PLATFORM == Platform.LIGHT]
+    assert len(light_entities) == 1
+    assert isinstance(light_entities[0], HueLight)
+
+    # With an override, it is going to be one switch
+    zha_gateway.config.config.device_overrides = {
+        f"{zigpy_device.ieee}-11": DeviceOverridesConfiguration(type=Platform.SWITCH)
+    }
+
+    entities = list(discover_device_entities(zha_device))
+    switch_entities = [e for e in entities if e.PLATFORM == Platform.SWITCH]
+    assert len(switch_entities) == 1
+
+
+async def test_device_override_filter_bypassing(
+    zha_gateway: Gateway,
+) -> None:
+    """Test that profile filtering is only bypassed for the override platform."""
+
+    # The sercomm device is an ON_OFF_LIGHT with a PowerConfiguration cluster.
+    # DeviceTracker matches PowerConfiguration but is restricted by profile_device_types
+    # to the SmartThings arrival sensor device type. A SWITCH override should not cause
+    # DeviceTracker to bypass that filter.
+    zigpy_device = await zigpy_device_from_json(
+        zha_gateway.application_controller,
+        "tests/data/devices/sercomm-corp-sz-esw01-au.json",
+    )
+
+    zha_gateway.config.config.device_overrides = {
+        f"{zigpy_device.ieee}-1": DeviceOverridesConfiguration(type=Platform.SWITCH)
+    }
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+
+    with pytest.raises(KeyError):
+        get_entity(zha_device, platform=Platform.DEVICE_TRACKER)
 
 
 async def test_quirks_v2_entity_discovery(
