@@ -992,10 +992,10 @@ async def test_configure_reporting(zha_gateway: Gateway) -> None:
             ],
             {"current_x": "SUCCESS", "current_y": "SUCCESS"},
         ),
-        # Empty list: all attributes assumed successful (no failures reported)
+        # Empty list: unexpected response, all attributes marked as FAILURE
         (
             [],
-            {"current_x": "SUCCESS", "current_y": "SUCCESS"},
+            {"current_x": "FAILURE", "current_y": "FAILURE"},
         ),
         # Per-attribute results: mixed success/failure
         (
