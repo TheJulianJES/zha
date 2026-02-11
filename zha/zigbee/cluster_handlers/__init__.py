@@ -430,7 +430,7 @@ class ClusterHandler(LogMixin, EventBase):
     def _configure_reporting_status(
         self,
         attrs: dict[ZCLAttributeDef, ReportingConfig],
-        res: list | tuple,
+        res: list[ConfigureReportingResponseRecord],
         event_data: dict[str, dict[str, Any]],
     ) -> None:
         """Parse configure reporting result."""
