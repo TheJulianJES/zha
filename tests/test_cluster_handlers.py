@@ -971,18 +971,6 @@ async def test_configure_reporting(zha_gateway: Gateway) -> None:
 @pytest.mark.parametrize(
     ("response", "expected_statuses"),
     [
-        # Exception result: all attributes marked as FAILURE
-        (
-            zigpy.exceptions.ZigbeeException("timeout"),
-            {"current_x": "FAILURE", "current_y": "FAILURE"},
-        ),
-        # Single ConfigureReportingResponseRecord: all attributes marked as FAILURE
-        (
-            foundation.ConfigureReportingResponseRecord(
-                status=foundation.Status.SUCCESS
-            ),
-            {"current_x": "FAILURE", "current_y": "FAILURE"},
-        ),
         # Single SUCCESS in a list: all attributes marked as SUCCESS (ZCL 2.5.8.1.3)
         (
             [
@@ -1013,8 +1001,6 @@ async def test_configure_reporting(zha_gateway: Gateway) -> None:
         ),
     ],
     ids=[
-        "exception",
-        "single_record",
         "single_success_list",
         "empty_list",
         "mixed_per_attribute",

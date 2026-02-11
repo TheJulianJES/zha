@@ -435,8 +435,7 @@ class ClusterHandler(LogMixin, EventBase):
     ) -> None:
         """Parse configure reporting result."""
         attr_names = {attr_def.name for attr_def in attrs}
-        if not res or isinstance(res, (Exception, ConfigureReportingResponseRecord)):
-            # assume default response
+        if not res:
             self.debug(
                 "attr reporting for '%s' on '%s': %s",
                 attr_names,
