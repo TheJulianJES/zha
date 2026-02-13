@@ -26,6 +26,7 @@ from zigpy.zcl.foundation import (
     Status,
     ZCLAttributeDef,
 )
+from zigpy.zcl.helpers import ReportingConfig
 
 from zha.application.const import (
     ZHA_CLUSTER_HANDLER_MSG,
@@ -369,12 +370,6 @@ class ClusterHandler(LogMixin, EventBase):
         devices are unreachable.
         """
         event_data = {}
-        kwargs = {}
-        if (
-            self.cluster.cluster_id >= 0xFC00
-            and self._endpoint.device.manufacturer_code
-        ):
-            kwargs["manufacturer"] = self._endpoint.device.manufacturer_code
 
         for attr_report in self.REPORT_CONFIG:
             attr, config = attr_report["attr"], attr_report["config"]
@@ -399,12 +394,17 @@ class ClusterHandler(LogMixin, EventBase):
             to_configure[REPORT_CONFIG_ATTR_PER_REQ:],
         )
         while chunk:
-            reports = {rec["attr"]: rec["config"] for rec in chunk}
+            reports = {
+                self.cluster.find_attribute(rec["attr"]): ReportingConfig(
+                    *rec["config"]
+                )
+                for rec in chunk
+            }
             try:
                 res = await RETRYABLE_REQUEST_DECORATOR(
                     self.cluster.configure_reporting_multiple
-                )(reports, **kwargs)
-                self._configure_reporting_status(reports, res[0], event_data)
+                )(reports)
+                self._configure_reporting_status(reports, res, event_data)
             except (zigpy.exceptions.ZigbeeException, TimeoutError) as ex:
                 self.debug(
                     "failed to set reporting on '%s' cluster for: %s",
@@ -429,26 +429,26 @@ class ClusterHandler(LogMixin, EventBase):
 
     def _configure_reporting_status(
         self,
-        attrs: dict[str, tuple[int, int, float | int]],
-        res: list | tuple,
+        attrs: dict[ZCLAttributeDef, ReportingConfig],
+        res: list[ConfigureReportingResponseRecord],
         event_data: dict[str, dict[str, Any]],
     ) -> None:
         """Parse configure reporting result."""
-        if isinstance(res, (Exception, ConfigureReportingResponseRecord)):
-            # assume default response
+        attr_names = {attr_def.name for attr_def in attrs}
+        if not res:
             self.debug(
                 "attr reporting for '%s' on '%s': %s",
-                attrs,
+                attr_names,
                 self.name,
                 res,
             )
-            for attr in attrs:
-                event_data[attr]["status"] = Status.FAILURE.name
+            for attr_name in attr_names:
+                event_data[attr_name]["status"] = Status.FAILURE.name
             return
-        if res[0].status == Status.SUCCESS and len(res) == 1:
+        if len(res) == 1 and res[0].status == Status.SUCCESS:
             self.debug(
                 "Successfully configured reporting for '%s' on '%s' cluster: %s",
-                attrs,
+                attr_names,
                 self.name,
                 res,
             )
@@ -458,8 +458,8 @@ class ClusterHandler(LogMixin, EventBase):
             # attributes, in order to save bandwidth. In the case of successful configuration of all attributes,
             # only a single attribute status record SHALL be included in the command, with the status field set to
             # SUCCESS and the direction and attribute identifier fields omitted.
-            for attr in attrs:
-                event_data[attr]["status"] = Status.SUCCESS.name
+            for attr_name in attr_names:
+                event_data[attr_name]["status"] = Status.SUCCESS.name
             return
 
         for record in res:
@@ -477,14 +477,14 @@ class ClusterHandler(LogMixin, EventBase):
             self.name,
             res,
         )
-        success = set(attrs) - set(failed)
+        success = attr_names - set(failed)
         self.debug(
             "Successfully configured reporting for '%s' on '%s' cluster",
-            set(attrs) - set(failed),
+            success,
             self.name,
         )
-        for attr in success:
-            event_data[attr]["status"] = Status.SUCCESS.name
+        for attr_name in success:
+            event_data[attr_name]["status"] = Status.SUCCESS.name
 
     async def async_configure(self) -> None:
         """Set cluster binding and attribute reporting."""
