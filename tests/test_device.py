@@ -23,7 +23,9 @@ from zigpy.typing import UNDEFINED
 from zigpy.zcl import ClusterType
 from zigpy.zcl.clusters import general
 from zigpy.zcl.clusters.general import Ota, PowerConfiguration
+from zigpy.zcl.clusters.measurement import CarbonDioxideConcentration
 from zigpy.zcl.foundation import Status, WriteAttributesResponse
+from zigpy.zcl.helpers import ReportingConfig
 import zigpy.zdo.types as zdo_t
 
 from tests.common import (
@@ -1176,7 +1178,13 @@ async def test_join_binding_reporting(zha_gateway: Gateway) -> None:
 
     assert mock_bind.mock_calls == [call()]
     assert mock_reporting_config.mock_calls == [
-        call({"measured_value": (30, 900, 1e-6)})
+        call(
+            {
+                CarbonDioxideConcentration.AttributeDefs.measured_value: ReportingConfig(
+                    30, 900, 1e-6
+                )
+            }
+        )
     ]
 
 

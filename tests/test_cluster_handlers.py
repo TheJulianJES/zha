@@ -15,6 +15,7 @@ from zhaquirks.centralite.cl_3130 import CentraLite3130
 from zhaquirks.xiaomi.aqara.sensor_switch_aq3 import BUTTON_DEVICE_TYPE, SwitchAQ3
 from zigpy.device import Device as ZigpyDevice
 from zigpy.endpoint import Endpoint as ZigpyEndpoint
+import zigpy.exceptions
 import zigpy.profiles.zha
 from zigpy.quirks import DEVICE_REGISTRY
 import zigpy.types as t
@@ -32,7 +33,9 @@ from zigpy.zcl.clusters.general import (
     PowerConfiguration,
 )
 from zigpy.zcl.clusters.homeautomation import Diagnostic
+from zigpy.zcl.clusters.lighting import Color
 from zigpy.zcl.clusters.measurement import TemperatureMeasurement
+from zigpy.zcl.helpers import ReportingConfig
 import zigpy.zdo.types as zdo_t
 
 from tests.common import (
@@ -47,13 +50,19 @@ from tests.common import (
     zigpy_device_from_json,
 )
 from zha.application import Platform
-from zha.application.const import ATTR_QUIRK_ID
+from zha.application.const import (
+    ATTR_QUIRK_ID,
+    ZHA_CLUSTER_HANDLER_MSG_BIND,
+    ZHA_CLUSTER_HANDLER_MSG_CFG_RPT,
+)
 from zha.application.gateway import Gateway
 from zha.application.platforms.button import IdentifyButton
 from zha.exceptions import ZHAException
 from zha.zigbee.cluster_handlers import (
     AttrReportConfig,
     ClientClusterHandler,
+    ClusterBindEvent,
+    ClusterConfigureReportingEvent,
     ClusterHandler,
     ClusterHandlerStatus,
     parse_and_log_command,
@@ -175,7 +184,7 @@ def endpoint_mock(zigpy_coordinator_device: ZigpyDevice) -> Endpoint:
         ),
         (zigpy.zcl.clusters.hvac.Fan.cluster_id, 1, {"fan_mode"}),
         (
-            zigpy.zcl.clusters.lighting.Color.cluster_id,
+            Color.cluster_id,
             1,
             {
                 "current_x",
@@ -303,7 +312,7 @@ async def test_in_cluster_handler_config(
     reported_attrs = set()
 
     for mock_call in cluster.configure_reporting_multiple.mock_calls:
-        reported_attrs.update(mock_call.args[0].keys())
+        reported_attrs.update(attr_def.name for attr_def in mock_call.args[0])
 
     assert attrs == reported_attrs
     assert cluster.configure_reporting.call_count == 0
@@ -924,7 +933,7 @@ async def test_configure_reporting(zha_gateway: Gateway) -> None:
     mock_ep.profile_id = zigpy.profiles.zha.PROFILE_ID
     mock_ep.device.zdo = AsyncMock()
 
-    cluster = zigpy.zcl.clusters.lighting.Color(mock_ep)
+    cluster = Color(mock_ep)
     cluster.bind = AsyncMock(
         spec_set=cluster.bind,
         return_value=[zdo_t.Status.SUCCESS],  # ZDOCmd.Bind_rsp
@@ -941,19 +950,127 @@ async def test_configure_reporting(zha_gateway: Gateway) -> None:
     cluster_handler = TestZigbeeClusterHandler(cluster, endpoint)
     await cluster_handler.async_configure()
 
-    # Since we request reporting for five attributes, we need to make two calls (3 + 1)
+    # Since we request reporting for four attributes, we need to make two calls (3 + 1)
+
     assert cluster.configure_reporting_multiple.mock_calls == [
         mock.call(
             {
-                "current_x": (1, 60, 1),
-                "current_hue": (1, 60, 2),
-                "color_temperature": (1, 60, 3),
+                Color.AttributeDefs.current_x: ReportingConfig(1, 60, 1),
+                Color.AttributeDefs.current_hue: ReportingConfig(1, 60, 2),
+                Color.AttributeDefs.color_temperature: ReportingConfig(1, 60, 3),
             }
         ),
         mock.call(
             {
-                "current_y": (1, 60, 4),
+                Color.AttributeDefs.current_y: ReportingConfig(1, 60, 4),
             }
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("response", "expected_statuses"),
+    [
+        # Single SUCCESS in a list: all attributes marked as SUCCESS (ZCL 2.5.8.1.3)
+        (
+            [
+                foundation.ConfigureReportingResponseRecord(
+                    status=foundation.Status.SUCCESS
+                )
+            ],
+            {"current_x": "SUCCESS", "current_y": "SUCCESS"},
+        ),
+        # Empty list: unexpected response, all attributes marked as FAILURE
+        (
+            [],
+            {"current_x": "FAILURE", "current_y": "FAILURE"},
+        ),
+        # Per-attribute results: mixed success/failure
+        (
+            [
+                foundation.ConfigureReportingResponseRecord(
+                    status=foundation.Status.SUCCESS,
+                    attrid=Color.AttributeDefs.current_x.id,
+                ),
+                foundation.ConfigureReportingResponseRecord(
+                    status=foundation.Status.UNSUPPORTED_ATTRIBUTE,
+                    attrid=Color.AttributeDefs.current_y.id,
+                ),
+            ],
+            {"current_x": "SUCCESS", "current_y": "UNSUPPORTED_ATTRIBUTE"},
+        ),
+    ],
+    ids=[
+        "single_success_list",
+        "empty_list",
+        "mixed_per_attribute",
+    ],
+)
+async def test_configure_reporting_status(
+    zha_gateway: Gateway, response, expected_statuses
+) -> None:
+    """Test configure reporting status parsing via async_configure."""
+    zigpy_coordinator_device: ZigpyDevice = zigpy_coordinator_device_mock(zha_gateway)
+    endpoint: Endpoint = endpoint_mock(zigpy_coordinator_device)
+
+    class TestClusterHandler(ClusterHandler):
+        BIND = True
+        REPORT_CONFIG = (
+            AttrReportConfig(attr="current_x", config=(1, 60, 1)),
+            AttrReportConfig(attr="current_y", config=(1, 60, 2)),
+        )
+
+    mock_ep = mock.AsyncMock()
+    mock_ep.profile_id = zigpy.profiles.zha.PROFILE_ID
+    mock_ep.device.zdo = AsyncMock()
+
+    cluster = Color(mock_ep)
+    cluster.bind = AsyncMock(
+        spec_set=cluster.bind,
+        return_value=[zdo_t.Status.SUCCESS],
+    )
+    cluster.configure_reporting_multiple = AsyncMock(
+        spec_set=cluster.configure_reporting_multiple,
+        return_value=response,
+    )
+
+    cluster_handler = TestClusterHandler(cluster, endpoint)
+
+    mock_emit = MagicMock()
+    cluster_handler._endpoint.device.emit = mock_emit
+
+    await cluster_handler.async_configure()
+
+    assert mock_emit.call_args_list == [
+        mock.call(
+            ZHA_CLUSTER_HANDLER_MSG_BIND,
+            ClusterBindEvent(
+                cluster_name=cluster.name,
+                cluster_id=cluster.cluster_id,
+                cluster_handler_unique_id=cluster_handler.unique_id,
+                success=True,
+            ),
+        ),
+        mock.call(
+            ZHA_CLUSTER_HANDLER_MSG_CFG_RPT,
+            ClusterConfigureReportingEvent(
+                cluster_name=cluster.name,
+                cluster_id=cluster.cluster_id,
+                cluster_handler_unique_id=cluster_handler.unique_id,
+                attributes={
+                    attr_name: {
+                        "min": 1,
+                        "max": 60,
+                        "id": attr_name,
+                        "name": attr_name,
+                        "change": idx + 1,
+                        "status": expected_status,
+                    }
+                    for idx, (attr_name, expected_status) in enumerate(
+                        expected_statuses.items()
+                    )
+                },
+            ),
         ),
     ]
 
@@ -970,7 +1087,7 @@ async def test_invalid_cluster_handler(zha_gateway: Gateway, caplog) -> None:  #
     zigpy_ep = zigpy.endpoint.Endpoint(mock_device, endpoint_id=1)
     zigpy_ep.profile_id = zigpy.profiles.zha.PROFILE_ID
 
-    cluster = zigpy_ep.add_input_cluster(zigpy.zcl.clusters.lighting.Color.cluster_id)
+    cluster = zigpy_ep.add_input_cluster(Color.cluster_id)
     cluster.configure_reporting_multiple = AsyncMock(
         spec_set=cluster.configure_reporting_multiple,
         return_value=[
@@ -1015,7 +1132,7 @@ async def test_standard_cluster_handler(
     zigpy_ep = zigpy.endpoint.Endpoint(mock_device, endpoint_id=1)
     zigpy_ep.profile_id = zigpy.profiles.zha.PROFILE_ID
 
-    cluster = zigpy_ep.add_input_cluster(zigpy.zcl.clusters.lighting.Color.cluster_id)
+    cluster = zigpy_ep.add_input_cluster(Color.cluster_id)
     cluster.configure_reporting_multiple = AsyncMock(
         spec_set=cluster.configure_reporting_multiple,
         return_value=[
@@ -1055,7 +1172,7 @@ async def test_exposed_feature_cluster_handler(
     zigpy_ep = zigpy.endpoint.Endpoint(mock_device, endpoint_id=1)
     zigpy_ep.profile_id = zigpy.profiles.zha.PROFILE_ID
 
-    cluster = zigpy_ep.add_input_cluster(zigpy.zcl.clusters.lighting.Color.cluster_id)
+    cluster = zigpy_ep.add_input_cluster(Color.cluster_id)
     cluster.configure_reporting_multiple = AsyncMock(
         spec_set=cluster.configure_reporting_multiple,
         return_value=[
