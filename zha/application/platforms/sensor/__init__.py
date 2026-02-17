@@ -786,6 +786,7 @@ class ReportingElectricalMeasurement(ElectricalMeasurementActivePower):
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
         models=frozenset({"VZM31-SN", "SP 234", "outletv4", "INSPELNING Smart plug"}),
+        feature_priority=(PlatformFeatureGroup.EM_ACTIVE_POWER, 1),
     )
 
 
@@ -797,6 +798,21 @@ class PolledElectricalMeasurement(ElectricalMeasurementActivePower):
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+        feature_priority=(PlatformFeatureGroup.EM_ACTIVE_POWER, 0),
+    )
+
+
+@register_entity(ElectricalMeasurement.cluster_id)
+class UbisysElectricalMeasurementActivePower(ElectricalMeasurementActivePower):
+    """Non-polling active power measurement for ubisys devices.
+
+    ubisys devices poll the EM cluster via the voltage entity instead.
+    """
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+        manufacturers=frozenset({"ubisys"}),
+        feature_priority=(PlatformFeatureGroup.EM_ACTIVE_POWER, 1),
     )
 
 
@@ -921,6 +937,25 @@ class ElectricalMeasurementRMSVoltage(BaseElectricalMeasurement):
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+        feature_priority=(PlatformFeatureGroup.EM_RMS_VOLTAGE, 0),
+    )
+
+
+@register_entity(ElectricalMeasurement.cluster_id)
+class PolledElectricalMeasurementRMSVoltage(ElectricalMeasurementRMSVoltage):
+    """Polled RMS voltage that polls all relevant EM attributes for ubisys devices.
+
+    ubisys devices do not expose the active_power attribute, so the
+    PolledElectricalMeasurement entity is not created for them. This class ensures
+    the EM cluster is still polled via the voltage entity instead.
+    """
+
+    _use_custom_polling: bool = True
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+        manufacturers=frozenset({"ubisys"}),
+        feature_priority=(PlatformFeatureGroup.EM_RMS_VOLTAGE, 1),
     )
 
 

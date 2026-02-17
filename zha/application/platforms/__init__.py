@@ -60,6 +60,12 @@ class PlatformFeatureGroup(StrEnum):
     # Model-specific overrides for VOC level
     VOC_LEVEL = "voc_level"
 
+    # Manufacturer-specific overrides for EM active power polling
+    EM_ACTIVE_POWER = "em_active_power"
+
+    # Manufacturer-specific overrides for EM RMS voltage polling
+    EM_RMS_VOLTAGE = "em_rms_voltage"
+
     # Model-specific overrides for Smart Energy Summation
     SMART_ENERGY_SUMMATION = "smart_energy_summation"
 
