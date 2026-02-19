@@ -753,13 +753,6 @@ async def test_devices_from_files(
         )
         assert loaded_device_data == device_data
 
-        # Calling get_diagnostics_json() a second time should produce the same
-        # result because the original_signature dict must not be mutated.
-        loaded_device_data_2 = json.loads(
-            json.dumps(zha_device.get_diagnostics_json(), cls=ZhaJsonEncoder)
-        )
-        assert loaded_device_data_2 == loaded_device_data
-
         # Assert identify called on join for devices that support it
         cluster_identify = _get_identify_cluster(zha_device.device)
         if cluster_identify and not zha_device.skip_configuration:
@@ -780,6 +773,23 @@ async def test_devices_from_files(
                     manufacturer=None,
                 )
             ]
+
+
+async def test_get_diagnostics_json_repeated_calls(zha_gateway: Gateway) -> None:
+    """Test that calling get_diagnostics_json twice produces the same result."""
+    zigpy_device = await zigpy_device_from_json(
+        zha_gateway.application_controller,
+        "tests/data/devices/jasco-products-45856.json",
+    )
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+
+    first = json.loads(
+        json.dumps(zha_device.get_diagnostics_json(), cls=ZhaJsonEncoder)
+    )
+    second = json.loads(
+        json.dumps(zha_device.get_diagnostics_json(), cls=ZhaJsonEncoder)
+    )
+    assert first == second
 
 
 async def test_cluster_handler_only_clusters_are_bound(zha_gateway: Gateway) -> None:
