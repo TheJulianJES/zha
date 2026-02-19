@@ -456,7 +456,7 @@ class BallastMinLevel(NumberConfigurationEntity):
     _attr_native_min_value: float = 0x01
     _attr_native_max_value: float = 0xFE
     _attribute_name = "min_level"
-    _attr_translation_key: str = "ballast_min_level"
+    _attr_translation_key: str = "minimum_dimming_level"
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_BALLAST})
@@ -472,7 +472,7 @@ class BallastMaxLevel(NumberConfigurationEntity):
     _attr_native_min_value: float = 0x01
     _attr_native_max_value: float = 0xFE
     _attribute_name = "max_level"
-    _attr_translation_key: str = "ballast_max_level"
+    _attr_translation_key: str = "maximum_dimming_level"
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_BALLAST})
