@@ -753,6 +753,13 @@ async def test_devices_from_files(
         )
         assert loaded_device_data == device_data
 
+        # Calling get_diagnostics_json() a second time should produce the same
+        # result because the original_signature dict must not be mutated.
+        loaded_device_data_2 = json.loads(
+            json.dumps(zha_device.get_diagnostics_json(), cls=ZhaJsonEncoder)
+        )
+        assert loaded_device_data_2 == loaded_device_data
+
         # Assert identify called on join for devices that support it
         cluster_identify = _get_identify_cluster(zha_device.device)
         if cluster_identify and not zha_device.skip_configuration:
