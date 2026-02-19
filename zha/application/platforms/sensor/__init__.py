@@ -1480,6 +1480,17 @@ class PolledSmartEnergySummation(SmartEnergySummation):
 
 
 @register_entity(Metering.cluster_id)
+class ExposedFeaturePolledSmartEnergySummation(PolledSmartEnergySummation):
+    """Polled Smart Energy Metering summation sensor via exposed feature."""
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+        exposed_features=frozenset({"se_poll_summation"}),
+        feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION, 1),
+    )
+
+
+@register_entity(Metering.cluster_id)
 class Tier1SmartEnergySummation(PolledSmartEnergySummation):
     """Tier 1 Smart Energy Metering summation sensor."""
 
@@ -1595,6 +1606,20 @@ class SmartEnergySummationReceived(PolledSmartEnergySummation):
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+        feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION_RECEIVED, 0),
+    )
+
+
+@register_entity(Metering.cluster_id)
+class ExposedFeaturePolledSmartEnergySummationReceived(SmartEnergySummationReceived):
+    """Polled Smart Energy Metering summation received sensor via exposed feature."""
+
+    _use_custom_polling = True
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+        exposed_features=frozenset({"se_poll_summation"}),
+        feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION_RECEIVED, 1),
     )
 
 
