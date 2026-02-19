@@ -12,7 +12,7 @@ from zhaquirks.quirk_ids import DANFOSS_ALLY_THERMOSTAT
 from zigpy.quirks.v2 import NumberMetadata
 from zigpy.zcl.clusters.general import AnalogOutput, Basic, LevelControl
 from zigpy.zcl.clusters.hvac import Thermostat
-from zigpy.zcl.clusters.lighting import Color
+from zigpy.zcl.clusters.lighting import Ballast, Color
 from zigpy.zcl.clusters.measurement import OccupancySensing
 
 from zha.application import Platform
@@ -33,6 +33,7 @@ from zha.zigbee.cluster_handlers.const import (
     AQARA_OPPLE_CLUSTER,
     CLUSTER_HANDLER_ANALOG_OUTPUT,
     CLUSTER_HANDLER_ATTRIBUTE_UPDATED,
+    CLUSTER_HANDLER_BALLAST,
     CLUSTER_HANDLER_BASIC,
     CLUSTER_HANDLER_COLOR,
     CLUSTER_HANDLER_INOVELLI,
@@ -444,6 +445,38 @@ class StartUpColorTemperatureConfigurationEntity(NumberConfigurationEntity):
         super().recompute_capabilities()
         self._attr_native_min_value = self._cluster_handler.min_mireds
         self._attr_native_max_value = self._cluster_handler.max_mireds
+
+
+@register_entity(Ballast.cluster_id)
+class BallastMinLevel(NumberConfigurationEntity):
+    """Ballast minimum level configuration entity."""
+
+    _unique_id_suffix = "ballast_min_level"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_native_min_value: float = 0x01
+    _attr_native_max_value: float = 0xFE
+    _attribute_name = "min_level"
+    _attr_translation_key: str = "ballast_min_level"
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_BALLAST})
+    )
+
+
+@register_entity(Ballast.cluster_id)
+class BallastMaxLevel(NumberConfigurationEntity):
+    """Ballast maximum level configuration entity."""
+
+    _unique_id_suffix = "ballast_max_level"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_native_min_value: float = 0x01
+    _attr_native_max_value: float = 0xFE
+    _attribute_name = "max_level"
+    _attr_translation_key: str = "ballast_max_level"
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_BALLAST})
+    )
 
 
 @register_entity(OccupancySensing.cluster_id)
