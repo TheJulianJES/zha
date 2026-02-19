@@ -657,3 +657,21 @@ class SinopeManufacturerClusterHandler(ClusterHandler):
 @registries.CLUSTER_HANDLER_REGISTRY.register(LEGRAND_CABLE_OUTLET_CLUSTER)
 class LegrandCableOutletClusterHandler(ClusterHandler):
     """Legrand cable outlet cluster handler."""
+
+
+@registries.CLUSTER_HANDLER_ONLY_CLUSTERS.register(0xFCBE)
+@registries.CLUSTER_HANDLER_REGISTRY.register(0xFCBE)
+class ManufacturerCluster0xFCBEHandler(ClusterHandler):
+    """Cluster handler for manufacturer specific cluster 0xFCBE."""
+
+
+@registries.CLUSTER_HANDLER_ONLY_CLUSTERS.register(0xFCC5)
+@registries.CLUSTER_HANDLER_REGISTRY.register(0xFCC5)
+class ManufacturerCluster0xFCC5Handler(ClusterHandler):
+    """Cluster handler for manufacturer specific cluster 0xFCC5."""
+
+
+@registries.CLUSTER_HANDLER_ONLY_CLUSTERS.register(0xFFFF)
+@registries.CLUSTER_HANDLER_REGISTRY.register(0xFFFF)
+class ManufacturerCluster0xFFFFHandler(ClusterHandler):
+    """Cluster handler for manufacturer specific cluster 0xFFFF."""

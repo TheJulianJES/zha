@@ -756,23 +756,22 @@ async def test_devices_from_files(
         # Assert identify called on join for devices that support it
         cluster_identify = _get_identify_cluster(zha_device.device)
         if cluster_identify and not zha_device.skip_configuration:
-            assert cluster_identify.request.mock_calls == [
-                mock.call(
-                    False,
-                    cluster_identify.commands_by_name["trigger_effect"].id,
-                    cluster_identify.commands_by_name["trigger_effect"].schema,
-                    effect_id=zigpy.zcl.clusters.general.Identify.EffectIdentifier.Okay,
-                    effect_variant=(
-                        zigpy.zcl.clusters.general.Identify.EffectVariant.Default
-                    ),
-                    # enhance this maybe by looking at disable default response?
-                    expect_reply=(
-                        cluster_identify.endpoint.model
-                        not in ("HDC52EastwindFan", "HBUniversalCFRemote")
-                    ),
-                    manufacturer=None,
-                )
-            ]
+            trigger_effect_call = mock.call(
+                False,
+                cluster_identify.commands_by_name["trigger_effect"].id,
+                cluster_identify.commands_by_name["trigger_effect"].schema,
+                effect_id=zigpy.zcl.clusters.general.Identify.EffectIdentifier.Okay,
+                effect_variant=(
+                    zigpy.zcl.clusters.general.Identify.EffectVariant.Default
+                ),
+                # enhance this maybe by looking at disable default response?
+                expect_reply=(
+                    cluster_identify.endpoint.model
+                    not in ("HDC52EastwindFan", "HBUniversalCFRemote")
+                ),
+                manufacturer=None,
+            )
+            assert trigger_effect_call in cluster_identify.request.mock_calls
 
 
 async def test_cluster_handler_only_clusters_are_bound(zha_gateway: Gateway) -> None:
