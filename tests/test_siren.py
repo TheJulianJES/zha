@@ -8,6 +8,7 @@ from zigpy.profiles import zha
 from zigpy.quirks import DEVICE_REGISTRY
 from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder
 from zigpy.quirks.v2.homeassistant import EntityPlatform
+import zigpy.types as t
 from zigpy.typing import UNDEFINED
 from zigpy.zcl.clusters import general, security
 import zigpy.zcl.foundation as zcl_f
@@ -325,6 +326,285 @@ async def test_siren_configurable_attribute(zha_gateway: Gateway) -> None:
         assert cluster.write_attributes.mock_calls == [
             call(
                 {general.Basic.AttributeDefs.power_source.name: 0},
+                manufacturer=UNDEFINED,
+            )
+        ]
+
+
+async def test_siren_configurable_attribute_custom_on_off_values(
+    zha_gateway: Gateway,
+) -> None:
+    """Test configurable attribute siren with custom on/off values."""
+
+    zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [general.Basic.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zha.DeviceType.IAS_WARNING_DEVICE,
+                SIG_EP_PROFILE: zha.PROFILE_ID,
+            }
+        },
+        manufacturer="FakeSirenManufacturer2",
+        model="FakeSirenModel2",
+    )
+
+    (
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
+        .switch(
+            general.Basic.AttributeDefs.power_source.name,
+            general.Basic.cluster_id,
+            on_value=3,
+            off_value=5,
+            entity_platform=EntityPlatform.SIREN,
+            translation_key="siren",
+            fallback_name="Siren",
+        )
+        .add_to_registry()
+    )
+
+    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
+    assert isinstance(zigpy_device_, CustomDeviceV2)
+
+    cluster = zigpy_device_.endpoints[1].basic
+    cluster.PLUGGED_ATTR_READS = {
+        general.Basic.AttributeDefs.power_source.name: 5,
+    }
+    update_attribute_cache(cluster)
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device_)
+    entity = get_entity(zha_device, platform=Platform.SIREN)
+    assert isinstance(entity, ConfigurableAttributeSiren)
+    assert entity.state["state"] is False
+
+    # turn on via attribute report
+    await send_attributes_report(
+        zha_gateway, cluster, {general.Basic.AttributeDefs.power_source.name: 3}
+    )
+    assert entity.state["state"] is True
+
+    # turn off via attribute report
+    await send_attributes_report(
+        zha_gateway, cluster, {general.Basic.AttributeDefs.power_source.name: 5}
+    )
+    assert entity.state["state"] is False
+
+    # turn on from HA
+    with patch(
+        "zigpy.zcl.Cluster.write_attributes",
+        return_value=[zcl_f.WriteAttributesResponse.deserialize(b"\x00")[0]],
+    ):
+        await entity.async_turn_on()
+        await zha_gateway.async_block_till_done()
+        assert cluster.write_attributes.mock_calls == [
+            call(
+                {general.Basic.AttributeDefs.power_source.name: 3},
+                manufacturer=UNDEFINED,
+            )
+        ]
+        cluster.write_attributes.reset_mock()
+
+    # turn off from HA
+    with patch(
+        "zigpy.zcl.Cluster.write_attributes",
+        return_value=[zcl_f.WriteAttributesResponse.deserialize(b"\x00")[0]],
+    ):
+        await entity.async_turn_off()
+        await zha_gateway.async_block_till_done()
+        assert cluster.write_attributes.mock_calls == [
+            call(
+                {general.Basic.AttributeDefs.power_source.name: 5},
+                manufacturer=UNDEFINED,
+            )
+        ]
+
+
+async def test_siren_configurable_attribute_force_inverted(
+    zha_gateway: Gateway,
+) -> None:
+    """Test configurable attribute siren with force_inverted=True."""
+
+    zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [general.Basic.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zha.DeviceType.IAS_WARNING_DEVICE,
+                SIG_EP_PROFILE: zha.PROFILE_ID,
+            }
+        },
+        manufacturer="FakeSirenManufacturer3",
+        model="FakeSirenModel3",
+    )
+
+    (
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
+        .switch(
+            general.Basic.AttributeDefs.power_source.name,
+            general.Basic.cluster_id,
+            on_value=3,
+            off_value=5,
+            force_inverted=True,
+            entity_platform=EntityPlatform.SIREN,
+            translation_key="siren",
+            fallback_name="Siren",
+        )
+        .add_to_registry()
+    )
+
+    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
+    assert isinstance(zigpy_device_, CustomDeviceV2)
+
+    cluster = zigpy_device_.endpoints[1].basic
+    cluster.PLUGGED_ATTR_READS = {
+        general.Basic.AttributeDefs.power_source.name: 5,
+    }
+    update_attribute_cache(cluster)
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device_)
+    entity = get_entity(zha_device, platform=Platform.SIREN)
+    assert isinstance(entity, ConfigurableAttributeSiren)
+
+    # with force_inverted, off_value=5 reads as on
+    assert entity.state["state"] is True
+
+    # attribute = on_value(3) -> inverted -> state is off
+    await send_attributes_report(
+        zha_gateway, cluster, {general.Basic.AttributeDefs.power_source.name: 3}
+    )
+    assert entity.state["state"] is False
+
+    # attribute = off_value(5) -> inverted -> state is on
+    await send_attributes_report(
+        zha_gateway, cluster, {general.Basic.AttributeDefs.power_source.name: 5}
+    )
+    assert entity.state["state"] is True
+
+    # turn on from HA: inverted, so writes off_value
+    with patch(
+        "zigpy.zcl.Cluster.write_attributes",
+        return_value=[zcl_f.WriteAttributesResponse.deserialize(b"\x00")[0]],
+    ):
+        await entity.async_turn_on()
+        await zha_gateway.async_block_till_done()
+        assert cluster.write_attributes.mock_calls == [
+            call(
+                {general.Basic.AttributeDefs.power_source.name: 5},
+                manufacturer=UNDEFINED,
+            )
+        ]
+        cluster.write_attributes.reset_mock()
+
+    # turn off from HA: inverted, so writes on_value
+    with patch(
+        "zigpy.zcl.Cluster.write_attributes",
+        return_value=[zcl_f.WriteAttributesResponse.deserialize(b"\x00")[0]],
+    ):
+        await entity.async_turn_off()
+        await zha_gateway.async_block_till_done()
+        assert cluster.write_attributes.mock_calls == [
+            call(
+                {general.Basic.AttributeDefs.power_source.name: 3},
+                manufacturer=UNDEFINED,
+            )
+        ]
+
+
+async def test_siren_configurable_attribute_inverter_attribute(
+    zha_gateway: Gateway,
+) -> None:
+    """Test configurable attribute siren with invert_attribute_name."""
+
+    zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [general.Basic.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zha.DeviceType.IAS_WARNING_DEVICE,
+                SIG_EP_PROFILE: zha.PROFILE_ID,
+            }
+        },
+        manufacturer="FakeSirenManufacturer4",
+        model="FakeSirenModel4",
+    )
+
+    (
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
+        .switch(
+            general.Basic.AttributeDefs.power_source.name,
+            general.Basic.cluster_id,
+            on_value=3,
+            off_value=5,
+            invert_attribute_name=general.Basic.AttributeDefs.disable_local_config.name,
+            entity_platform=EntityPlatform.SIREN,
+            translation_key="siren",
+            fallback_name="Siren",
+        )
+        .add_to_registry()
+    )
+
+    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
+    assert isinstance(zigpy_device_, CustomDeviceV2)
+
+    cluster = zigpy_device_.endpoints[1].basic
+    cluster.PLUGGED_ATTR_READS = {
+        general.Basic.AttributeDefs.power_source.name: 5,
+        general.Basic.AttributeDefs.disable_local_config.name: t.Bool(True),
+    }
+    update_attribute_cache(cluster)
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device_)
+    entity = get_entity(zha_device, platform=Platform.SIREN)
+    assert isinstance(entity, ConfigurableAttributeSiren)
+
+    # inverter_attribute is True, so off_value(5) reads as on
+    assert entity.state["state"] is True
+
+    # attribute = on_value(3), inverter still True -> state is off
+    await send_attributes_report(
+        zha_gateway, cluster, {general.Basic.AttributeDefs.power_source.name: 3}
+    )
+    assert entity.state["state"] is False
+
+    # inverter attribute flipped to False -> off_value(5) with no inversion -> off
+    await send_attributes_report(
+        zha_gateway,
+        cluster,
+        {general.Basic.AttributeDefs.disable_local_config.name: t.Bool(False)},
+    )
+    await send_attributes_report(
+        zha_gateway, cluster, {general.Basic.AttributeDefs.power_source.name: 5}
+    )
+    assert entity.state["state"] is False
+
+    # turn on from HA (not inverted now): writes on_value
+    with patch(
+        "zigpy.zcl.Cluster.write_attributes",
+        return_value=[zcl_f.WriteAttributesResponse.deserialize(b"\x00")[0]],
+    ):
+        await entity.async_turn_on()
+        await zha_gateway.async_block_till_done()
+        assert cluster.write_attributes.mock_calls == [
+            call(
+                {general.Basic.AttributeDefs.power_source.name: 3},
+                manufacturer=UNDEFINED,
+            )
+        ]
+        cluster.write_attributes.reset_mock()
+
+    # turn off from HA: writes off_value
+    with patch(
+        "zigpy.zcl.Cluster.write_attributes",
+        return_value=[zcl_f.WriteAttributesResponse.deserialize(b"\x00")[0]],
+    ):
+        await entity.async_turn_off()
+        await zha_gateway.async_block_till_done()
+        assert cluster.write_attributes.mock_calls == [
+            call(
+                {general.Basic.AttributeDefs.power_source.name: 5},
                 manufacturer=UNDEFINED,
             )
         ]
