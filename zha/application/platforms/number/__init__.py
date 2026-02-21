@@ -1226,3 +1226,37 @@ class SinopeLightLEDOffIntensityConfigurationEntity(NumberConfigurationEntity):
             }
         ),
     )
+
+
+@register_entity(OccupancySensing.cluster_id)
+class PIROccupiedToUnoccupiedDelayConfigurationEntity(NumberConfigurationEntity):
+    """Representation of a ZHA PIR occupied to unoccupied delay configuration entity."""
+
+    _unique_id_suffix = "pir_o_to_u_delay"
+    _attr_native_min_value: float = 0x0000
+    _attr_native_max_value: float = 0xFFFF
+    _attr_device_class = NumberDeviceClass.DURATION
+    _attr_native_unit_of_measurement: str = UnitOfTime.SECONDS
+    _attribute_name = "pir_o_to_u_delay"
+    _attr_translation_key: str = "pir_o_to_u_delay"
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_OCCUPANCY})
+    )
+
+
+@register_entity(OccupancySensing.cluster_id)
+class PIRUnoccupiedToOccupiedDelayConfigurationEntity(NumberConfigurationEntity):
+    """Representation of a ZHA PIR unoccupied to occupied delay configuration entity."""
+
+    _unique_id_suffix = "pir_u_to_o_delay"
+    _attr_native_min_value: float = 0x0000
+    _attr_native_max_value: float = 0xFFFF
+    _attr_device_class = NumberDeviceClass.DURATION
+    _attr_native_unit_of_measurement: str = UnitOfTime.SECONDS
+    _attribute_name = "pir_u_to_o_delay"
+    _attr_translation_key: str = "pir_u_to_o_delay"
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_OCCUPANCY})
+    )
