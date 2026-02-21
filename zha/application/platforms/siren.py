@@ -11,6 +11,7 @@ import functools
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from zigpy.profiles import zha
+from zigpy.quirks.v2 import SwitchMetadata
 from zigpy.zcl.clusters.security import IasWd
 
 from zha.application import Platform
@@ -34,7 +35,11 @@ from zha.application.platforms import (
     PlatformFeatureGroup,
     register_entity,
 )
-from zha.zigbee.cluster_handlers.const import CLUSTER_HANDLER_IAS_WD
+from zha.zigbee.cluster_handlers import ClusterAttributeUpdatedEvent
+from zha.zigbee.cluster_handlers.const import (
+    CLUSTER_HANDLER_ATTRIBUTE_UPDATED,
+    CLUSTER_HANDLER_IAS_WD,
+)
 from zha.zigbee.cluster_handlers.security import IasWdClusterHandler
 
 if TYPE_CHECKING:
@@ -158,6 +163,112 @@ class BaseZclSiren(BaseSiren, ABC):
                 self._tracked_handles.remove(self._off_listener)
 
             self._off_listener = None
+        self.maybe_emit_state_changed_event()
+
+
+class ConfigurableAttributeSiren(BaseSiren):
+    """Siren entity backed by a ZCL attribute, created from quirks v2 SwitchMetadata."""
+
+    _attribute_name: str
+    _inverter_attribute_name: str | None = None
+    _force_inverted: bool = False
+    _off_value: int = 0
+    _on_value: int = 1
+
+    def __init__(
+        self,
+        cluster_handlers: list[ClusterHandler],
+        endpoint: Endpoint,
+        device: Device,
+        **kwargs: Any,
+    ) -> None:
+        """Init this configurable attribute siren."""
+        self._cluster_handler: ClusterHandler = cluster_handlers[0]
+        super().__init__(cluster_handlers, endpoint, device, **kwargs)
+        self._attr_supported_features = (
+            SirenEntityFeature.TURN_ON | SirenEntityFeature.TURN_OFF
+        )
+        self._attr_available_tones: dict[int, str] = {}
+        self._cluster_handler.on_event(
+            CLUSTER_HANDLER_ATTRIBUTE_UPDATED,
+            self.handle_cluster_handler_attribute_updated,
+        )
+
+    def _init_from_quirks_metadata(self, entity_metadata: SwitchMetadata) -> None:
+        """Init this entity from the quirks metadata."""
+        super()._init_from_quirks_metadata(entity_metadata)
+        self._attribute_name = entity_metadata.attribute_name
+        if entity_metadata.invert_attribute_name:
+            self._inverter_attribute_name = entity_metadata.invert_attribute_name
+        if entity_metadata.force_inverted:
+            self._force_inverted = entity_metadata.force_inverted
+        self._off_value = entity_metadata.off_value
+        self._on_value = entity_metadata.on_value
+
+    @property
+    def inverted(self) -> bool:
+        """Return True if the siren is inverted."""
+        if self._inverter_attribute_name:
+            return bool(
+                self._cluster_handler.cluster.get(self._inverter_attribute_name)
+            )
+        return self._force_inverted
+
+    @property
+    def is_on(self) -> bool:
+        """Return if the siren is on based on the cluster attribute."""
+        if self._on_value != 1:
+            val = self._cluster_handler.cluster.get(self._attribute_name)
+            val = val == self._on_value
+        else:
+            val = bool(self._cluster_handler.cluster.get(self._attribute_name))
+        return (not val) if self.inverted else val
+
+    def handle_cluster_handler_attribute_updated(
+        self,
+        event: ClusterAttributeUpdatedEvent,
+    ) -> None:
+        """Handle state update from cluster handler."""
+        if event.attribute_name == self._attribute_name:
+            self.maybe_emit_state_changed_event()
+
+    async def async_turn_on(
+        self,
+        duration: int | None = None,
+        tone: int | None = None,
+        volume_level: int | None = None,
+    ) -> None:
+        """Turn on siren."""
+        await self._cluster_handler.write_attributes_safe(
+            {
+                self._attribute_name: self._on_value
+                if not self.inverted
+                else self._off_value
+            }
+        )
+        self.maybe_emit_state_changed_event()
+
+    async def async_turn_off(self) -> None:
+        """Turn off siren."""
+        await self._cluster_handler.write_attributes_safe(
+            {
+                self._attribute_name: self._off_value
+                if not self.inverted
+                else self._on_value
+            }
+        )
+        self.maybe_emit_state_changed_event()
+
+    async def async_update(self) -> None:
+        """Attempt to retrieve the state of the entity."""
+        self.debug("Polling current state")
+        polling_attrs = [self._attribute_name]
+        if self._inverter_attribute_name:
+            polling_attrs.append(self._inverter_attribute_name)
+        results = await self._cluster_handler.get_attributes(
+            polling_attrs, from_cache=False, only_cache=False
+        )
+        self.debug("read values=%s", results)
         self.maybe_emit_state_changed_event()
 
 
