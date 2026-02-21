@@ -315,7 +315,8 @@ class IASZone(BinarySensor):
     # TODO: split this sensor off into individual sensor classes per IASZone type
 
     _cluster_handler_match = ClusterHandlerMatch(
-        cluster_handlers=frozenset({CLUSTER_HANDLER_ZONE})
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ZONE}),
+        not_exposed_features=frozenset({"ias_zone_split"}),
     )
 
     def recompute_capabilities(self) -> None:
@@ -342,6 +343,42 @@ class IASZone(BinarySensor):
     async def async_update(self) -> None:
         """Attempt to retrieve on off state from the IAS Zone sensor."""
         await PlatformEntity.async_update(self)
+
+
+@register_entity(IasZone.cluster_id)
+class IASZoneAlarm1(IASZone):
+    """ZHA IAS BinarySensor reporting only alarm bit 0 (Alarm_1)."""
+
+    # keep same unique ID of normal IASZone binary sensor
+    _attr_translation_key: str = "ias_zone_alarm_1"
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ZONE}),
+        exposed_features=frozenset({"ias_zone_split"}),
+    )
+
+    @staticmethod
+    def parse(value: bool | int) -> bool:
+        """Return True if alarm bit 0 (Alarm_1) is set."""
+        return bool(value & 0b00000001)
+
+
+@register_entity(IasZone.cluster_id)
+class IASZoneAlarm2(IASZone):
+    """ZHA IAS BinarySensor reporting only alarm bit 1 (Alarm_2)."""
+
+    _unique_id_suffix = "ias_zone_alarm_2"
+    _attr_translation_key: str = "ias_zone_alarm_2"
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ZONE}),
+        exposed_features=frozenset({"ias_zone_split"}),
+    )
+
+    @staticmethod
+    def parse(value: bool | int) -> bool:
+        """Return True if alarm bit 1 (Alarm_2) is set."""
+        return bool(value & 0b00000010)
 
 
 @register_entity(IasZone.cluster_id)
