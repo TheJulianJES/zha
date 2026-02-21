@@ -6,12 +6,12 @@ from abc import ABC, abstractmethod
 import asyncio
 import contextlib
 from dataclasses import dataclass
-from enum import IntFlag
+from enum import Enum, IntFlag
 import functools
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from zigpy.profiles import zha
-from zigpy.quirks.v2 import SwitchMetadata
+from zigpy.quirks.v2 import SwitchMetadata, ZCLEnumMetadata
 from zigpy.zcl.clusters.security import IasWd
 
 from zha.application import Platform
@@ -267,6 +267,102 @@ class ConfigurableAttributeSiren(BaseSiren):
             polling_attrs.append(self._inverter_attribute_name)
         results = await self._cluster_handler.get_attributes(
             polling_attrs, from_cache=False, only_cache=False
+        )
+        self.debug("read values=%s", results)
+        self.maybe_emit_state_changed_event()
+
+
+class EnumSiren(BaseSiren):
+    """Siren entity backed by a ZCL enum attribute, created from quirks v2 ZCLEnumMetadata.
+
+    Entry 0 of the enum is the off state.
+    Entry 1 is the default tone used when no specific tone is requested.
+    All remaining entries are exposed as additional tones.
+    """
+
+    _attribute_name: str
+    _enum: type[Enum]
+
+    def __init__(
+        self,
+        cluster_handlers: list[ClusterHandler],
+        endpoint: Endpoint,
+        device: Device,
+        **kwargs: Any,
+    ) -> None:
+        """Init this enum siren."""
+        self._cluster_handler: ClusterHandler = cluster_handlers[0]
+        self._attr_available_tones: dict[int, str] = {}
+        super().__init__(cluster_handlers, endpoint, device, **kwargs)
+        self._attr_supported_features = (
+            SirenEntityFeature.TURN_ON
+            | SirenEntityFeature.TURN_OFF
+            | SirenEntityFeature.TONES
+        )
+        self._cluster_handler.on_event(
+            CLUSTER_HANDLER_ATTRIBUTE_UPDATED,
+            self.handle_cluster_handler_attribute_updated,
+        )
+
+    def _init_from_quirks_metadata(self, entity_metadata: ZCLEnumMetadata) -> None:
+        """Init this entity from the quirks metadata."""
+        super()._init_from_quirks_metadata(entity_metadata)
+        self._attribute_name = entity_metadata.attribute_name
+        self._enum = entity_metadata.enum
+        # All entries except index 0 (off) are exposed as tones
+        entries = list(self._enum)
+        self._attr_available_tones = {
+            entry.value: entry.name.replace("_", " ") for entry in entries[1:]
+        }
+
+    @property
+    def is_on(self) -> bool:
+        """Return True if the current enum value is not the off entry (index 0)."""
+        value = self._cluster_handler.cluster.get(self._attribute_name)
+        if value is None:
+            return False
+        off_value = next(iter(self._enum)).value
+        return int(value) != off_value
+
+    def handle_cluster_handler_attribute_updated(
+        self,
+        event: ClusterAttributeUpdatedEvent,
+    ) -> None:
+        """Handle state update from cluster handler."""
+        if event.attribute_name == self._attribute_name:
+            self.maybe_emit_state_changed_event()
+
+    async def async_turn_on(
+        self,
+        duration: int | None = None,
+        tone: int | None = None,
+        volume_level: int | None = None,
+    ) -> None:
+        """Turn on siren. Uses tone if provided, otherwise the second enum entry."""
+        entries = list(self._enum)
+        if tone is not None and tone in self._attr_available_tones:
+            target = self._enum(tone)
+        else:
+            # Default: second entry (index 1)
+            target = entries[1]
+        await self._cluster_handler.write_attributes_safe(
+            {self._attribute_name: target}
+        )
+        self.maybe_emit_state_changed_event()
+
+    async def async_turn_off(self) -> None:
+        """Turn off siren by writing the first enum entry (index 0)."""
+        off_entry = next(iter(self._enum))
+        await self._cluster_handler.write_attributes_safe(
+            {self._attribute_name: off_entry}
+        )
+        self.maybe_emit_state_changed_event()
+
+    async def async_update(self) -> None:
+        """Attempt to retrieve the state of the entity."""
+        self.debug("Polling current state")
+        results = await self._cluster_handler.get_attributes(
+            [self._attribute_name], from_cache=False, only_cache=False
         )
         self.debug("read values=%s", results)
         self.maybe_emit_state_changed_event()
