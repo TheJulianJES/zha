@@ -404,6 +404,28 @@ class IASZoneTamper(IASZone):
 
 
 @register_entity(IasZone.cluster_id)
+class IASZoneTest(IASZone):
+    """ZHA IAS BinarySensor reporting only the test bit (bit 8)."""
+
+    _unique_id_suffix = "test"
+    _attr_translation_key: str = "ias_zone_test"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ZONE}),
+        exposed_features=frozenset({"ias_zone_test"}),
+    )
+
+    def recompute_capabilities(self) -> None:
+        """Test always has no device class; skip zone-type mapping."""
+
+    @staticmethod
+    def parse(value: bool | int) -> bool:
+        """Return True if the test bit (bit 8) is set."""
+        return bool(value & 0b0000000100000000)
+
+
+@register_entity(IasZone.cluster_id)
 class SinopeLeakStatus(BinarySensor):
     """Sinope water leak sensor."""
 
