@@ -25,6 +25,7 @@ from zha.zigbee.device import Device
 
 async def siren_mock(
     zha_gateway: Gateway,
+    basic: bool = False,
 ) -> tuple[Device, security.IasWd]:
     """Siren fixture."""
 
@@ -39,6 +40,9 @@ async def siren_mock(
             }
         },
     )
+
+    if basic:
+        zigpy_device.quirk_id = {"siren_basic"}
 
     zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
     return zha_device, zigpy_device.endpoints[1].ias_wd
@@ -110,6 +114,79 @@ async def test_siren(zha_gateway: Gateway) -> None:
         assert cluster.request.call_args[0][0] is False
         assert cluster.request.call_args[0][1] == 0
         assert cluster.request.call_args[0][3] == 51  # bitmask for specified args
+        assert cluster.request.call_args[0][4] == 100  # duration in seconds
+        assert cluster.request.call_args[0][5] == 0
+        assert cluster.request.call_args[0][6] == 2
+        cluster.request.reset_mock()
+
+    # test that the state has changed to on
+    assert entity.state["state"] is True
+
+
+async def test_basic_siren(zha_gateway: Gateway) -> None:
+    """Test zha basic siren."""
+
+    zha_device, cluster = await siren_mock(zha_gateway, basic=True)
+    assert cluster is not None
+
+    entity = get_entity(zha_device, platform=Platform.SIREN)
+    assert entity.supported_features == (
+        SirenEntityFeature.TURN_ON
+        | SirenEntityFeature.TURN_OFF
+        | SirenEntityFeature.DURATION
+    )
+
+    assert entity.state["state"] is False
+
+    # turn on from client
+    with patch(
+        "zigpy.zcl.Cluster.request",
+        return_value=[0x00, zcl_f.Status.SUCCESS],
+    ):
+        await entity.async_turn_on()
+        await zha_gateway.async_block_till_done()
+        assert len(cluster.request.mock_calls) == 1
+        assert cluster.request.call_args[0][0] is False
+        assert cluster.request.call_args[0][1] == 0
+        assert cluster.request.call_args[0][3] == 50  # bitmask for default args
+        assert cluster.request.call_args[0][4] == 5  # duration in seconds
+        assert cluster.request.call_args[0][5] == 0
+        assert cluster.request.call_args[0][6] == 2
+        cluster.request.reset_mock()
+
+    # test that the state has changed to on
+    assert entity.state["state"] is True
+
+    # turn off from client
+    with patch(
+        "zigpy.zcl.Cluster.request",
+        return_value=mock_coro([0x00, zcl_f.Status.SUCCESS]),
+    ):
+        await entity.async_turn_off()
+        await zha_gateway.async_block_till_done()
+        assert len(cluster.request.mock_calls) == 1
+        assert cluster.request.call_args[0][0] is False
+        assert cluster.request.call_args[0][1] == 0
+        assert cluster.request.call_args[0][3] == 2  # bitmask for default args
+        assert cluster.request.call_args[0][4] == 5  # duration in seconds
+        assert cluster.request.call_args[0][5] == 0
+        assert cluster.request.call_args[0][6] == 2
+        cluster.request.reset_mock()
+
+    # test that the state has changed to off
+    assert entity.state["state"] is False
+
+    # turn on from client with duration option
+    with patch(
+        "zigpy.zcl.Cluster.request",
+        return_value=mock_coro([0x00, zcl_f.Status.SUCCESS]),
+    ):
+        await entity.async_turn_on(duration=100)
+        await zha_gateway.async_block_till_done()
+        assert len(cluster.request.mock_calls) == 1
+        assert cluster.request.call_args[0][0] is False
+        assert cluster.request.call_args[0][1] == 0
+        assert cluster.request.call_args[0][3] == 50  # bitmask for specified args
         assert cluster.request.call_args[0][4] == 100  # duration in seconds
         assert cluster.request.call_args[0][5] == 0
         assert cluster.request.call_args[0][6] == 2
