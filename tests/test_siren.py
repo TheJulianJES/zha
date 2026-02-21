@@ -1,10 +1,14 @@
 """Test zha siren."""
 
 import asyncio
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 from zigpy.const import SIG_EP_PROFILE
 from zigpy.profiles import zha
+from zigpy.quirks import DEVICE_REGISTRY
+from zigpy.quirks.v2 import CustomDeviceV2, QuirkBuilder
+from zigpy.quirks.v2.homeassistant import EntityPlatform
+from zigpy.typing import UNDEFINED
 from zigpy.zcl.clusters import general, security
 import zigpy.zcl.foundation as zcl_f
 
@@ -16,10 +20,15 @@ from tests.common import (
     get_entity,
     join_zigpy_device,
     mock_coro,
+    send_attributes_report,
+    update_attribute_cache,
 )
 from zha.application import Platform
 from zha.application.gateway import Gateway
-from zha.application.platforms.siren import SirenEntityFeature
+from zha.application.platforms.siren import (
+    ConfigurableAttributeSiren,
+    SirenEntityFeature,
+)
 from zha.zigbee.device import Device
 
 
@@ -228,3 +237,94 @@ async def test_siren_timed_off(zha_gateway: Gateway) -> None:
 
     # test that the state has changed to off from the timer
     assert entity.state["state"] is False
+
+
+async def test_siren_configurable_attribute(zha_gateway: Gateway) -> None:
+    """Test ZHA configurable attribute siren created from quirks v2 SwitchMetadata."""
+
+    zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [general.Basic.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zha.DeviceType.IAS_WARNING_DEVICE,
+                SIG_EP_PROFILE: zha.PROFILE_ID,
+            }
+        },
+        manufacturer="FakeSirenManufacturer",
+        model="FakeSirenModel",
+    )
+
+    (
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
+        .switch(
+            general.Basic.AttributeDefs.power_source.name,
+            general.Basic.cluster_id,
+            on_value=1,
+            off_value=0,
+            entity_platform=EntityPlatform.SIREN,
+            translation_key="siren",
+            fallback_name="Siren",
+        )
+        .add_to_registry()
+    )
+
+    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
+    assert isinstance(zigpy_device_, CustomDeviceV2)
+
+    cluster = zigpy_device_.endpoints[1].basic
+    cluster.PLUGGED_ATTR_READS = {
+        general.Basic.AttributeDefs.power_source.name: 0,
+    }
+    update_attribute_cache(cluster)
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device_)
+
+    entity = get_entity(zha_device, platform=Platform.SIREN)
+    assert isinstance(entity, ConfigurableAttributeSiren)
+    assert entity.supported_features == (
+        SirenEntityFeature.TURN_ON | SirenEntityFeature.TURN_OFF
+    )
+    assert entity.state["state"] is False
+
+    # turn on via attribute report
+    await send_attributes_report(
+        zha_gateway, cluster, {general.Basic.AttributeDefs.power_source.name: 1}
+    )
+    assert entity.state["state"] is True
+
+    # turn off via attribute report
+    await send_attributes_report(
+        zha_gateway, cluster, {general.Basic.AttributeDefs.power_source.name: 0}
+    )
+    assert entity.state["state"] is False
+
+    # turn on from HA
+    with patch(
+        "zigpy.zcl.Cluster.write_attributes",
+        return_value=[zcl_f.WriteAttributesResponse.deserialize(b"\x00")[0]],
+    ):
+        await entity.async_turn_on()
+        await zha_gateway.async_block_till_done()
+        assert cluster.write_attributes.mock_calls == [
+            call(
+                {general.Basic.AttributeDefs.power_source.name: 1},
+                manufacturer=UNDEFINED,
+            )
+        ]
+        cluster.write_attributes.reset_mock()
+
+    # turn off from HA
+    with patch(
+        "zigpy.zcl.Cluster.write_attributes",
+        return_value=[zcl_f.WriteAttributesResponse.deserialize(b"\x00")[0]],
+    ):
+        await entity.async_turn_off()
+        await zha_gateway.async_block_till_done()
+        assert cluster.write_attributes.mock_calls == [
+            call(
+                {general.Basic.AttributeDefs.power_source.name: 0},
+                manufacturer=UNDEFINED,
+            )
+        ]
