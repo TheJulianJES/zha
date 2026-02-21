@@ -28,6 +28,7 @@ from zha.application import Platform
 from zha.application.gateway import Gateway
 from zha.application.platforms.siren import (
     ConfigurableAttributeSiren,
+    EnumSiren,
     SirenEntityFeature,
 )
 from zha.zigbee.device import Device
@@ -607,4 +608,116 @@ async def test_siren_configurable_attribute_inverter_attribute(
                 {general.Basic.AttributeDefs.power_source.name: 5},
                 manufacturer=UNDEFINED,
             )
+        ]
+
+
+async def test_siren_enum(zha_gateway: Gateway) -> None:
+    """Test ZHA enum siren created from quirks v2 ZCLEnumMetadata.
+
+    Verifies that:
+    - enum entry 0 (Unknown) is the off state
+    - enum entry 1 (Mains_single_phase) is the default on tone
+    - remaining entries are exposed as available tones
+    - specific tone can be requested via async_turn_on(tone=...)
+    """
+
+    # Use Basic cluster because it has a real ZCL attribute (power_source)
+    # with an associated enum type (PowerSource).
+    PowerSource = general.Basic.PowerSource
+    attr_name = general.Basic.AttributeDefs.power_source.name
+
+    zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [general.Basic.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zha.DeviceType.ON_OFF_LIGHT,
+                SIG_EP_PROFILE: zha.PROFILE_ID,
+            }
+        },
+        manufacturer="FakeSirenManufacturer5",
+        model="FakeSirenModel5",
+    )
+
+    (
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
+        .enum(
+            attr_name,
+            PowerSource,
+            general.Basic.cluster_id,
+            entity_platform=EntityPlatform.SIREN,
+            translation_key="power_mode",
+            fallback_name="Power mode",
+        )
+        .add_to_registry()
+    )
+
+    zigpy_device_ = DEVICE_REGISTRY.get_device(zigpy_dev)
+    assert isinstance(zigpy_device_, CustomDeviceV2)
+
+    cluster = zigpy_device_.endpoints[1].basic
+    cluster.PLUGGED_ATTR_READS = {attr_name: PowerSource.Unknown}
+    update_attribute_cache(cluster)
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device_)
+    entity = get_entity(zha_device, platform=Platform.SIREN)
+    assert isinstance(entity, EnumSiren)
+
+    # Entry 0 (Unknown) = off; remaining entries are available tones
+    entries = list(PowerSource)
+    expected_tones = {e.value: e.name.replace("_", " ") for e in entries[1:]}
+    assert entity.available_tones == expected_tones
+    assert entity.supported_features == (
+        SirenEntityFeature.TURN_ON
+        | SirenEntityFeature.TURN_OFF
+        | SirenEntityFeature.TONES
+    )
+
+    # Initial state: Unknown (0) -> off
+    assert entity.state["state"] is False
+
+    # Attribute report: Mains_single_phase -> on
+    await send_attributes_report(
+        zha_gateway, cluster, {attr_name: PowerSource.Mains_single_phase}
+    )
+    assert entity.state["state"] is True
+
+    # Attribute report: Unknown -> off
+    await send_attributes_report(zha_gateway, cluster, {attr_name: PowerSource.Unknown})
+    assert entity.state["state"] is False
+
+    # Turn on without tone: writes entry 1 (Mains_single_phase)
+    with patch(
+        "zigpy.zcl.Cluster.write_attributes",
+        return_value=[zcl_f.WriteAttributesResponse.deserialize(b"\x00")[0]],
+    ):
+        await entity.async_turn_on()
+        await zha_gateway.async_block_till_done()
+        assert cluster.write_attributes.mock_calls == [
+            call({attr_name: PowerSource.Mains_single_phase}, manufacturer=UNDEFINED)
+        ]
+        cluster.write_attributes.reset_mock()
+
+    # Turn on with a specific tone (Battery = value 3)
+    with patch(
+        "zigpy.zcl.Cluster.write_attributes",
+        return_value=[zcl_f.WriteAttributesResponse.deserialize(b"\x00")[0]],
+    ):
+        await entity.async_turn_on(tone=PowerSource.Battery.value)
+        await zha_gateway.async_block_till_done()
+        assert cluster.write_attributes.mock_calls == [
+            call({attr_name: PowerSource.Battery}, manufacturer=UNDEFINED)
+        ]
+        cluster.write_attributes.reset_mock()
+
+    # Turn off: writes entry 0 (Unknown)
+    with patch(
+        "zigpy.zcl.Cluster.write_attributes",
+        return_value=[zcl_f.WriteAttributesResponse.deserialize(b"\x00")[0]],
+    ):
+        await entity.async_turn_off()
+        await zha_gateway.async_block_till_done()
+        assert cluster.write_attributes.mock_calls == [
+            call({attr_name: PowerSource.Unknown}, manufacturer=UNDEFINED)
         ]
