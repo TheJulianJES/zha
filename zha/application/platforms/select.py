@@ -164,7 +164,8 @@ class DefaultToneSelectEntity(NonZCLSelectEntity):
     _attr_translation_key: str = "default_siren_tone"
 
     _cluster_handler_match = ClusterHandlerMatch(
-        cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_WD})
+        cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_WD}),
+        not_exposed_features=frozenset({"siren_basic"}),
     )
 
 
@@ -177,7 +178,8 @@ class DefaultSirenLevelSelectEntity(NonZCLSelectEntity):
     _attr_translation_key: str = "default_siren_level"
 
     _cluster_handler_match = ClusterHandlerMatch(
-        cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_WD})
+        cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_WD}),
+        not_exposed_features=frozenset({"siren_basic"}),
     )
 
 
@@ -190,7 +192,8 @@ class DefaultStrobeLevelSelectEntity(NonZCLSelectEntity):
     _attr_translation_key: str = "default_strobe_level"
 
     _cluster_handler_match = ClusterHandlerMatch(
-        cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_WD})
+        cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_WD}),
+        not_exposed_features=frozenset({"siren_basic"}),
     )
 
 
@@ -203,7 +206,8 @@ class DefaultStrobeSelectEntity(NonZCLSelectEntity):
     _attr_translation_key: str = "default_strobe"
 
     _cluster_handler_match = ClusterHandlerMatch(
-        cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_WD})
+        cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_WD}),
+        not_exposed_features=frozenset({"siren_basic"}),
     )
 
 
