@@ -122,9 +122,48 @@ class BaseSiren(PlatformEntity, ABC):
         """Turn off siren."""
 
 
+class BaseZclSiren(BaseSiren, ABC):
+    """Base class for ZHA IAS WD siren entities with shared ZCL logic."""
+
+    _cluster_handler: IasWdClusterHandler
+    _off_listener: asyncio.TimerHandle | None
+
+    def __init__(
+        self,
+        cluster_handlers: list[ClusterHandler],
+        endpoint: Endpoint,
+        device: Device,
+        **kwargs: Any,
+    ) -> None:
+        """Init ZCL siren base."""
+        self._cluster_handler = cast(IasWdClusterHandler, cluster_handlers[0])
+        self._off_listener = None
+        super().__init__(cluster_handlers, endpoint, device, **kwargs)
+
+    async def async_turn_off(self) -> None:
+        """Turn off siren."""
+        await self._cluster_handler.issue_start_warning(
+            mode=WARNING_DEVICE_MODE_STOP, strobe=WARNING_DEVICE_STROBE_NO
+        )
+        self._attr_is_on = False
+        self.maybe_emit_state_changed_event()
+
+    def _async_set_off(self) -> None:
+        """Set is_on to False and write HA state."""
+        self._attr_is_on = False
+        if self._off_listener:
+            self._off_listener.cancel()
+
+            with contextlib.suppress(ValueError):
+                self._tracked_handles.remove(self._off_listener)
+
+            self._off_listener = None
+        self.maybe_emit_state_changed_event()
+
+
 @register_entity(IasWd.cluster_id)
-class Siren(BaseSiren):
-    """Representation of a ZHA siren."""
+class AdvancedSiren(BaseZclSiren):
+    """Representation of a ZHA siren with full tone, level, and strobe support."""
 
     _attr_fallback_name: str = "Siren"
     _attr_primary_weight = 4
@@ -142,10 +181,6 @@ class Siren(BaseSiren):
         **kwargs: Any,
     ) -> None:
         """Init this siren."""
-        self._cluster_handler: IasWdClusterHandler = cast(
-            IasWdClusterHandler, cluster_handlers[0]
-        )
-
         legacy_discovery_unique_id = (
             f"{endpoint.device.ieee}-{endpoint.id}"
             if (
@@ -176,7 +211,6 @@ class Siren(BaseSiren):
             WARNING_DEVICE_MODE_FIRE_PANIC: "Fire Panic",
             WARNING_DEVICE_MODE_EMERGENCY_PANIC: "Emergency Panic",
         }
-        self._off_listener: asyncio.TimerHandle | None = None
 
     async def async_turn_on(
         self,
@@ -231,35 +265,15 @@ class Siren(BaseSiren):
         )
         self._attr_is_on = True
         self._off_listener = asyncio.get_running_loop().call_later(
-            siren_duration, self.async_set_off
+            siren_duration, self._async_set_off
         )
         self._tracked_handles.append(self._off_listener)
         self.maybe_emit_state_changed_event()
 
-    async def async_turn_off(self) -> None:
-        """Turn off siren."""
-        await self._cluster_handler.issue_start_warning(
-            mode=WARNING_DEVICE_MODE_STOP, strobe=WARNING_DEVICE_STROBE_NO
-        )
-        self._attr_is_on = False
-        self.maybe_emit_state_changed_event()
-
-    def async_set_off(self) -> None:
-        """Set is_on to False and write HA state."""
-        self._attr_is_on = False
-        if self._off_listener:
-            self._off_listener.cancel()
-
-            with contextlib.suppress(ValueError):
-                self._tracked_handles.remove(self._off_listener)
-
-            self._off_listener = None
-        self.maybe_emit_state_changed_event()
-
 
 @register_entity(IasWd.cluster_id)
-class BasicSiren(BaseSiren):
-    """Representation of a basic ZHA siren with no tone, level, and strobe."""
+class BasicSiren(BaseZclSiren):
+    """Representation of a basic ZHA siren with fixed tone, level, and strobe."""
 
     _attr_fallback_name: str = "Siren"
     _attr_primary_weight = 4
@@ -278,9 +292,6 @@ class BasicSiren(BaseSiren):
         **kwargs: Any,
     ) -> None:
         """Init this basic siren."""
-        self._cluster_handler: IasWdClusterHandler = cast(
-            IasWdClusterHandler, cluster_handlers[0]
-        )
         super().__init__(cluster_handlers, endpoint, device, **kwargs)
         self._attr_supported_features = (
             SirenEntityFeature.TURN_ON
@@ -288,7 +299,6 @@ class BasicSiren(BaseSiren):
             | SirenEntityFeature.DURATION
         )
         self._attr_available_tones: dict[int, str] = {}
-        self._off_listener: asyncio.TimerHandle | None = None
 
     async def async_turn_on(
         self,
@@ -314,24 +324,4 @@ class BasicSiren(BaseSiren):
             siren_duration, self._async_set_off
         )
         self._tracked_handles.append(self._off_listener)
-        self.maybe_emit_state_changed_event()
-
-    async def async_turn_off(self) -> None:
-        """Turn off siren."""
-        await self._cluster_handler.issue_start_warning(
-            mode=WARNING_DEVICE_MODE_STOP, strobe=WARNING_DEVICE_STROBE_NO
-        )
-        self._attr_is_on = False
-        self.maybe_emit_state_changed_event()
-
-    def _async_set_off(self) -> None:
-        """Set is_on to False and write HA state."""
-        self._attr_is_on = False
-        if self._off_listener:
-            self._off_listener.cancel()
-
-            with contextlib.suppress(ValueError):
-                self._tracked_handles.remove(self._off_listener)
-
-            self._off_listener = None
         self.maybe_emit_state_changed_event()
