@@ -584,12 +584,7 @@ class BaseClusterHandlerLight(BaseLight):
             # If the task was cancelled (e.g. by a mode: restart automation) before
             # the transition timer was started, clean up the transitioning flag so
             # the light does not get stuck in a transitioning state indefinitely.
-            if (
-                set_transition_flag
-                and self._transitioning_individual
-                and not self._transition_listener
-            ):
-                self.async_transition_complete()
+            self._async_cleanup_transition_if_stuck(set_transition_flag)
 
     async def async_turn_off(self, *, transition: float | None = None) -> None:
         """Turn the entity off."""
@@ -647,12 +642,9 @@ class BaseClusterHandlerLight(BaseLight):
         finally:
             # If the task was cancelled before the transition timer was started,
             # clean up the transitioning flag so the light does not get stuck.
-            if (
+            self._async_cleanup_transition_if_stuck(
                 self._zha_config_enable_light_transitioning_flag
-                and self._transitioning_individual
-                and not self._transition_listener
-            ):
-                self.async_transition_complete()
+            )
 
     async def async_handle_color_commands(
         self,
@@ -742,6 +734,14 @@ class BaseClusterHandlerLight(BaseLight):
 
             with contextlib.suppress(ValueError):
                 self._tracked_handles.remove(self._transition_listener)
+
+    def _async_cleanup_transition_if_stuck(self, guarded: bool) -> None:
+        """Call async_transition_complete if the flag is set but no timer is running.
+
+        Used in finally blocks to handle task cancellation gracefully.
+        """
+        if guarded and self._transitioning_individual and not self._transition_listener:
+            self.async_transition_complete()
 
     def async_transition_complete(self, _=None) -> None:
         """Set _transitioning_individual to False and write HA state."""
