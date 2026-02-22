@@ -311,7 +311,7 @@ class BaseClusterHandlerLight(BaseLight):
             light_options.enable_light_transitioning_flag
         )
 
-    async def async_turn_on(
+    async def async_turn_on(  # noqa: C901
         self,
         *,
         transition: float | None = None,
@@ -531,6 +531,11 @@ class BaseClusterHandlerLight(BaseLight):
                 )
                 t_log["move_to_level_if_color"] = result
                 if result[1] is not Status.SUCCESS:
+                    # Second 'move to level' call failed; the light is on but at the
+                    # wrong brightness. If no previous timer is running, unset the flag
+                    # immediately so attribute reports are not ignored indefinitely.
+                    if set_transition_flag and not self._transition_listener:
+                        self.async_transition_complete()
                     self.debug("turned on: %s", t_log)
                     return
                 self._state = bool(level)
