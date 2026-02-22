@@ -284,7 +284,6 @@ class BaseClusterHandlerLight(BaseLight):
         self._transitioning_group: bool = False
         self._transition_listener: asyncio.TimerHandle | None = None
         self._transition_brightness_buffer: int | None = None
-        self._transition_on_off_buffer: bool | None = None
 
         self._internal_supported_color_modes: set[ColorMode] = set()
 
@@ -689,7 +688,6 @@ class BaseClusterHandlerLight(BaseLight):
         self._transitioning_individual = True
         self._transitioning_group = False
         self._transition_brightness_buffer = None
-        self._transition_on_off_buffer = None
         if isinstance(self, LightGroup):
             for platform_entity in self.group.get_platform_entities(Light.PLATFORM):
                 assert isinstance(platform_entity, Light)
@@ -733,18 +731,12 @@ class BaseClusterHandlerLight(BaseLight):
                 "applying buffered brightness %s from transition",
                 self._transition_brightness_buffer,
             )
-            self._brightness = self._transition_brightness_buffer
+            if self._transition_brightness_buffer == 0:
+                # The device is actually off; override the optimistic on-state.
+                self._state = False
+            else:
+                self._brightness = self._transition_brightness_buffer
             self._transition_brightness_buffer = None
-        if self._transition_on_off_buffer is not None:
-            self.debug(
-                "applying buffered on/off %s from transition",
-                self._transition_on_off_buffer,
-            )
-            self._state = self._transition_on_off_buffer
-            if self._transition_on_off_buffer:
-                self._off_with_transition = False
-                self._off_brightness = None
-            self._transition_on_off_buffer = None
         self.maybe_emit_state_changed_event()
         if isinstance(self, LightGroup):
             for platform_entity in self.group.get_platform_entities(Light.PLATFORM):
@@ -968,7 +960,8 @@ class Light(BaseClusterHandlerLight, PlatformEntity):
                 "received onoff %s while transitioning - buffering",
                 event.attribute_value,
             )
-            self._transition_on_off_buffer = bool(event.attribute_value)
+            if not event.attribute_value:
+                self._transition_brightness_buffer = 0
             return
         self._state = bool(event.attribute_value)
         if event.attribute_value:
