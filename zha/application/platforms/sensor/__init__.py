@@ -91,6 +91,7 @@ from zha.units import (
     UnitOfMass,
     UnitOfPower,
     UnitOfPressure,
+    UnitOfReactivePower,
     UnitOfSpeed,
     UnitOfTemperature,
     UnitOfTime,
@@ -880,6 +881,62 @@ class ElectricalMeasurementApparentPower(BaseElectricalMeasurement):
     _multiplier_attribute_name = "ac_power_multiplier"
     _attr_device_class: SensorDeviceClass = SensorDeviceClass.APPARENT_POWER
     _attr_native_unit_of_measurement = UnitOfApparentPower.VOLT_AMPERE
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
+
+
+@register_entity(ElectricalMeasurement.cluster_id)
+class ElectricalMeasurementReactivePower(BaseElectricalMeasurement):
+    """Reactive power measurement."""
+
+    _attribute_name = "reactive_power"
+    _unique_id_suffix = "reactive_power"
+    _divisor_attribute_name = "ac_power_divisor"
+    _multiplier_attribute_name = "ac_power_multiplier"
+    _attr_device_class: SensorDeviceClass = SensorDeviceClass.REACTIVE_POWER
+    _attr_native_unit_of_measurement = UnitOfReactivePower.VOLT_AMPERE_REACTIVE
+    _skip_creation_if_no_attr_cache = True
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
+
+
+@register_entity(ElectricalMeasurement.cluster_id)
+class ElectricalMeasurementReactivePowerPhB(ElectricalMeasurementReactivePower):
+    """Reactive power phase B measurement."""
+
+    _attribute_name = "reactive_power_ph_b"
+    _unique_id_suffix = "reactive_power_ph_b"
+    _attr_translation_key: str = "reactive_power_ph_b"
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
+
+
+@register_entity(ElectricalMeasurement.cluster_id)
+class ElectricalMeasurementReactivePowerPhC(ElectricalMeasurementReactivePower):
+    """Reactive power phase C measurement."""
+
+    _attribute_name = "reactive_power_ph_c"
+    _unique_id_suffix = "reactive_power_ph_c"
+    _attr_translation_key: str = "reactive_power_ph_c"
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
+    )
+
+
+@register_entity(ElectricalMeasurement.cluster_id)
+class ElectricalMeasurementTotalReactivePower(ElectricalMeasurementReactivePower):
+    """Total reactive power measurement."""
+
+    _attribute_name = "total_reactive_power"
+    _unique_id_suffix = "total_reactive_power"
+    _attr_translation_key: str = "total_reactive_power"
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_ELECTRICAL_MEASUREMENT}),
