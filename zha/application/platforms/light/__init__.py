@@ -283,6 +283,7 @@ class BaseClusterHandlerLight(BaseLight):
         self._transitioning_individual: bool = False
         self._transitioning_group: bool = False
         self._transition_listener: asyncio.TimerHandle | None = None
+        self._transition_brightness_buffer: int | None = None
 
         self._internal_supported_color_modes: set[ColorMode] = set()
 
@@ -686,6 +687,7 @@ class BaseClusterHandlerLight(BaseLight):
         self.debug("setting transitioning flag to True")
         self._transitioning_individual = True
         self._transitioning_group = False
+        self._transition_brightness_buffer = None
         if isinstance(self, LightGroup):
             for platform_entity in self.group.get_platform_entities(Light.PLATFORM):
                 assert isinstance(platform_entity, Light)
@@ -724,6 +726,13 @@ class BaseClusterHandlerLight(BaseLight):
         self.debug("transition complete - future attribute reports will write HA state")
         self._transitioning_individual = False
         self._async_unsub_transition_listener()
+        if self._transition_brightness_buffer is not None:
+            self.debug(
+                "applying buffered brightness %s from transition",
+                self._transition_brightness_buffer,
+            )
+            self._brightness = self._transition_brightness_buffer
+            self._transition_brightness_buffer = None
         self.maybe_emit_state_changed_event()
         if isinstance(self, LightGroup):
             for platform_entity in self.group.get_platform_entities(Light.PLATFORM):
@@ -880,13 +889,14 @@ class Light(BaseClusterHandlerLight, PlatformEntity):
         on at `on_level` Zigbee attribute value, regardless of the last set
         level
         """
+        value = max(0, min(254, event.level))
         if self.is_transitioning:
             self.debug(
-                "received level change event %s while transitioning - skipping update",
+                "received level change event %s while transitioning - buffering",
                 event,
             )
+            self._transition_brightness_buffer = value
             return
-        value = max(0, min(254, event.level))
         self._brightness = value
         self.maybe_emit_state_changed_event()
 
