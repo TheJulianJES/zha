@@ -1937,6 +1937,78 @@ async def test_group_member_assume_state(zha_gateway: Gateway) -> None:
     assert device_2_light_entity.state["brightness"] == 100
 
 
+@patch(
+    "zigpy.zcl.clusters.general.LevelControl.request",
+    new=AsyncMock(return_value=[sentinel.data, zcl_f.Status.SUCCESS]),
+)
+@patch(
+    "zigpy.zcl.clusters.general.OnOff.request",
+    new=AsyncMock(return_value=[sentinel.data, zcl_f.Status.SUCCESS]),
+)
+async def test_transition_brightness_buffering(zha_gateway: Gateway) -> None:
+    """Test that brightness reports during a transition are buffered.
+
+    The last received report is applied when the transition completes, which
+    handles lights that claim SUCCESS but fail to reach the target brightness.
+    """
+    device_light_1 = await device_light_1_mock(zha_gateway)
+    dev1_cluster_level = device_light_1.device.endpoints[1].level
+    entity = get_entity(device_light_1, platform=Platform.LIGHT)
+
+    assert bool(entity.state["on"]) is False
+
+    # Turn on with a short transition and a target brightness of 200.
+    await entity.async_turn_on(transition=0.1, brightness=200)
+    await zha_gateway.async_block_till_done()
+
+    # The state is optimistically set to the target brightness immediately.
+    assert bool(entity.state["on"]) is True
+    assert entity.state["brightness"] == 200
+    assert entity.is_transitioning
+
+    # Simulate intermediate brightness reports during the transition (light slowly ramping up).
+    # These should be buffered, not immediately applied to HA state.
+    await send_attributes_report(
+        zha_gateway,
+        dev1_cluster_level,
+        {general.LevelControl.AttributeDefs.current_level.id: 50},
+    )
+    await zha_gateway.async_block_till_done()
+    assert entity.state["brightness"] == 200  # still the optimistic value
+
+    # The light only goes to brightness 120 (for some reason), not the requested 200.
+    await send_attributes_report(
+        zha_gateway,
+        dev1_cluster_level,
+        {general.LevelControl.AttributeDefs.current_level.id: 120},
+    )
+    await zha_gateway.async_block_till_done()
+    assert entity.state["brightness"] == 200  # still buffered, not yet applied
+
+    # Wait for the transition timer to fire (0.1 + 0.5s delay = 0.6s).
+    await asyncio.sleep(0.8)
+    await zha_gateway.async_block_till_done()
+
+    # After the transition, the last buffered report (120) is applied instead of the target (200).
+    assert not entity.is_transitioning
+    assert entity.state["brightness"] == 120
+
+    # Now verify that if no brightness reports arrive during a transition, the
+    # optimistically set target brightness is preserved unchanged.
+    await entity.async_turn_on(transition=0.1, brightness=150)
+    await zha_gateway.async_block_till_done()
+
+    assert entity.state["brightness"] == 150
+    assert entity.is_transitioning
+
+    # No level reports during this transition.
+    await asyncio.sleep(0.8)
+    await zha_gateway.async_block_till_done()
+
+    assert not entity.is_transitioning
+    assert entity.state["brightness"] == 150  # target preserved
+
+
 async def test_light_state_restoration(zha_gateway: Gateway) -> None:
     """Test the light state restoration function."""
     device_light_3 = await device_light_3_mock(zha_gateway)
