@@ -15,7 +15,7 @@ import typing
 from typing import TYPE_CHECKING, Any, cast
 
 from zhaquirks.danfoss import thermostat as danfoss_thermostat
-from zhaquirks.quirk_ids import DANFOSS_ALLY_THERMOSTAT
+from zhaquirks.quirk_ids import DANFOSS_ALLY_THERMOSTAT, SE_POLL_SUMMATION
 from zigpy import types
 from zigpy.quirks.v2 import ZCLEnumMetadata, ZCLSensorMetadata
 from zigpy.state import Counter, State
@@ -1485,7 +1485,7 @@ class ExposedFeaturePolledSmartEnergySummation(PolledSmartEnergySummation):
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
-        exposed_features=frozenset({"se_poll_summation"}),
+        exposed_features=frozenset({SE_POLL_SUMMATION}),
         feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION, 1),
     )
 
@@ -1618,7 +1618,7 @@ class ExposedFeaturePolledSmartEnergySummationReceived(SmartEnergySummationRecei
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
-        exposed_features=frozenset({"se_poll_summation"}),
+        exposed_features=frozenset({SE_POLL_SUMMATION}),
         feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION_RECEIVED, 1),
     )
 
