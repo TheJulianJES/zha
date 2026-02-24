@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 import asyncio
 import contextlib
 from dataclasses import dataclass
@@ -66,11 +67,64 @@ class SirenEntityInfo(BaseEntityInfo):
     supported_features: SirenEntityFeature
 
 
-@register_entity(IasWd.cluster_id)
-class Siren(PlatformEntity):
-    """Representation of a ZHA siren."""
+class BaseSiren(PlatformEntity, ABC):
+    """Abstract base class for ZHA siren entities."""
 
     PLATFORM = Platform.SIREN
+
+    _attr_is_on: bool = False
+    _attr_available_tones: dict[int, str]
+    _attr_supported_features: SirenEntityFeature
+
+    @property
+    def state(self) -> dict[str, Any]:
+        """Get the state of the siren."""
+        response = super().state
+        response["state"] = self.is_on
+        return response
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if the entity is on."""
+        return self._attr_is_on
+
+    @property
+    def available_tones(self) -> dict[int, str]:
+        """Return available tones."""
+        return self._attr_available_tones
+
+    @property
+    def supported_features(self) -> SirenEntityFeature:
+        """Return supported features."""
+        return self._attr_supported_features
+
+    @functools.cached_property
+    def info_object(self) -> SirenEntityInfo:
+        """Return representation of the siren."""
+        return SirenEntityInfo(
+            **super().info_object.__dict__,
+            available_tones=self.available_tones,
+            supported_features=self.supported_features,
+        )
+
+    @abstractmethod
+    async def async_turn_on(
+        self,
+        duration: int | None = None,
+        tone: int | None = None,
+        volume_level: int | None = None,
+    ) -> None:
+        """Turn on siren."""
+
+    @abstractmethod
+    async def async_turn_off(self) -> None:
+        """Turn off siren."""
+
+
+@register_entity(IasWd.cluster_id)
+class Siren(BaseSiren):
+    """Representation of a ZHA siren."""
+
     _attr_fallback_name: str = "Siren"
     _attr_primary_weight = 4
 
@@ -120,36 +174,14 @@ class Siren(PlatformEntity):
             WARNING_DEVICE_MODE_FIRE_PANIC: "Fire Panic",
             WARNING_DEVICE_MODE_EMERGENCY_PANIC: "Emergency Panic",
         }
-        self._attr_is_on: bool = False
         self._off_listener: asyncio.TimerHandle | None = None
 
-    @functools.cached_property
-    def info_object(self) -> SirenEntityInfo:
-        """Return representation of the siren."""
-        return SirenEntityInfo(
-            **super().info_object.__dict__,
-            available_tones=self._attr_available_tones,
-            supported_features=self._attr_supported_features,
-        )
-
-    @property
-    def state(self) -> dict[str, Any]:
-        """Get the state of the siren."""
-        response = super().state
-        response["state"] = self.is_on
-        return response
-
-    @property
-    def supported_features(self) -> SirenEntityFeature:
-        """Return supported features."""
-        return self._attr_supported_features
-
-    @property
-    def is_on(self) -> bool:
-        """Return true if the entity is on."""
-        return self._attr_is_on
-
-    async def async_turn_on(self, **kwargs: Any) -> None:
+    async def async_turn_on(
+        self,
+        duration: int | None = None,
+        tone: int | None = None,
+        volume_level: int | None = None,
+    ) -> None:
         """Turn on siren."""
         if self._off_listener:
             self._off_listener.cancel()
@@ -181,12 +213,12 @@ class Siren(PlatformEntity):
             if strobe_level_cache is not None
             else WARNING_DEVICE_STROBE_HIGH
         )
-        if (duration := kwargs.get(ATTR_DURATION)) is not None:
+        if duration is not None:
             siren_duration = duration
-        if (tone := kwargs.get(ATTR_TONE)) is not None:
+        if tone is not None:
             siren_tone = tone
-        if (level := kwargs.get(ATTR_VOLUME_LEVEL)) is not None:
-            siren_level = int(level)
+        if volume_level is not None:
+            siren_level = int(volume_level)
         await self._cluster_handler.issue_start_warning(
             mode=siren_tone,
             warning_duration=siren_duration,
@@ -202,7 +234,7 @@ class Siren(PlatformEntity):
         self._tracked_handles.append(self._off_listener)
         self.maybe_emit_state_changed_event()
 
-    async def async_turn_off(self, **kwargs: Any) -> None:  # pylint: disable=unused-argument
+    async def async_turn_off(self) -> None:
         """Turn off siren."""
         await self._cluster_handler.issue_start_warning(
             mode=WARNING_DEVICE_MODE_STOP, strobe=WARNING_DEVICE_STROBE_NO

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 import functools
@@ -63,10 +64,38 @@ class EnumSelectInfo(BaseEntityInfo):
     options: list[str]
 
 
-class EnumSelectEntity(PlatformEntity):
-    """Representation of a ZHA select entity."""
+class BaseSelectEntity(PlatformEntity, ABC):
+    """Abstract base class for ZHA select entities."""
 
     PLATFORM = Platform.SELECT
+
+    _attr_options: list[str]
+
+    @property
+    def options(self) -> list[str]:
+        """Return the list of available options."""
+        return self._attr_options
+
+    @property
+    def state(self) -> dict[str, Any]:
+        """Return the state of the select."""
+        response = super().state
+        response["state"] = self.current_option
+        return response
+
+    @property
+    @abstractmethod
+    def current_option(self) -> str | None:
+        """Return the selected entity option to represent the entity state."""
+
+    @abstractmethod
+    async def async_select_option(self, option: str) -> None:
+        """Change the selected option."""
+
+
+class EnumSelectEntity(BaseSelectEntity):
+    """Representation of a ZHA select entity."""
+
     _attr_entity_category = EntityCategory.CONFIG
     _attribute_name: str
     _enum: type[Enum]
@@ -90,15 +119,8 @@ class EnumSelectEntity(PlatformEntity):
         return EnumSelectInfo(
             **super().info_object.__dict__,
             enum=self._enum.__name__,
-            options=self._attr_options,
+            options=self.options,
         )
-
-    @property
-    def state(self) -> dict:
-        """Return the state of the select."""
-        response = super().state
-        response["state"] = self.current_option
-        return response
 
     @property
     def current_option(self) -> str | None:
@@ -186,10 +208,9 @@ class DefaultStrobeSelectEntity(NonZCLSelectEntity):
     )
 
 
-class ZCLEnumSelectEntity(PlatformEntity):
+class ZCLEnumSelectEntity(BaseSelectEntity):
     """Representation of a ZHA ZCL enum select entity."""
 
-    PLATFORM = Platform.SELECT
     _attribute_name: str
     _attr_entity_category = EntityCategory.CONFIG
     _enum: type[Enum]
@@ -245,15 +266,8 @@ class ZCLEnumSelectEntity(PlatformEntity):
         return EnumSelectInfo(
             **super().info_object.__dict__,
             enum=self._enum.__name__,
-            options=self._attr_options,
+            options=self.options,
         )
-
-    @property
-    def state(self) -> dict[str, Any]:
-        """Return the state of the select."""
-        response = super().state
-        response["state"] = self.current_option
-        return response
 
     @property
     def current_option(self) -> str | None:

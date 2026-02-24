@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import functools
 import math
@@ -73,7 +73,7 @@ class FanEntityInfo(BaseEntityInfo):
     speed_list: list[str]
 
 
-class BaseFan(BaseEntity):
+class BaseFan(BaseEntity, ABC):
     """Base representation of a ZHA fan."""
 
     PLATFORM = Platform.FAN
@@ -183,12 +183,11 @@ class BaseFan(BaseEntity):
         )
         return response
 
-    async def async_turn_on(  # pylint: disable=unused-argument
+    async def async_turn_on(
         self,
         speed: str | None = None,
         percentage: int | None = None,
         preset_mode: str | None = None,
-        **kwargs: Any,
     ) -> None:
         """Turn the entity on."""
         if preset_mode is not None:
@@ -201,7 +200,7 @@ class BaseFan(BaseEntity):
             percentage = self.default_on_percentage
             await self.async_set_percentage(percentage)
 
-    async def async_turn_off(self, **kwargs: Any) -> None:  # pylint: disable=unused-argument
+    async def async_turn_off(self) -> None:
         """Turn the entity off."""
         await self.async_set_percentage(0)
 
@@ -443,7 +442,6 @@ class IkeaFan(BaseFan, PlatformEntity):
         speed: str | None = None,
         percentage: int | None = None,
         preset_mode: str | None = None,
-        **kwargs: Any,
     ) -> None:
         """Turn the entity on."""
         # Starkvind turns on in auto mode by default.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from asyncio import Task
 from dataclasses import dataclass
 import datetime as dt
@@ -25,16 +26,12 @@ from zha.application.platforms import (
     register_entity,
 )
 from zha.application.platforms.climate.const import (
-    ATTR_HVAC_MODE,
     ATTR_OCCP_COOL_SETPT,
     ATTR_OCCP_HEAT_SETPT,
     ATTR_OCCUPANCY,
     ATTR_PI_COOLING_DEMAND,
     ATTR_PI_HEATING_DEMAND,
     ATTR_SYS_MODE,
-    ATTR_TARGET_TEMP_HIGH,
-    ATTR_TARGET_TEMP_LOW,
-    ATTR_TEMPERATURE,
     ATTR_UNOCCP_COOL_SETPT,
     ATTR_UNOCCP_HEAT_SETPT,
     FAN_AUTO,
@@ -77,11 +74,128 @@ class ThermostatEntityInfo(BaseEntityInfo):
     hvac_modes: list[HVACMode]
 
 
-@register_entity(ThermostatCluster.cluster_id)
-class Thermostat(PlatformEntity):
-    """Representation of a ZHA Thermostat device."""
+class BaseThermostat(PlatformEntity, ABC):
+    """Abstract base class for climate entities."""
 
     PLATFORM = Platform.CLIMATE
+
+    @property
+    def state(self) -> dict[str, Any]:
+        """Get the state of the climate entity."""
+        response = super().state
+        response["current_temperature"] = self.current_temperature
+        response["outdoor_temperature"] = self.outdoor_temperature
+        response["target_temperature"] = self.target_temperature
+        response["target_temperature_high"] = self.target_temperature_high
+        response["target_temperature_low"] = self.target_temperature_low
+        response["hvac_action"] = self.hvac_action
+        response["hvac_mode"] = self.hvac_mode
+        response["preset_mode"] = self.preset_mode
+        response["fan_mode"] = self.fan_mode
+        return response
+
+    @property
+    @abstractmethod
+    def current_temperature(self) -> float | None:
+        """Return the current temperature."""
+
+    @property
+    @abstractmethod
+    def outdoor_temperature(self) -> float | None:
+        """Return the outdoor temperature."""
+
+    @property
+    @abstractmethod
+    def target_temperature(self) -> float | None:
+        """Return the temperature we try to reach."""
+
+    @property
+    @abstractmethod
+    def target_temperature_high(self) -> float | None:
+        """Return the upper bound temperature we try to reach."""
+
+    @property
+    @abstractmethod
+    def target_temperature_low(self) -> float | None:
+        """Return the lower bound temperature we try to reach."""
+
+    @property
+    @abstractmethod
+    def hvac_action(self) -> HVACAction | None:
+        """Return the current HVAC action."""
+
+    @property
+    @abstractmethod
+    def hvac_mode(self) -> HVACMode | None:
+        """Return HVAC operation mode."""
+
+    @property
+    @abstractmethod
+    def hvac_modes(self) -> list[HVACMode]:
+        """Return the list of available HVAC operation modes."""
+
+    @property
+    @abstractmethod
+    def preset_mode(self) -> str | None:
+        """Return current preset mode."""
+
+    @property
+    @abstractmethod
+    def preset_modes(self) -> list[str] | None:
+        """Return supported preset modes."""
+
+    @property
+    @abstractmethod
+    def fan_mode(self) -> str | None:
+        """Return current FAN mode."""
+
+    @property
+    @abstractmethod
+    def fan_modes(self) -> list[str] | None:
+        """Return supported FAN modes."""
+
+    @property
+    @abstractmethod
+    def max_temp(self) -> float:
+        """Return the maximum temperature."""
+
+    @property
+    @abstractmethod
+    def min_temp(self) -> float:
+        """Return the minimum temperature."""
+
+    @property
+    @abstractmethod
+    def supported_features(self) -> ClimateEntityFeature:
+        """Return the list of supported features."""
+
+    @abstractmethod
+    async def async_set_fan_mode(self, fan_mode: str) -> None:
+        """Set fan mode."""
+
+    @abstractmethod
+    async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
+        """Set new target operation mode."""
+
+    @abstractmethod
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        """Set new preset mode."""
+
+    @abstractmethod
+    async def async_set_temperature(
+        self,
+        target_temp_low: float | None = None,
+        target_temp_high: float | None = None,
+        temperature: float | None = None,
+        hvac_mode: HVACMode | None = None,
+    ) -> None:
+        """Set new target temperature."""
+
+
+@register_entity(ThermostatCluster.cluster_id)
+class Thermostat(BaseThermostat):
+    """Representation of a ZHA Thermostat device."""
+
     DEFAULT_MAX_TEMP = 35
     DEFAULT_MIN_TEMP = 7
 
@@ -186,15 +300,6 @@ class Thermostat(PlatformEntity):
         system_mode = SYSTEM_MODE_2_HVAC.get(thermostat.system_mode, "unknown")
 
         response = super().state
-        response["current_temperature"] = self.current_temperature
-        response["outdoor_temperature"] = self.outdoor_temperature
-        response["target_temperature"] = self.target_temperature
-        response["target_temperature_high"] = self.target_temperature_high
-        response["target_temperature_low"] = self.target_temperature_low
-        response["hvac_action"] = self.hvac_action
-        response["hvac_mode"] = self.hvac_mode
-        response["preset_mode"] = self.preset_mode
-        response["fan_mode"] = self.fan_mode
 
         response[ATTR_SYS_MODE] = (
             f"[{thermostat.system_mode}]/{system_mode}"
@@ -470,45 +575,46 @@ class Thermostat(PlatformEntity):
         self._preset = preset_mode
         self.maybe_emit_state_changed_event()
 
-    async def async_set_temperature(self, **kwargs: Any) -> None:
+    async def async_set_temperature(
+        self,
+        target_temp_low: float | None = None,
+        target_temp_high: float | None = None,
+        temperature: float | None = None,
+        hvac_mode: HVACMode | None = None,
+    ) -> None:
         """Set new target temperature."""
-        low_temp = kwargs.get(ATTR_TARGET_TEMP_LOW)
-        high_temp = kwargs.get(ATTR_TARGET_TEMP_HIGH)
-        temp = kwargs.get(ATTR_TEMPERATURE)
-        hvac_mode = kwargs.get(ATTR_HVAC_MODE)
-
         if hvac_mode is not None:
             await self.async_set_hvac_mode(hvac_mode)
 
         is_away = self.preset_mode == Preset.AWAY
 
         if self.hvac_mode == HVACMode.HEAT_COOL:
-            if low_temp is not None:
+            if target_temp_low is not None:
                 await self._thermostat_cluster_handler.async_set_heating_setpoint(
-                    temperature=int(low_temp * ZCL_TEMP),
+                    temperature=int(target_temp_low * ZCL_TEMP),
                     is_away=is_away,
                 )
-            if high_temp is not None:
+            if target_temp_high is not None:
                 await self._thermostat_cluster_handler.async_set_cooling_setpoint(
-                    temperature=int(high_temp * ZCL_TEMP),
+                    temperature=int(target_temp_high * ZCL_TEMP),
                     is_away=is_away,
                 )
-        elif temp is not None:
+        elif temperature is not None:
             if self.hvac_mode == HVACMode.COOL:
                 await self._thermostat_cluster_handler.async_set_cooling_setpoint(
-                    temperature=int(temp * ZCL_TEMP),
+                    temperature=int(temperature * ZCL_TEMP),
                     is_away=is_away,
                 )
             elif self.hvac_mode == HVACMode.HEAT:
                 await self._thermostat_cluster_handler.async_set_heating_setpoint(
-                    temperature=int(temp * ZCL_TEMP),
+                    temperature=int(temperature * ZCL_TEMP),
                     is_away=is_away,
                 )
             else:
                 self.debug("Not setting temperature for '%s' mode", self.hvac_mode)
                 return
         else:
-            self.debug("incorrect %s setting for '%s' mode", kwargs, self.hvac_mode)
+            self.debug("incorrect temperature setting for '%s' mode", self.hvac_mode)
             return
 
         self.maybe_emit_state_changed_event()
