@@ -1546,7 +1546,7 @@ async def test_timestamp_sensor_v2(zha_gateway: Gateway) -> None:
     assert isinstance(zha_device.device, CustomDeviceV2)
     entity = get_entity(zha_device, platform=Platform.SENSOR, qualifier="start_time")
 
-    await send_attributes_report(zha_gateway, cluster, {0xEF65: 781355715})
+    await send_attributes_report(zha_gateway, cluster, {"start_time": 781355715})
     assert entity.state["state"] == datetime(2024, 10, 4, 11, 15, 15, tzinfo=UTC)
 
 
@@ -1650,10 +1650,10 @@ async def test_last_feeding_size_sensor_v2(zha_gateway: Gateway) -> None:
         zha_device, platform=Platform.SENSOR, qualifier="last_feeding_size"
     )
 
-    await send_attributes_report(zha_gateway, cluster, {0x010C: 1})
+    await send_attributes_report(zha_gateway, cluster, {"last_feeding_size": 1})
     assert_state(entity, 1.0, "g")
 
-    await send_attributes_report(zha_gateway, cluster, {0x010C: 5})
+    await send_attributes_report(zha_gateway, cluster, {"last_feeding_size": 5})
     assert_state(entity, 5.0, "g")
 
 
@@ -1978,7 +1978,7 @@ async def test_danfoss_thermostat_sw_error(zha_gateway: Gateway) -> None:
         zha_gateway,
         cluster,
         {
-            danfoss_thermostat.DanfossDiagnosticCluster.AttributeDefs.sw_error_code.id: 0x0001
+            danfoss_thermostat.DanfossDiagnosticCluster.AttributeDefs.sw_error_code.name: 0x0001
         },
     )
 

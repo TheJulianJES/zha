@@ -556,11 +556,11 @@ async def test_fan_ikea(
     assert entity.state["is_on"] is False
 
     # turn on at fan
-    await send_attributes_report(zha_gateway, cluster, {6: 1})
+    await send_attributes_report(zha_gateway, cluster, {"fan_mode": 1})
     assert entity.state["is_on"] is True
 
     # turn off at fan
-    await send_attributes_report(zha_gateway, cluster, {6: 0})
+    await send_attributes_report(zha_gateway, cluster, {"fan_mode": 0})
     assert entity.state["is_on"] is False
 
     # turn on from HA
