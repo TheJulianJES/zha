@@ -66,6 +66,9 @@ class PlatformFeatureGroup(StrEnum):
     # Model-specific overrides for Smart Energy Summation
     SMART_ENERGY_SUMMATION = "smart_energy_summation"
 
+    # Overrides for Smart Energy Summation Received
+    SMART_ENERGY_SUMMATION_RECEIVED = "smart_energy_summation_received"
+
     # Model-specific overrides for local temperature calibration
     LOCAL_TEMPERATURE_CALIBRATION = "local_temperature_calibration"
 

@@ -15,7 +15,7 @@ import typing
 from typing import TYPE_CHECKING, Any, cast
 
 from zhaquirks.danfoss import thermostat as danfoss_thermostat
-from zhaquirks.quirk_ids import DANFOSS_ALLY_THERMOSTAT
+from zhaquirks.quirk_ids import DANFOSS_ALLY_THERMOSTAT, SE_POLL_SUMMATION
 from zigpy import types
 from zigpy.quirks.v2 import ZCLEnumMetadata, ZCLSensorMetadata
 from zigpy.state import Counter, State
@@ -1480,6 +1480,17 @@ class PolledSmartEnergySummation(SmartEnergySummation):
 
 
 @register_entity(Metering.cluster_id)
+class ExposedFeaturePolledSmartEnergySummation(PolledSmartEnergySummation):
+    """Polled Smart Energy Metering summation sensor via exposed feature."""
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+        exposed_features=frozenset({SE_POLL_SUMMATION}),
+        feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION, 1),
+    )
+
+
+@register_entity(Metering.cluster_id)
 class Tier1SmartEnergySummation(PolledSmartEnergySummation):
     """Tier 1 Smart Energy Metering summation sensor."""
 
@@ -1595,6 +1606,20 @@ class SmartEnergySummationReceived(PolledSmartEnergySummation):
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+        feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION_RECEIVED, 0),
+    )
+
+
+@register_entity(Metering.cluster_id)
+class ExposedFeaturePolledSmartEnergySummationReceived(SmartEnergySummationReceived):
+    """Polled Smart Energy Metering summation received sensor via exposed feature."""
+
+    _use_custom_polling = True
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_SMARTENERGY_METERING}),
+        exposed_features=frozenset({SE_POLL_SUMMATION}),
+        feature_priority=(PlatformFeatureGroup.SMART_ENERGY_SUMMATION_RECEIVED, 1),
     )
 
 

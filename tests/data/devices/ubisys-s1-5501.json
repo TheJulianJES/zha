@@ -994,7 +994,7 @@
           "unique_id": "ab:cd:ef:12:e4:d6:5c:c2-3-1794-summation_delivered",
           "migrate_unique_ids": [],
           "platform": "sensor",
-          "class_name": "SmartEnergySummation",
+          "class_name": "ExposedFeaturePolledSmartEnergySummation",
           "translation_key": "summation_delivered",
           "translation_placeholders": null,
           "device_class": "energy",
@@ -1027,7 +1027,7 @@
           "unit": "kWh"
         },
         "state": {
-          "class_name": "SmartEnergySummation",
+          "class_name": "ExposedFeaturePolledSmartEnergySummation",
           "available": true,
           "state": 0.0,
           "status": "NO_ALARMS",
@@ -1045,7 +1045,7 @@
           "unique_id": "ab:cd:ef:12:e4:d6:5c:c2-3-1794-summation_received",
           "migrate_unique_ids": [],
           "platform": "sensor",
-          "class_name": "SmartEnergySummationReceived",
+          "class_name": "ExposedFeaturePolledSmartEnergySummationReceived",
           "translation_key": "summation_received",
           "translation_placeholders": null,
           "device_class": "energy",
@@ -1078,7 +1078,7 @@
           "unit": "kWh"
         },
         "state": {
-          "class_name": "SmartEnergySummationReceived",
+          "class_name": "ExposedFeaturePolledSmartEnergySummationReceived",
           "available": true,
           "state": 0.0,
           "status": "NO_ALARMS",
