@@ -292,7 +292,7 @@ class SwitchGroup(GroupEntity, BaseSwitch):
     async def async_turn_on(self) -> None:
         """Turn the entity on."""
         result = await self._on_off_cluster_handler.on()
-        if isinstance(result, Exception) or result[1] is not Status.SUCCESS:
+        if result[1] is not Status.SUCCESS:
             return
         self._state = True
         self.maybe_emit_state_changed_event()
@@ -300,7 +300,7 @@ class SwitchGroup(GroupEntity, BaseSwitch):
     async def async_turn_off(self) -> None:
         """Turn the entity off."""
         result = await self._on_off_cluster_handler.off()
-        if isinstance(result, Exception) or result[1] is not Status.SUCCESS:
+        if result[1] is not Status.SUCCESS:
             return
         self._state = False
         self.maybe_emit_state_changed_event()
