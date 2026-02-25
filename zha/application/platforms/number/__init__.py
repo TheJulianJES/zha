@@ -446,6 +446,59 @@ class StartUpColorTemperatureConfigurationEntity(NumberConfigurationEntity):
         self._attr_native_max_value = self._cluster_handler.max_mireds
 
 
+@register_entity(OccupancySensing.cluster_id)
+class PIROccupiedToUnoccupiedDelayConfigurationEntity(NumberConfigurationEntity):
+    """Representation of a ZHA PIR occupied to unoccupied delay configuration entity."""
+
+    _unique_id_suffix = "pir_o_to_u_delay"
+    _attr_native_min_value: float = 0x0000
+    _attr_native_max_value: float = 0xFFFF
+    _attr_device_class = NumberDeviceClass.DURATION
+    _attr_native_unit_of_measurement: str = UnitOfTime.SECONDS
+    _attribute_name = "pir_o_to_u_delay"
+    _attr_translation_key: str = "pir_o_to_u_delay"
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_OCCUPANCY})
+    )
+
+
+@register_entity(OccupancySensing.cluster_id)
+class PIRUnoccupiedToOccupiedDelayConfigurationEntity(NumberConfigurationEntity):
+    """Representation of a ZHA PIR unoccupied to occupied delay configuration entity."""
+
+    _unique_id_suffix = "pir_u_to_o_delay"
+    _attr_native_min_value: float = 0x0000
+    _attr_native_max_value: float = 0xFFFF
+    _attr_device_class = NumberDeviceClass.DURATION
+    _attr_native_unit_of_measurement: str = UnitOfTime.SECONDS
+    _attribute_name = "pir_u_to_o_delay"
+    _attr_translation_key: str = "pir_u_to_o_delay"
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_OCCUPANCY})
+    )
+
+
+@register_entity(OccupancySensing.cluster_id)
+class SonoffPresenceSenorTimeout(NumberConfigurationEntity):
+    """Configuration of Sonoff sensor presence detection timeout."""
+
+    _unique_id_suffix = "presence_detection_timeout"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_native_min_value: int = 15
+    _attr_native_max_value: int = 60
+    _attribute_name = "ultrasonic_o_to_u_delay"
+    _attr_translation_key: str = "presence_detection_timeout"
+
+    _attr_mode: NumberMode = NumberMode.BOX
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_OCCUPANCY}),
+        models=frozenset({"SNZB-06P", "SNZB-03P"}),
+    )
+
+
 @register_entity(TUYA_MANUFACTURER_CLUSTER)
 class TimerDurationMinutes(NumberConfigurationEntity):
     """Representation of a ZHA timer duration configuration entity."""
@@ -982,25 +1035,6 @@ class BoschThermostatLocalTempCalibration(ThermostatLocalTempCalibration):
             }
         ),
         feature_priority=(PlatformFeatureGroup.LOCAL_TEMPERATURE_CALIBRATION, 1),
-    )
-
-
-@register_entity(OccupancySensing.cluster_id)
-class SonoffPresenceSenorTimeout(NumberConfigurationEntity):
-    """Configuration of Sonoff sensor presence detection timeout."""
-
-    _unique_id_suffix = "presence_detection_timeout"
-    _attr_entity_category = EntityCategory.CONFIG
-    _attr_native_min_value: int = 15
-    _attr_native_max_value: int = 60
-    _attribute_name = "ultrasonic_o_to_u_delay"
-    _attr_translation_key: str = "presence_detection_timeout"
-
-    _attr_mode: NumberMode = NumberMode.BOX
-
-    _cluster_handler_match = ClusterHandlerMatch(
-        cluster_handlers=frozenset({CLUSTER_HANDLER_OCCUPANCY}),
-        models=frozenset({"SNZB-06P", "SNZB-03P"}),
     )
 
 
