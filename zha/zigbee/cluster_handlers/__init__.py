@@ -638,19 +638,7 @@ class ClusterHandler(LogMixin, EventBase):
     ) -> None:
         """Wrap `write_attributes` to throw an exception on attribute write failure."""
 
-        res = await self.write_attributes(attributes, manufacturer=manufacturer)
-        for record in res[0]:
-            if record.status != Status.SUCCESS:
-                try:
-                    name = self.cluster.attributes[record.attrid].name
-                    value = attributes.get(name, "unknown")
-                except KeyError:
-                    name = f"0x{record.attrid:04x}"
-                    value = "unknown"
-
-                raise ZHAException(
-                    f"Failed to write attribute {name}={value}: {record.status}",
-                )
+        await self.write_attributes(attributes, manufacturer=manufacturer)
 
     def log(self, level, msg, *args, **kwargs) -> None:
         """Log a message."""
