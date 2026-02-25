@@ -907,6 +907,7 @@ class ElectricalMeasurementApparentPower(BaseElectricalMeasurement):
 class ElectricalMeasurementRMSCurrent(BaseElectricalMeasurement):
     """RMS current measurement."""
 
+    _attr_suggested_display_precision = 2
     _attribute_name = "rms_current"
     _unique_id_suffix = "rms_current"
     _attr_max_attribute_name = "rms_current_max"
@@ -1219,6 +1220,7 @@ class SmartEnergyMetering(PollableSensor):
 
     entity_description: SmartEnergyMeteringEntityDescription
     _use_custom_polling: bool = False
+    _attr_suggested_display_precision = 1
     _attribute_name = "instantaneous_demand"
     _attr_translation_key: str = "instantaneous_demand"
     _attr_extra_state_attribute_names: set[str] = {
