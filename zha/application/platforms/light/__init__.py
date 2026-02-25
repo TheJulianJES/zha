@@ -311,7 +311,7 @@ class BaseClusterHandlerLight(BaseLight):
             light_options.enable_light_transitioning_flag
         )
 
-    async def async_turn_on(  # noqa: C901
+    async def async_turn_on(
         self,
         *,
         transition: float | None = None,
@@ -373,223 +373,250 @@ class BaseClusterHandlerLight(BaseLight):
             self.async_transition_set_flag()
 
         try:
-            # If the light is currently off but a turn_on call with a color/temperature is
-            # sent, the light needs to be turned on first at a low brightness level where
-            # the light is immediately transitioned to the correct color. Afterwards, the
-            # transition is only from the low brightness to the new brightness.
-            # Otherwise, the transition is from the color the light had before being turned
-            # on to the new color. This can look especially bad with transitions longer than
-            # a second. We do not want to do this for devices that need to be forced to use
-            # the on command because we would end up with 4 commands sent:
-            # move to level, on, color, move to level... We also will not set this
-            # if the bulb is already in the desired color mode with the desired color
-            # or color temperature.
-            new_color_provided_while_off = (
-                self._zha_config_enhanced_light_transition
-                and not self._FORCE_ON
-                and not self._state
-                and (
-                    (
-                        color_temp is not None
-                        and (
-                            self._color_temp != color_temp
-                            or self._color_mode != ColorMode.COLOR_TEMP
-                        )
-                    )
-                    or (
-                        xy_color is not None
-                        and (
-                            self._xy_color != xy_color
-                            or self._color_mode != ColorMode.XY
-                        )
-                    )
-                )
-                and brightness_supported
-                and not execute_if_off_supported
+            await self._async_turn_on_impl(
+                transition=transition,
+                brightness=brightness,
+                effect=effect,
+                flash=flash,
+                color_temp=color_temp,
+                xy_color=xy_color,
+                duration=duration,
+                execute_if_off_supported=execute_if_off_supported,
+                brightness_supported=brightness_supported,
+                set_transition_flag=set_transition_flag,
+                transition_time=transition_time,
             )
-
-            if (
-                brightness is None
-                and (self._off_with_transition or new_color_provided_while_off)
-                and self._off_brightness is not None
-            ):
-                brightness = self._off_brightness
-
-            if brightness is not None:
-                level = min(254, brightness)
-            else:
-                level = self._brightness or 254
-
-            t_log = {}
-
-            if new_color_provided_while_off:
-                assert self._level_cluster_handler is not None
-
-                # If the light is currently off, we first need to turn it on at a low
-                # brightness level with no transition.
-                # After that, we set it to the desired color/temperature with no transition.
-                result = await self._level_cluster_handler.move_to_level_with_on_off(
-                    level=DEFAULT_MIN_BRIGHTNESS,
-                    transition_time=int(10 * self._DEFAULT_MIN_TRANSITION_TIME),
-                )
-                t_log["move_to_level_with_on_off"] = result
-                if result[1] is not Status.SUCCESS:
-                    # First 'move to level' call failed, so if the transitioning delay
-                    # isn't running from a previous call,
-                    # the flag can be unset immediately
-                    if set_transition_flag and not self._transition_listener:
-                        self.async_transition_complete()
-                    self.debug("turned on: %s", t_log)
-                    return
-                # Currently only setting it to "on", as the correct level state will
-                # be set at the second move_to_level call
-                self._state = True
-
-            if execute_if_off_supported:
-                self.debug("handling color commands before turning on/level")
-                if not await self.async_handle_color_commands(
-                    color_temp,
-                    duration,  # duration is ignored by lights when off
-                    xy_color,
-                    new_color_provided_while_off,
-                    t_log,
-                ):
-                    # Color calls before on/level calls failed,
-                    # so if the transitioning delay isn't running from a previous call,
-                    # the flag can be unset immediately
-                    if set_transition_flag and not self._transition_listener:
-                        self.async_transition_complete()
-                    self.debug("turned on: %s", t_log)
-                    return
-
-            if (
-                (brightness is not None or transition is not None)
-                and not new_color_provided_while_off
-                and brightness_supported
-            ):
-                assert self._level_cluster_handler is not None
-
-                result = await self._level_cluster_handler.move_to_level_with_on_off(
-                    level=level,
-                    transition_time=int(10 * duration),
-                )
-                t_log["move_to_level_with_on_off"] = result
-                if result[1] is not Status.SUCCESS:
-                    # First 'move to level' call failed, so if the transitioning delay
-                    # isn't running from a previous call, the flag can be unset immediately
-                    if set_transition_flag and not self._transition_listener:
-                        self.async_transition_complete()
-                    self.debug("turned on: %s", t_log)
-                    return
-                self._state = bool(level)
-                if level:
-                    self._brightness = level
-
-            if (
-                (brightness is None and transition is None)
-                and not new_color_provided_while_off
-                or (self._FORCE_ON and brightness != 0)
-            ):
-                assert self._on_off_cluster_handler is not None
-
-                # since FORCE_ON lights don't turn on with move_to_level_with_on_off,
-                # we should call the on command on the on_off cluster
-                # if brightness is not 0.
-                result = await self._on_off_cluster_handler.on()
-                t_log["on_off"] = result
-                if result[1] is not Status.SUCCESS:
-                    # 'On' call failed, but as brightness may still transition
-                    # (for FORCE_ON lights), we start the timer to unset the flag after
-                    # the transition_time if necessary.
-                    self.async_transition_start_timer(transition_time)
-                    self.debug("turned on: %s", t_log)
-                    return
-                self._state = True
-
-            if not execute_if_off_supported:
-                self.debug("handling color commands after turning on/level")
-                if not await self.async_handle_color_commands(
-                    color_temp,
-                    duration,
-                    xy_color,
-                    new_color_provided_while_off,
-                    t_log,
-                ):
-                    # Color calls failed, but as brightness may still transition,
-                    # we start the timer to unset the flag
-                    self.async_transition_start_timer(transition_time)
-                    self.debug("turned on: %s", t_log)
-                    return
-
-            if new_color_provided_while_off:
-                assert self._level_cluster_handler is not None
-
-                # The light has the correct color, so we can now transition
-                # it to the correct brightness level.
-                result = await self._level_cluster_handler.move_to_level(
-                    level=level, transition_time=int(10 * duration)
-                )
-                t_log["move_to_level_if_color"] = result
-                if result[1] is not Status.SUCCESS:
-                    # Second 'move to level' call failed; the light is on but at the
-                    # wrong brightness. If no previous timer is running, unset the flag
-                    # immediately so attribute reports are not ignored indefinitely.
-                    if set_transition_flag and not self._transition_listener:
-                        self.async_transition_complete()
-                    self.debug("turned on: %s", t_log)
-                    return
-                self._state = bool(level)
-                if level:
-                    self._brightness = level
-
-            # Our light is guaranteed to have just started the transitioning process
-            # if necessary, so we start the delay for the transition (to stop parsing
-            # attribute reports after the completed transition).
-            self.async_transition_start_timer(transition_time)
-
-            if self._color_cluster_handler is not None:
-                if effect == EFFECT_COLORLOOP:
-                    result = await self._color_cluster_handler.color_loop_set(
-                        update_flags=(
-                            Color.ColorLoopUpdateFlags.Action
-                            | Color.ColorLoopUpdateFlags.Direction
-                            | Color.ColorLoopUpdateFlags.Time
-                        ),
-                        action=Color.ColorLoopAction.Activate_from_current_hue,
-                        direction=Color.ColorLoopDirection.Increment,
-                        time=transition if transition else 7,
-                        start_hue=0,
-                    )
-                    t_log["color_loop_set"] = result
-                    self._effect = EFFECT_COLORLOOP
-                elif self._effect == EFFECT_COLORLOOP and effect != EFFECT_COLORLOOP:
-                    result = await self._color_cluster_handler.color_loop_set(
-                        update_flags=Color.ColorLoopUpdateFlags.Action,
-                        action=Color.ColorLoopAction.Deactivate,
-                        direction=Color.ColorLoopDirection.Decrement,
-                        time=0,
-                        start_hue=0,
-                    )
-                    t_log["color_loop_set"] = result
-                    self._effect = EFFECT_OFF
-
-            if flash is not None:
-                assert self._identify_cluster_handler is not None
-                result = await self._identify_cluster_handler.trigger_effect(
-                    effect_id=FLASH_EFFECTS[flash],
-                    effect_variant=Identify.EffectVariant.Default,
-                )
-                t_log["trigger_effect"] = result
-
-            self._off_with_transition = False
-            self._off_brightness = None
-            self.debug("turned on: %s", t_log)
-            self.maybe_emit_state_changed_event()
         finally:
             # If the task was cancelled (e.g. by a mode: restart automation) before
             # the transition timer was started, clean up the transitioning flag so
             # the light does not get stuck in a transitioning state indefinitely.
             self._async_cleanup_transition_if_stuck(set_transition_flag)
+
+    async def _async_turn_on_impl(  # noqa: C901
+        self,
+        *,
+        transition: float | None,
+        brightness: int | None,
+        effect: str | None,
+        flash: FlashMode | None,
+        color_temp: int | None,
+        xy_color: tuple[int, int] | None,
+        duration: float,
+        execute_if_off_supported: bool,
+        brightness_supported: bool,
+        set_transition_flag: bool,
+        transition_time: float,
+    ) -> None:
+        """Implement the turn on logic."""
+        # If the light is currently off but a turn_on call with a color/temperature is
+        # sent, the light needs to be turned on first at a low brightness level where
+        # the light is immediately transitioned to the correct color. Afterwards, the
+        # transition is only from the low brightness to the new brightness.
+        # Otherwise, the transition is from the color the light had before being turned
+        # on to the new color. This can look especially bad with transitions longer than
+        # a second. We do not want to do this for devices that need to be forced to use
+        # the on command because we would end up with 4 commands sent:
+        # move to level, on, color, move to level... We also will not set this
+        # if the bulb is already in the desired color mode with the desired color
+        # or color temperature.
+        new_color_provided_while_off = (
+            self._zha_config_enhanced_light_transition
+            and not self._FORCE_ON
+            and not self._state
+            and (
+                (
+                    color_temp is not None
+                    and (
+                        self._color_temp != color_temp
+                        or self._color_mode != ColorMode.COLOR_TEMP
+                    )
+                )
+                or (
+                    xy_color is not None
+                    and (self._xy_color != xy_color or self._color_mode != ColorMode.XY)
+                )
+            )
+            and brightness_supported
+            and not execute_if_off_supported
+        )
+
+        if (
+            brightness is None
+            and (self._off_with_transition or new_color_provided_while_off)
+            and self._off_brightness is not None
+        ):
+            brightness = self._off_brightness
+
+        if brightness is not None:
+            level = min(254, brightness)
+        else:
+            level = self._brightness or 254
+
+        t_log = {}
+
+        if new_color_provided_while_off:
+            assert self._level_cluster_handler is not None
+
+            # If the light is currently off, we first need to turn it on at a low
+            # brightness level with no transition.
+            # After that, we set it to the desired color/temperature with no transition.
+            result = await self._level_cluster_handler.move_to_level_with_on_off(
+                level=DEFAULT_MIN_BRIGHTNESS,
+                transition_time=int(10 * self._DEFAULT_MIN_TRANSITION_TIME),
+            )
+            t_log["move_to_level_with_on_off"] = result
+            if result[1] is not Status.SUCCESS:
+                # First 'move to level' call failed, so if the transitioning delay
+                # isn't running from a previous call,
+                # the flag can be unset immediately
+                if set_transition_flag and not self._transition_listener:
+                    self.async_transition_complete()
+                self.debug("turned on: %s", t_log)
+                return
+            # Currently only setting it to "on", as the correct level state will
+            # be set at the second move_to_level call
+            self._state = True
+
+        if execute_if_off_supported:
+            self.debug("handling color commands before turning on/level")
+            if not await self.async_handle_color_commands(
+                color_temp,
+                duration,  # duration is ignored by lights when off
+                xy_color,
+                new_color_provided_while_off,
+                t_log,
+            ):
+                # Color calls before on/level calls failed,
+                # so if the transitioning delay isn't running from a previous call,
+                # the flag can be unset immediately
+                if set_transition_flag and not self._transition_listener:
+                    self.async_transition_complete()
+                self.debug("turned on: %s", t_log)
+                return
+
+        if (
+            (brightness is not None or transition is not None)
+            and not new_color_provided_while_off
+            and brightness_supported
+        ):
+            assert self._level_cluster_handler is not None
+
+            result = await self._level_cluster_handler.move_to_level_with_on_off(
+                level=level,
+                transition_time=int(10 * duration),
+            )
+            t_log["move_to_level_with_on_off"] = result
+            if result[1] is not Status.SUCCESS:
+                # First 'move to level' call failed, so if the transitioning delay
+                # isn't running from a previous call, the flag can be unset immediately
+                if set_transition_flag and not self._transition_listener:
+                    self.async_transition_complete()
+                self.debug("turned on: %s", t_log)
+                return
+            self._state = bool(level)
+            if level:
+                self._brightness = level
+
+        if (
+            (brightness is None and transition is None)
+            and not new_color_provided_while_off
+            or (self._FORCE_ON and brightness != 0)
+        ):
+            assert self._on_off_cluster_handler is not None
+
+            # since FORCE_ON lights don't turn on with move_to_level_with_on_off,
+            # we should call the on command on the on_off cluster
+            # if brightness is not 0.
+            result = await self._on_off_cluster_handler.on()
+            t_log["on_off"] = result
+            if result[1] is not Status.SUCCESS:
+                # 'On' call failed, but as brightness may still transition
+                # (for FORCE_ON lights), we start the timer to unset the flag after
+                # the transition_time if necessary.
+                self.async_transition_start_timer(transition_time)
+                self.debug("turned on: %s", t_log)
+                return
+            self._state = True
+
+        if not execute_if_off_supported:
+            self.debug("handling color commands after turning on/level")
+            if not await self.async_handle_color_commands(
+                color_temp,
+                duration,
+                xy_color,
+                new_color_provided_while_off,
+                t_log,
+            ):
+                # Color calls failed, but as brightness may still transition,
+                # we start the timer to unset the flag
+                self.async_transition_start_timer(transition_time)
+                self.debug("turned on: %s", t_log)
+                return
+
+        if new_color_provided_while_off:
+            assert self._level_cluster_handler is not None
+
+            # The light has the correct color, so we can now transition
+            # it to the correct brightness level.
+            result = await self._level_cluster_handler.move_to_level(
+                level=level, transition_time=int(10 * duration)
+            )
+            t_log["move_to_level_if_color"] = result
+            if result[1] is not Status.SUCCESS:
+                # Second 'move to level' call failed; the light is on but at the
+                # wrong brightness. If no previous timer is running, unset the flag
+                # immediately so attribute reports are not ignored indefinitely.
+                if set_transition_flag and not self._transition_listener:
+                    self.async_transition_complete()
+                self.debug("turned on: %s", t_log)
+                return
+            self._state = bool(level)
+            if level:
+                self._brightness = level
+
+        # Our light is guaranteed to have just started the transitioning process
+        # if necessary, so we start the delay for the transition (to stop parsing
+        # attribute reports after the completed transition).
+        self.async_transition_start_timer(transition_time)
+
+        if self._color_cluster_handler is not None:
+            if effect == EFFECT_COLORLOOP:
+                result = await self._color_cluster_handler.color_loop_set(
+                    update_flags=(
+                        Color.ColorLoopUpdateFlags.Action
+                        | Color.ColorLoopUpdateFlags.Direction
+                        | Color.ColorLoopUpdateFlags.Time
+                    ),
+                    action=Color.ColorLoopAction.Activate_from_current_hue,
+                    direction=Color.ColorLoopDirection.Increment,
+                    time=transition if transition else 7,
+                    start_hue=0,
+                )
+                t_log["color_loop_set"] = result
+                self._effect = EFFECT_COLORLOOP
+            elif self._effect == EFFECT_COLORLOOP and effect != EFFECT_COLORLOOP:
+                result = await self._color_cluster_handler.color_loop_set(
+                    update_flags=Color.ColorLoopUpdateFlags.Action,
+                    action=Color.ColorLoopAction.Deactivate,
+                    direction=Color.ColorLoopDirection.Decrement,
+                    time=0,
+                    start_hue=0,
+                )
+                t_log["color_loop_set"] = result
+                self._effect = EFFECT_OFF
+
+        if flash is not None:
+            assert self._identify_cluster_handler is not None
+            result = await self._identify_cluster_handler.trigger_effect(
+                effect_id=FLASH_EFFECTS[flash],
+                effect_variant=Identify.EffectVariant.Default,
+            )
+            t_log["trigger_effect"] = result
+
+        self._off_with_transition = False
+        self._off_brightness = None
+        self.debug("turned on: %s", t_log)
+        self.maybe_emit_state_changed_event()
 
     async def async_turn_off(self, *, transition: float | None = None) -> None:
         """Turn the entity off."""
