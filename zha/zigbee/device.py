@@ -1012,6 +1012,43 @@ class Device(LogMixin, EventBase):
 
             # Ignore entities that already exist
             if key in new_entities:
+                existing_entity = new_entities[key]
+                existing_class = (
+                    existing_entity.__class__.__module__,
+                    existing_entity.__class__.__name__,
+                )
+                duplicate_class = (
+                    entity.__class__.__module__,
+                    entity.__class__.__name__,
+                )
+
+                if existing_class != duplicate_class:
+                    existing_endpoint_id = getattr(
+                        getattr(existing_entity, "endpoint", None), "id", None
+                    )
+                    duplicate_endpoint_id = getattr(
+                        getattr(entity, "endpoint", None), "id", None
+                    )
+                    existing_handlers = sorted(
+                        getattr(existing_entity, "cluster_handlers", {}).keys()
+                    )
+                    duplicate_handlers = sorted(
+                        getattr(entity, "cluster_handlers", {}).keys()
+                    )
+                    _LOGGER.warning(
+                        "Entity unique_id conflict on device %s for %s: keeping %s "
+                        "(endpoint=%s, cluster_handlers=%s), dropping %s "
+                        "(endpoint=%s, cluster_handlers=%s)",
+                        self.ieee,
+                        key,
+                        ".".join(existing_class),
+                        existing_endpoint_id,
+                        existing_handlers,
+                        ".".join(duplicate_class),
+                        duplicate_endpoint_id,
+                        duplicate_handlers,
+                    )
+
                 await entity.on_remove()
                 continue
 
