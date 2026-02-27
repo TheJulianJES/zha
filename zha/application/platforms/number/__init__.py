@@ -36,6 +36,7 @@ from zha.zigbee.cluster_handlers.const import (
     CLUSTER_HANDLER_BALLAST,
     CLUSTER_HANDLER_BASIC,
     CLUSTER_HANDLER_COLOR,
+    CLUSTER_HANDLER_HUE_OCCUPANCY,
     CLUSTER_HANDLER_INOVELLI,
     CLUSTER_HANDLER_LEVEL,
     CLUSTER_HANDLER_OCCUPANCY,
@@ -497,6 +498,17 @@ class PIROccupiedToUnoccupiedDelayConfigurationEntity(NumberConfigurationEntity)
 
 
 @register_entity(OccupancySensing.cluster_id)
+class HuePIROccupiedToUnoccupiedDelayConfigurationEntity(
+    PIROccupiedToUnoccupiedDelayConfigurationEntity
+):
+    """Representation of a ZHA Hue PIR occupied to unoccupied delay configuration entity."""
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_HUE_OCCUPANCY})
+    )
+
+
+@register_entity(OccupancySensing.cluster_id)
 class PIRUnoccupiedToOccupiedDelayConfigurationEntity(NumberConfigurationEntity):
     """Representation of a ZHA PIR unoccupied to occupied delay configuration entity."""
 
@@ -510,6 +522,17 @@ class PIRUnoccupiedToOccupiedDelayConfigurationEntity(NumberConfigurationEntity)
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_OCCUPANCY})
+    )
+
+
+@register_entity(OccupancySensing.cluster_id)
+class HuePIRUnoccupiedToOccupiedDelayConfigurationEntity(
+    PIRUnoccupiedToOccupiedDelayConfigurationEntity
+):
+    """Representation of a ZHA Hue PIR unoccupied to occupied delay configuration entity."""
+
+    _cluster_handler_match = ClusterHandlerMatch(
+        cluster_handlers=frozenset({CLUSTER_HANDLER_HUE_OCCUPANCY})
     )
 
 
