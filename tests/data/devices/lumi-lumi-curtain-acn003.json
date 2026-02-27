@@ -280,7 +280,8 @@
           "state": "closed",
           "is_opening": false,
           "is_closing": false,
-          "is_closed": true
+          "is_closed": true,
+          "supported_features": 15
         }
       }
     ],

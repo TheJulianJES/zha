@@ -237,7 +237,8 @@
           "state": null,
           "is_opening": null,
           "is_closing": null,
-          "is_closed": null
+          "is_closed": null,
+          "supported_features": 15
         }
       }
     ],
