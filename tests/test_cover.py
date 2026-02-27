@@ -687,6 +687,39 @@ async def test_cover(
         assert cluster.request.call_args[1]["expect_reply"] is True
 
 
+async def test_cover_recompute_capabilities_on_type_update(
+    zha_gateway: Gateway,
+) -> None:
+    """Test supported features update when window covering type changes."""
+    zha_device, zigpy_cover_device = await device_cover_mock(
+        zha_gateway,
+        current_position_lift_percentage=0,
+        current_position_tilt_percentage=0,
+        window_covering_type=WCT.Drapery,
+    )
+    cluster = zigpy_cover_device.endpoints[1].window_covering
+    entity = get_entity(zha_device, platform=Platform.COVER)
+
+    assert entity.supported_features == (
+        CoverEntityFeature.OPEN
+        | CoverEntityFeature.CLOSE
+        | CoverEntityFeature.STOP
+        | CoverEntityFeature.SET_POSITION
+    )
+
+    await send_attributes_report(
+        zha_gateway,
+        cluster,
+        {WCAttrs.window_covering_type: WCT.Tilt_blind_tilt_only},
+    )
+    assert entity.supported_features == (
+        CoverEntityFeature.OPEN_TILT
+        | CoverEntityFeature.CLOSE_TILT
+        | CoverEntityFeature.STOP_TILT
+        | CoverEntityFeature.SET_TILT_POSITION
+    )
+
+
 async def test_cover_failures(zha_gateway: Gateway) -> None:
     """Test ZHA cover platform failure cases."""
 
