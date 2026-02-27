@@ -976,6 +976,51 @@ class Device(LogMixin, EventBase):
             entity.on_add()
             self._pending_entities.append(entity)
 
+    @staticmethod
+    def _entity_class_path(entity: BaseEntity) -> tuple[str, str]:
+        """Return module and class name for an entity."""
+        return (entity.__class__.__module__, entity.__class__.__name__)
+
+    @staticmethod
+    def _entity_endpoint_id(entity: BaseEntity) -> int | None:
+        """Return endpoint id if this is a platform entity."""
+        if not isinstance(entity, PlatformEntity):
+            return None
+        return entity.endpoint.id
+
+    @staticmethod
+    def _entity_cluster_handler_names(entity: BaseEntity) -> list[str]:
+        """Return cluster handler names if this is a platform entity."""
+        if not isinstance(entity, PlatformEntity):
+            return []
+        return sorted(entity.cluster_handlers.keys())
+
+    def _log_entity_unique_id_conflict(
+        self,
+        key: tuple[Platform, str],
+        existing_entity: BaseEntity,
+        duplicate_entity: BaseEntity,
+    ) -> None:
+        """Log duplicate unique_id collisions when classes differ."""
+        existing_class = self._entity_class_path(existing_entity)
+        duplicate_class = self._entity_class_path(duplicate_entity)
+        if existing_class == duplicate_class:
+            return
+
+        _LOGGER.warning(
+            "Entity unique_id conflict on device %s for %s: keeping %s "
+            "(endpoint=%s, cluster_handlers=%s), dropping %s "
+            "(endpoint=%s, cluster_handlers=%s)",
+            self.ieee,
+            key,
+            ".".join(existing_class),
+            self._entity_endpoint_id(existing_entity),
+            self._entity_cluster_handler_names(existing_entity),
+            ".".join(duplicate_class),
+            self._entity_endpoint_id(duplicate_entity),
+            self._entity_cluster_handler_names(duplicate_entity),
+        )
+
     async def async_initialize(self, from_cache: bool = False) -> None:
         """Initialize cluster handlers."""
         self.debug("started initialization")
@@ -1012,43 +1057,7 @@ class Device(LogMixin, EventBase):
 
             # Ignore entities that already exist
             if key in new_entities:
-                existing_entity = new_entities[key]
-                existing_class = (
-                    existing_entity.__class__.__module__,
-                    existing_entity.__class__.__name__,
-                )
-                duplicate_class = (
-                    entity.__class__.__module__,
-                    entity.__class__.__name__,
-                )
-
-                if existing_class != duplicate_class:
-                    existing_endpoint_id = getattr(
-                        getattr(existing_entity, "endpoint", None), "id", None
-                    )
-                    duplicate_endpoint_id = getattr(
-                        getattr(entity, "endpoint", None), "id", None
-                    )
-                    existing_handlers = sorted(
-                        getattr(existing_entity, "cluster_handlers", {}).keys()
-                    )
-                    duplicate_handlers = sorted(
-                        getattr(entity, "cluster_handlers", {}).keys()
-                    )
-                    _LOGGER.warning(
-                        "Entity unique_id conflict on device %s for %s: keeping %s "
-                        "(endpoint=%s, cluster_handlers=%s), dropping %s "
-                        "(endpoint=%s, cluster_handlers=%s)",
-                        self.ieee,
-                        key,
-                        ".".join(existing_class),
-                        existing_endpoint_id,
-                        existing_handlers,
-                        ".".join(duplicate_class),
-                        duplicate_endpoint_id,
-                        duplicate_handlers,
-                    )
-
+                self._log_entity_unique_id_conflict(key, new_entities[key], entity)
                 await entity.on_remove()
                 continue
 
