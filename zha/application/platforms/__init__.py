@@ -72,6 +72,9 @@ class PlatformFeatureGroup(StrEnum):
     # Model-specific overrides for local temperature calibration
     LOCAL_TEMPERATURE_CALIBRATION = "local_temperature_calibration"
 
+    # Prefer OTA client update entities over OTA server update entities
+    OTA_UPDATE = "ota_update"
+
 
 @dataclasses.dataclass(frozen=True)
 class ClusterHandlerMatch:

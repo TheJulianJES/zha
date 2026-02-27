@@ -20,6 +20,7 @@ from zha.application.platforms import (
     ClusterHandlerMatch,
     EntityCategory,
     PlatformEntity,
+    PlatformFeatureGroup,
     register_entity,
 )
 from zha.exceptions import ZHAException
@@ -285,7 +286,8 @@ class FirmwareUpdateEntity(BaseFirmwareUpdateEntity):
     _unique_id_suffix = "firmware_update"
 
     _cluster_handler_match = ClusterHandlerMatch(
-        client_cluster_handlers=frozenset({CLUSTER_HANDLER_OTA})
+        client_cluster_handlers=frozenset({CLUSTER_HANDLER_OTA}),
+        feature_priority=(PlatformFeatureGroup.OTA_UPDATE, 1),
     )
 
     def __init__(
@@ -335,7 +337,8 @@ class FirmwareUpdateServerEntity(BaseFirmwareUpdateEntity):
 
     _unique_id_suffix = "firmware_update"
     _cluster_handler_match = ClusterHandlerMatch(
-        cluster_handlers=frozenset({CLUSTER_HANDLER_OTA})
+        cluster_handlers=frozenset({CLUSTER_HANDLER_OTA}),
+        feature_priority=(PlatformFeatureGroup.OTA_UPDATE, 0),
     )
 
     def __init__(
