@@ -38,6 +38,12 @@ async def main(files: list[str] | None = None) -> None:
         paths = [pathlib.Path(f) for f in files]
 
     async with create_zha_gateway() as zha_gateway:
+        # Regeneration should be deterministic: disable background tasks that can
+        # asynchronously mutate device availability while fixtures are being written.
+        zha_gateway.global_updater.stop()
+        zha_gateway._device_availability_checker.stop()  # noqa: SLF001
+        zha_gateway.config.allow_polling = False
+
         for device_json in paths:
             _LOGGER.info("Migrating %s", device_json)
             zigpy_device = await zigpy_device_from_json(
