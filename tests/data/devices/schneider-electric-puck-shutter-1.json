@@ -502,7 +502,8 @@
           "state": "open",
           "is_opening": false,
           "is_closing": false,
-          "is_closed": false
+          "is_closed": false,
+          "supported_features": 255
         }
       }
     ],

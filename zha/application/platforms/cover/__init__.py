@@ -279,6 +279,7 @@ class Cover(BaseCover):
                 "is_opening": self.is_opening,
                 "is_closing": self.is_closing,
                 "is_closed": self.is_closed,
+                "supported_features": self.supported_features,
             }
         )
         return response
@@ -563,6 +564,9 @@ class Cover(BaseCover):
         elif event.attribute_id == WCAttrs.current_position_tilt_percentage.id:
             self._tilt_position_history.append(self.current_cover_tilt_position)
             self._determine_cover_state(is_tilt_update=True)
+        elif event.attribute_id == WCAttrs.window_covering_type.id:
+            self.recompute_capabilities()
+            self.maybe_emit_state_changed_event()
 
     def async_update_state(self, state):
         """Handle state update from HA operations below."""

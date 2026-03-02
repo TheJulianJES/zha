@@ -384,7 +384,8 @@
           "state": "open",
           "is_opening": false,
           "is_closing": false,
-          "is_closed": false
+          "is_closed": false,
+          "supported_features": 15
         }
       },
       {
@@ -431,7 +432,8 @@
           "state": "closed",
           "is_opening": false,
           "is_closing": false,
-          "is_closed": true
+          "is_closed": true,
+          "supported_features": 15
         }
       }
     ],
