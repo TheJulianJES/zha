@@ -126,7 +126,7 @@
         },
         {
           "cluster_id": "0x0406",
-          "endpoint_attribute": "philips_occupancy",
+          "endpoint_attribute": "occupancy",
           "attributes": [
             {
               "id": "0x0000",
@@ -234,7 +234,7 @@
           "unique_id": "00:17:88:01:0c:dc:9d:61-2-1030",
           "migrate_unique_ids": [],
           "platform": "binary_sensor",
-          "class_name": "HueOccupancy",
+          "class_name": "Occupancy",
           "translation_key": null,
           "translation_placeholders": null,
           "device_class": "occupancy",
@@ -250,7 +250,7 @@
               "endpoint_id": 2,
               "cluster": {
                 "id": 1030,
-                "name": "PhilipsOccupancySensing",
+                "name": "Occupancy Sensing",
                 "type": "server"
               },
               "id": "2:0x0406",
@@ -266,7 +266,7 @@
           "attribute_name": "occupancy"
         },
         "state": {
-          "class_name": "HueOccupancy",
+          "class_name": "Occupancy",
           "available": true,
           "state": false
         }
@@ -386,7 +386,7 @@
               "endpoint_id": 2,
               "cluster": {
                 "id": 1030,
-                "name": "PhilipsOccupancySensing",
+                "name": "Occupancy Sensing",
                 "type": "server"
               },
               "id": "2:0x0406",
