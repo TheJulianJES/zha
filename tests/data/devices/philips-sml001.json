@@ -399,6 +399,56 @@
         }
       }
     ],
+    "select": [
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "00:17:88:01:06:f5:ac:71-2-1030-motion_sensitivity",
+          "migrate_unique_ids": [],
+          "platform": "select",
+          "class_name": "HueV1MotionSensitivity",
+          "translation_key": "motion_sensitivity",
+          "translation_placeholders": null,
+          "device_class": null,
+          "state_class": null,
+          "entity_category": "config",
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "cluster_handlers": [
+            {
+              "class_name": "OccupancySensingClusterHandler",
+              "generic_id": "cluster_handler_0x0406",
+              "endpoint_id": 2,
+              "cluster": {
+                "id": 1030,
+                "name": "Occupancy Sensing",
+                "type": "server"
+              },
+              "id": "2:0x0406",
+              "unique_id": "00:17:88:01:06:f5:ac:71:2:0x0406",
+              "status": "INITIALIZED",
+              "value_attribute": "occupancy"
+            }
+          ],
+          "device_ieee": "00:17:88:01:06:f5:ac:71",
+          "endpoint_id": 2,
+          "available": true,
+          "group_id": null,
+          "enum": "HueV1MotionSensitivities",
+          "options": [
+            "Low",
+            "Medium",
+            "High"
+          ]
+        },
+        "state": {
+          "class_name": "HueV1MotionSensitivity",
+          "available": true,
+          "state": "High"
+        }
+      }
+    ],
     "sensor": [
       {
         "info_object": {
