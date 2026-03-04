@@ -37,7 +37,6 @@ from zha.zigbee.cluster_handlers.const import (
     CLUSTER_HANDLER_ACCELEROMETER,
     CLUSTER_HANDLER_ATTRIBUTE_UPDATED,
     CLUSTER_HANDLER_BINARY_INPUT,
-    CLUSTER_HANDLER_HUE_OCCUPANCY,
     CLUSTER_HANDLER_OCCUPANCY,
     CLUSTER_HANDLER_ON_OFF,
     CLUSTER_HANDLER_THERMOSTAT,
@@ -193,19 +192,6 @@ class Occupancy(BinarySensor):
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_OCCUPANCY})
-    )
-
-
-@register_entity(OccupancySensing.cluster_id)
-class HueOccupancy(BinarySensor):
-    """ZHA Hue occupancy."""
-
-    _attribute_name = "occupancy"
-    _attr_device_class: BinarySensorDeviceClass = BinarySensorDeviceClass.OCCUPANCY
-    _attr_primary_weight = 3
-
-    _cluster_handler_match = ClusterHandlerMatch(
-        cluster_handlers=frozenset({CLUSTER_HANDLER_HUE_OCCUPANCY})
     )
 
 

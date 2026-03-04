@@ -37,7 +37,6 @@ from zha.zigbee.cluster_handlers import ClusterAttributeUpdatedEvent
 from zha.zigbee.cluster_handlers.const import (
     AQARA_OPPLE_CLUSTER,
     CLUSTER_HANDLER_ATTRIBUTE_UPDATED,
-    CLUSTER_HANDLER_HUE_OCCUPANCY,
     CLUSTER_HANDLER_IAS_WD,
     CLUSTER_HANDLER_INOVELLI,
     CLUSTER_HANDLER_OCCUPANCY,
@@ -442,7 +441,7 @@ class HueV1MotionSensitivity(ZCLEnumSelectEntity):
     _attr_translation_key: str = "motion_sensitivity"
 
     _cluster_handler_match = ClusterHandlerMatch(
-        cluster_handlers=frozenset({CLUSTER_HANDLER_HUE_OCCUPANCY}),
+        cluster_handlers=frozenset({CLUSTER_HANDLER_OCCUPANCY}),
         manufacturers=frozenset({"Philips", "Signify Netherlands B.V."}),
         models=frozenset({"SML001"}),
     )
@@ -468,7 +467,7 @@ class HueV2MotionSensitivity(ZCLEnumSelectEntity):
     _attr_translation_key: str = "motion_sensitivity"
 
     _cluster_handler_match = ClusterHandlerMatch(
-        cluster_handlers=frozenset({CLUSTER_HANDLER_HUE_OCCUPANCY}),
+        cluster_handlers=frozenset({CLUSTER_HANDLER_OCCUPANCY}),
         manufacturers=frozenset({"Philips", "Signify Netherlands B.V."}),
         models=frozenset({"SML002", "SML003", "SML004"}),
     )
