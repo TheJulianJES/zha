@@ -577,13 +577,15 @@ async def test_firmware_update_no_image(zha_gateway: Gateway) -> None:
 async def test_firmware_update_latest_version_even_if_downgrade(
     zha_gateway: Gateway,
 ) -> None:
-    """Test ZHA update platform - `latest_version` always reflects the latest."""
+    """Test ZHA update platform - latest downgrade sets version and release URL."""
     zigpy_device = zigpy_device_mock(zha_gateway)
     zha_device, ota_cluster, fw_image, installed_fw_version = await setup_test_data(
         zha_gateway, zigpy_device
     )
 
-    fw_image_downgrade = create_fw_image(installed_fw_version - 10)
+    fw_image_downgrade = create_fw_image(
+        installed_fw_version - 10, release_url="https://example.com/releases/v0.1"
+    )
 
     zigpy_device.application.ota.get_ota_images = AsyncMock(
         return_value=OtaImagesResult(
@@ -615,6 +617,7 @@ async def test_firmware_update_latest_version_even_if_downgrade(
         entity.state[ATTR_LATEST_VERSION]
         == f"0x{fw_image_downgrade.firmware.header.file_version:08x}"
     )
+    assert entity.state[ATTR_RELEASE_URL] == "https://example.com/releases/v0.1"
 
 
 async def test_firmware_update_metadata(zha_gateway: Gateway) -> None:
