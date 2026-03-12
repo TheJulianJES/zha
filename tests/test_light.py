@@ -2149,7 +2149,7 @@ async def test_light_state_restoration_unsupported_color_mode(
 async def test_color_temp_only_light_ignores_incorrect_color_mode(
     zha_gateway: Gateway,
 ) -> None:
-    """Test that a color_temp-only light ignores incorrect color_mode reports from the device."""
+    """Test color_temp-only light ignores incorrect color_mode reads when polling."""
     zigpy_device = create_mock_zigpy_device(zha_gateway, LIGHT_COLOR)
     color_cluster = zigpy_device.endpoints[1].light_color
     color_cluster.PLUGGED_ATTR_READS = {
@@ -2199,6 +2199,53 @@ async def test_color_temp_only_light_ignores_incorrect_color_mode(
     assert entity.state["color_mode"] == ColorMode.COLOR_TEMP
     assert entity.state["color_temp"] == 400
     assert entity.state["xy_color"] is None
+
+
+async def test_poll_updates_color_mode_on_dual_mode_light(
+    zha_gateway: Gateway,
+) -> None:
+    """Test polling XY + COLOR_TEMP light updates color_mode and attribute values."""
+    device = await device_light_1_mock(zha_gateway)
+    entity = get_entity(device, platform=Platform.LIGHT)
+    color_cluster = device.device.endpoints[1].light_color
+
+    assert entity.supported_color_modes == {ColorMode.COLOR_TEMP, ColorMode.XY}
+
+    # Poll with color_temp mode
+    color_cluster.PLUGGED_ATTR_READS = {
+        "color_capabilities": (
+            lighting.Color.ColorCapabilities.Color_temperature
+            | lighting.Color.ColorCapabilities.XY_attributes
+        ),
+        "color_mode": lighting.Color.ColorMode.Color_temperature,
+        "color_temperature": 350,
+        "current_x": 20000,
+        "current_y": 20000,
+    }
+    update_attribute_cache(color_cluster)
+    await entity.async_update()
+
+    assert entity.state["color_mode"] == ColorMode.COLOR_TEMP
+    assert entity.state["color_temp"] == 350
+    assert entity.state["xy_color"] is None
+
+    # Poll with XY mode
+    color_cluster.PLUGGED_ATTR_READS = {
+        "color_capabilities": (
+            lighting.Color.ColorCapabilities.Color_temperature
+            | lighting.Color.ColorCapabilities.XY_attributes
+        ),
+        "color_mode": lighting.Color.ColorMode.X_and_Y,
+        "color_temperature": 350,
+        "current_x": 30000,
+        "current_y": 25000,
+    }
+    update_attribute_cache(color_cluster)
+    await entity.async_update()
+
+    assert entity.state["color_mode"] == ColorMode.XY
+    assert entity.state["xy_color"] == (30000 / 65535, 25000 / 65535)
+    assert entity.state["color_temp"] is None
 
 
 async def test_turn_on_cancellation_cleans_up_transition_flag(
