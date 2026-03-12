@@ -1088,13 +1088,12 @@ class Light(BaseClusterHandlerLight, PlatformEntity):
                 if color_mode == Color.ColorMode.Color_temperature:
                     if ColorMode.COLOR_TEMP in self._supported_color_modes:
                         self._color_mode = ColorMode.COLOR_TEMP
-                    color_temp = results.get("color_temperature")
-                    if color_temp is not None and color_mode:
-                        self._color_temp = color_temp
-                        self._xy_color = None
-                else:
-                    if ColorMode.XY in self._supported_color_modes:
-                        self._color_mode = ColorMode.XY
+                        color_temp = results.get("color_temperature")
+                        if color_temp is not None and color_mode:
+                            self._color_temp = color_temp
+                            self._xy_color = None
+                elif ColorMode.XY in self._supported_color_modes:
+                    self._color_mode = ColorMode.XY
                     color_x = results.get("current_x")
                     color_y = results.get("current_y")
                     if color_x is not None and color_y is not None:
