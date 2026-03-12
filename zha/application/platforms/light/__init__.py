@@ -1085,29 +1085,22 @@ class Light(BaseClusterHandlerLight, PlatformEntity):
                 return  # type: ignore[unreachable]
 
             if (color_mode := results.get("color_mode")) is not None:
+                # Determine the effective color mode: if only one mode is
+                # supported, use it regardless of what the device reports
                 if len(self._supported_color_modes) == 1:
-                    # Only one color mode supported, use it regardless of
-                    # what the device reports
-                    supported_mode = next(iter(self._supported_color_modes))
-                    if supported_mode == ColorMode.COLOR_TEMP:
-                        color_temp = results.get("color_temperature")
-                        if color_temp is not None:
-                            self._color_temp = color_temp
-                            self._xy_color = None
-                    elif supported_mode == ColorMode.XY:
-                        color_x = results.get("current_x")
-                        color_y = results.get("current_y")
-                        if color_x is not None and color_y is not None:
-                            self._xy_color = (color_x / 65535, color_y / 65535)
-                            self._color_temp = None
+                    effective_mode = next(iter(self._supported_color_modes))
                 elif color_mode == Color.ColorMode.Color_temperature:
-                    self._color_mode = ColorMode.COLOR_TEMP
+                    effective_mode = ColorMode.COLOR_TEMP
+                else:
+                    effective_mode = ColorMode.XY
+                self._color_mode = effective_mode
+
+                if effective_mode == ColorMode.COLOR_TEMP:
                     color_temp = results.get("color_temperature")
                     if color_temp is not None:
                         self._color_temp = color_temp
                         self._xy_color = None
-                else:
-                    self._color_mode = ColorMode.XY
+                elif effective_mode == ColorMode.XY:
                     color_x = results.get("current_x")
                     color_y = results.get("current_y")
                     if color_x is not None and color_y is not None:
