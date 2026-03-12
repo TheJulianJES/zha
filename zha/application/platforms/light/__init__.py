@@ -1085,22 +1085,34 @@ class Light(BaseClusterHandlerLight, PlatformEntity):
                 return  # type: ignore[unreachable]
 
             if (color_mode := results.get("color_mode")) is not None:
-                if (
-                    color_mode != Color.ColorMode.Color_temperature
-                    and ColorMode.XY in self._supported_color_modes
-                ):
+                if len(self._supported_color_modes) == 1:
+                    # Only one color mode supported, use it regardless of
+                    # what the device reports
+                    supported_mode = next(iter(self._supported_color_modes))
+                    if supported_mode == ColorMode.COLOR_TEMP:
+                        color_temp = results.get("color_temperature")
+                        if color_temp is not None:
+                            self._color_temp = color_temp
+                            self._xy_color = None
+                    elif supported_mode == ColorMode.XY:
+                        color_x = results.get("current_x")
+                        color_y = results.get("current_y")
+                        if color_x is not None and color_y is not None:
+                            self._xy_color = (color_x / 65535, color_y / 65535)
+                            self._color_temp = None
+                elif color_mode == Color.ColorMode.Color_temperature:
+                    self._color_mode = ColorMode.COLOR_TEMP
+                    color_temp = results.get("color_temperature")
+                    if color_temp is not None:
+                        self._color_temp = color_temp
+                        self._xy_color = None
+                else:
                     self._color_mode = ColorMode.XY
                     color_x = results.get("current_x")
                     color_y = results.get("current_y")
                     if color_x is not None and color_y is not None:
                         self._xy_color = (color_x / 65535, color_y / 65535)
                         self._color_temp = None
-                elif ColorMode.COLOR_TEMP in self._supported_color_modes:
-                    self._color_mode = ColorMode.COLOR_TEMP
-                    color_temp = results.get("color_temperature")
-                    if color_temp is not None:
-                        self._color_temp = color_temp
-                        self._xy_color = None
 
             color_loop_active = results.get("color_loop_active")
             if color_loop_active is not None:
