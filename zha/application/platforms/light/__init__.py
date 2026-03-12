@@ -258,6 +258,7 @@ class BaseLight(BaseEntity, ABC):
             self._color_temp = color_temp
         if xy_color is not None:
             self._xy_color = xy_color
+        # Older persisted states may contain a color_mode not in supported modes
         if color_mode is not None and color_mode in self._supported_color_modes:
             self._color_mode = color_mode
         if effect is not None:
