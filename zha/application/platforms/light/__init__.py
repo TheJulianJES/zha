@@ -888,6 +888,18 @@ class Light(BaseClusterHandlerLight, PlatformEntity):
 
         self.start_polling()
 
+    def _determine_color_mode(self, zigbee_color_mode: int | None) -> ColorMode:
+        """Determine the effective HA color mode from a Zigbee color_mode value.
+
+        If only one color mode is supported, it is always used regardless of
+        what the device reports. Otherwise, the Zigbee color_mode is mapped.
+        """
+        if len(self._supported_color_modes) == 1:
+            return next(iter(self._supported_color_modes))
+        if zigbee_color_mode == Color.ColorMode.Color_temperature:
+            return ColorMode.COLOR_TEMP
+        return ColorMode.XY
+
     def recompute_capabilities(self) -> None:
         """Recompute capabilities."""
         super().recompute_capabilities()
@@ -923,20 +935,14 @@ class Light(BaseClusterHandlerLight, PlatformEntity):
                 if self._color_cluster_handler.color_loop_active == 1:
                     self._effect = EFFECT_COLORLOOP
 
-        self._supported_color_modes = supported_color_modes = (
-            filter_supported_color_modes(self._internal_supported_color_modes)
+        self._supported_color_modes = filter_supported_color_modes(
+            self._internal_supported_color_modes
         )
-        if len(supported_color_modes) == 1:
-            self._color_mode = next(iter(supported_color_modes))
-        else:  # Light supports color_temp + xy, determine which mode the light is in
-            assert self._color_cluster_handler
-            if (
-                self._color_cluster_handler.color_mode
-                == Color.ColorMode.Color_temperature
-            ):
-                self._color_mode = ColorMode.COLOR_TEMP
-            else:
-                self._color_mode = ColorMode.XY
+        self._color_mode = self._determine_color_mode(
+            self._color_cluster_handler.color_mode
+            if self._color_cluster_handler
+            else None
+        )
 
         if self._identify_cluster_handler:
             self._supported_features |= LightEntityFeature.FLASH
@@ -1086,14 +1092,7 @@ class Light(BaseClusterHandlerLight, PlatformEntity):
                 return  # type: ignore[unreachable]
 
             if (color_mode := results.get("color_mode")) is not None:
-                # Determine the effective color mode: if only one mode is
-                # supported, use it regardless of what the device reports
-                if len(self._supported_color_modes) == 1:
-                    effective_mode = next(iter(self._supported_color_modes))
-                elif color_mode == Color.ColorMode.Color_temperature:
-                    effective_mode = ColorMode.COLOR_TEMP
-                else:
-                    effective_mode = ColorMode.XY
+                effective_mode = self._determine_color_mode(color_mode)
                 self._color_mode = effective_mode
 
                 if effective_mode == ColorMode.COLOR_TEMP:
