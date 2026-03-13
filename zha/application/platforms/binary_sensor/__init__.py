@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
+import enum
 import functools
 import logging
 from typing import TYPE_CHECKING, Any
@@ -66,6 +67,15 @@ class BaseBinarySensor(PlatformEntity, ABC):
     """Abstract base class for ZHA binary sensors."""
 
     PLATFORM: Platform = Platform.BINARY_SENSOR
+
+    def _update_device_class_from_metadata(self, device_class: enum.Enum) -> None:
+        """Apply a binary sensor device class override from quirks metadata."""
+        self._attr_device_class = validate_device_class(
+            BinarySensorDeviceClass,
+            device_class,
+            self.PLATFORM.value,
+            _LOGGER,
+        )
 
     @property
     def state(self) -> dict:

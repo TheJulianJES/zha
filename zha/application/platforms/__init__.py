@@ -8,13 +8,13 @@ from collections import defaultdict
 from collections.abc import Callable
 from contextlib import suppress
 import dataclasses
-from enum import StrEnum
+from enum import Enum, StrEnum
 from functools import cached_property
 import logging
 from typing import TYPE_CHECKING, Any, Final, Literal, final
 
 from zigpy.profiles import zha, zll
-from zigpy.quirks.v2 import EntityMetadata, EntityType
+from zigpy.quirks.v2 import ChangedEntityMetadata, EntityMetadata, EntityType
 from zigpy.types import ClusterId
 from zigpy.types.named import EUI64
 
@@ -400,6 +400,56 @@ class BaseEntity(LogMixin, EventBase):
         """Disable the entity."""
         self.enabled = False
 
+    def _update_device_class_from_metadata(self, device_class: Enum) -> None:
+        """Apply a device class override from quirks metadata."""
+        self._attr_device_class = str(device_class.value)
+
+    def _update_state_class_from_metadata(self, state_class: Enum) -> None:
+        """Apply a state class override from quirks metadata."""
+        self._attr_state_class = str(state_class.value)
+
+    def _update_entity_category_from_metadata(self, entity_type: EntityType) -> None:
+        """Apply an entity category override from quirks metadata."""
+        if entity_type.value == EntityCategory.CONFIG:
+            self._attr_entity_category = EntityCategory.CONFIG
+        elif entity_type.value == EntityCategory.DIAGNOSTIC:
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        else:
+            self._attr_entity_category = None
+
+    def apply_changed_metadata(self, metadata: ChangedEntityMetadata) -> None:
+        """Apply quirks v2 metadata changes to this entity."""
+        if metadata.new_primary is not None:
+            self._attr_primary = metadata.new_primary
+
+        if metadata.new_unique_id is not None:
+            self._unique_id = metadata.new_unique_id
+
+        if metadata.new_translation_key is not None:
+            self._attr_translation_key = metadata.new_translation_key
+
+        if metadata.new_translation_placeholders is not None:
+            self._attr_translation_placeholders = dict(
+                metadata.new_translation_placeholders
+            )
+
+        if metadata.new_device_class is not None:
+            self._update_device_class_from_metadata(metadata.new_device_class)
+
+        if metadata.new_state_class is not None:
+            self._update_state_class_from_metadata(metadata.new_state_class)
+
+        if metadata.new_entity_category is not None:
+            self._update_entity_category_from_metadata(metadata.new_entity_category)
+
+        if metadata.new_entity_registry_enabled_default is not None:
+            self._attr_entity_registry_enabled_default = (
+                metadata.new_entity_registry_enabled_default
+            )
+
+        if metadata.new_fallback_name is not None:
+            self._attr_fallback_name = metadata.new_fallback_name
+
     def on_add(self) -> None:
         """Run when entity is added."""
         pass
@@ -493,34 +543,29 @@ class PlatformEntity(BaseEntity):
         # v2 quirks entities are assumed to always be supported
         self._attr_always_supported = True
 
-        has_attribute_name = hasattr(entity_metadata, "attribute_name")
-        has_command_name = hasattr(entity_metadata, "command_name")
-        has_fallback_name = hasattr(entity_metadata, "fallback_name")
+        attribute_name = getattr(entity_metadata, "attribute_name", None)
+        command_name = getattr(entity_metadata, "command_name", None)
+        fallback_name = getattr(entity_metadata, "fallback_name", None)
 
-        if has_fallback_name:
-            self._attr_fallback_name = entity_metadata.fallback_name
+        if fallback_name is not None:
+            self._attr_fallback_name = fallback_name
 
         if entity_metadata.translation_key:
             self._attr_translation_key = entity_metadata.translation_key
 
         if entity_metadata.translation_placeholders:
-            self._attr_translation_placeholders = (
+            self._attr_translation_placeholders = dict(
                 entity_metadata.translation_placeholders
             )
 
         if unique_id_suffix := entity_metadata.unique_id_suffix:
             self._unique_id_suffix = unique_id_suffix
-        elif has_attribute_name:
-            self._unique_id_suffix = entity_metadata.attribute_name
-        elif has_command_name:
-            self._unique_id_suffix = entity_metadata.command_name
+        elif attribute_name is not None:
+            self._unique_id_suffix = attribute_name
+        elif command_name is not None:
+            self._unique_id_suffix = command_name
 
-        if entity_metadata.entity_type is EntityType.CONFIG:
-            self._attr_entity_category = EntityCategory.CONFIG
-        elif entity_metadata.entity_type is EntityType.DIAGNOSTIC:
-            self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        else:
-            self._attr_entity_category = None
+        self._update_entity_category_from_metadata(entity_metadata.entity_type)
 
         if entity_metadata.primary is not None:
             self._attr_primary = entity_metadata.primary

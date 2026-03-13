@@ -201,6 +201,22 @@ class BaseSensor(PlatformEntity, ABC):
     _attr_device_class: SensorDeviceClass | None = None
     _attr_state_class: SensorStateClass | None = None
 
+    def _update_device_class_from_metadata(self, device_class: enum.Enum) -> None:
+        """Apply a sensor device class override from quirks metadata."""
+        self._attr_device_class = validate_device_class(
+            SensorDeviceClass,
+            device_class,
+            self.PLATFORM.value,
+            _LOGGER,
+        )
+
+    def _update_state_class_from_metadata(self, state_class: enum.Enum) -> None:
+        """Apply a sensor state class override from quirks metadata."""
+        self._attr_state_class = validate_state_class(
+            state_class,
+            _LOGGER,
+        )
+
     @property
     def suggested_display_precision(self) -> int | None:
         """Return the suggested display precision."""

@@ -51,7 +51,7 @@ from zha.application.const import (
     UNKNOWN,
 )
 from zha.application.gateway import Gateway
-from zha.application.platforms import PlatformEntity
+from zha.application.platforms import EntityCategory, PlatformEntity
 from zha.application.platforms.binary_sensor import IASZone
 from zha.application.platforms.light import Light
 from zha.application.platforms.sensor import LQISensor, RSSISensor
@@ -1086,9 +1086,10 @@ async def test_quirks_v2_change_entity_metadata(zha_gateway: Gateway) -> None:
     # Verify metadata changes were applied - first filter matches by endpoint_id=1 and unique_id_suffix="-lqi"
     assert isinstance(lqi_entity._attr_device_class, str)
     assert isinstance(lqi_entity._attr_state_class, str)
+    assert isinstance(lqi_entity._attr_entity_category, str)
     assert lqi_entity._attr_device_class == ZhaSensorDeviceClass.POWER
     assert lqi_entity._attr_state_class == ZhaSensorStateClass.MEASUREMENT
-    assert lqi_entity._attr_entity_category == EntityType.CONFIG
+    assert lqi_entity._attr_entity_category == EntityCategory.CONFIG
     assert lqi_entity._attr_entity_registry_enabled_default is False
     assert lqi_entity._attr_translation_key == "custom_lqi_key"
     assert lqi_entity._attr_translation_placeholders == {"placeholder": "123"}

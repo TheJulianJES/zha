@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+import enum
 import functools
 import logging
 from typing import TYPE_CHECKING, Any
@@ -78,6 +79,15 @@ class BaseNumber(PlatformEntity, ABC):
     _attr_native_step: float | None = None
     _attr_native_value: float | None
     _attr_native_unit_of_measurement: str | None = None
+
+    def _update_device_class_from_metadata(self, device_class: enum.Enum) -> None:
+        """Apply a number device class override from quirks metadata."""
+        self._attr_device_class = validate_device_class(
+            NumberDeviceClass,
+            device_class,
+            self.PLATFORM.value,
+            _LOGGER,
+        )
 
     @property
     @abstractmethod
