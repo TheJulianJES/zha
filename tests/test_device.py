@@ -17,7 +17,10 @@ from zigpy.quirks.v2 import (
     QuirkBuilder,
 )
 from zigpy.quirks.v2.homeassistant import EntityType
-from zigpy.quirks.v2.homeassistant.sensor import SensorDeviceClass, SensorStateClass
+from zigpy.quirks.v2.homeassistant.sensor import (
+    SensorDeviceClass as QuirkSensorDeviceClass,
+    SensorStateClass as QuirkSensorStateClass,
+)
 import zigpy.types
 from zigpy.typing import UNDEFINED
 from zigpy.zcl import ClusterType
@@ -52,6 +55,10 @@ from zha.application.platforms import PlatformEntity
 from zha.application.platforms.binary_sensor import IASZone
 from zha.application.platforms.light import Light
 from zha.application.platforms.sensor import LQISensor, RSSISensor
+from zha.application.platforms.sensor.const import (
+    SensorDeviceClass as ZhaSensorDeviceClass,
+    SensorStateClass as ZhaSensorStateClass,
+)
 from zha.application.platforms.switch import Switch
 from zha.exceptions import ZHAException
 from zha.zigbee.device import (
@@ -1039,8 +1046,8 @@ async def test_quirks_v2_change_entity_metadata(zha_gateway: Gateway) -> None:
         .change_entity_metadata(
             endpoint_id=1,
             unique_id_suffix="-lqi",
-            new_device_class=SensorDeviceClass.POWER,
-            new_state_class=SensorStateClass.MEASUREMENT,
+            new_device_class=QuirkSensorDeviceClass.POWER,
+            new_state_class=QuirkSensorStateClass.MEASUREMENT,
             new_entity_category=EntityType.CONFIG,
             new_entity_registry_enabled_default=False,
             new_translation_key="custom_lqi_key",
@@ -1077,8 +1084,10 @@ async def test_quirks_v2_change_entity_metadata(zha_gateway: Gateway) -> None:
     assert lqi_entity is not None, "LQI sensor entity should exist"
 
     # Verify metadata changes were applied - first filter matches by endpoint_id=1 and unique_id_suffix="-lqi"
-    assert lqi_entity._attr_device_class == SensorDeviceClass.POWER
-    assert lqi_entity._attr_state_class == SensorStateClass.MEASUREMENT
+    assert isinstance(lqi_entity._attr_device_class, str)
+    assert isinstance(lqi_entity._attr_state_class, str)
+    assert lqi_entity._attr_device_class == ZhaSensorDeviceClass.POWER
+    assert lqi_entity._attr_state_class == ZhaSensorStateClass.MEASUREMENT
     assert lqi_entity._attr_entity_category == EntityType.CONFIG
     assert lqi_entity._attr_entity_registry_enabled_default is False
     assert lqi_entity._attr_translation_key == "custom_lqi_key"

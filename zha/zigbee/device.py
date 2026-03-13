@@ -75,9 +75,17 @@ from zha.application.helpers import convert_to_zcl_values, convert_zcl_value
 from zha.application.platforms import (
     BaseEntity,
     BaseEntityInfo,
+    EntityCategory,
     EntityStateChangedEvent,
     PlatformEntity,
 )
+from zha.application.platforms.binary_sensor.const import BinarySensorDeviceClass
+from zha.application.platforms.helpers import (
+    validate_device_class,
+    validate_state_class,
+)
+from zha.application.platforms.number.const import NumberDeviceClass
+from zha.application.platforms.sensor.const import SensorDeviceClass
 from zha.application.platforms.update import BaseFirmwareUpdateEntity
 from zha.const import STATE_CHANGED
 from zha.event import EventBase
@@ -933,18 +941,51 @@ class Device(LogMixin, EventBase):
                 entity._attr_translation_key = meta.new_translation_key
 
             if meta.new_translation_placeholders is not None:
-                entity._attr_translation_placeholders = (
+                entity._attr_translation_placeholders = dict(
                     meta.new_translation_placeholders
                 )
 
             if meta.new_device_class is not None:
-                entity._attr_device_class = meta.new_device_class
+                if entity.PLATFORM is Platform.BINARY_SENSOR:
+                    entity._attr_device_class = validate_device_class(
+                        BinarySensorDeviceClass,
+                        meta.new_device_class,
+                        entity.PLATFORM,
+                        _LOGGER,
+                    )
+                elif entity.PLATFORM is Platform.NUMBER:
+                    entity._attr_device_class = validate_device_class(
+                        NumberDeviceClass,
+                        meta.new_device_class,
+                        entity.PLATFORM,
+                        _LOGGER,
+                    )
+                elif entity.PLATFORM is Platform.SENSOR:
+                    entity._attr_device_class = validate_device_class(
+                        SensorDeviceClass,
+                        meta.new_device_class,
+                        entity.PLATFORM,
+                        _LOGGER,
+                    )
+                else:
+                    entity._attr_device_class = str(meta.new_device_class.value)
 
             if meta.new_state_class is not None:
-                entity._attr_state_class = meta.new_state_class
+                if entity.PLATFORM is Platform.SENSOR:
+                    entity._attr_state_class = validate_state_class(
+                        meta.new_state_class,
+                        _LOGGER,
+                    )
+                else:
+                    entity._attr_state_class = str(meta.new_state_class.value)
 
             if meta.new_entity_category is not None:
-                entity._attr_entity_category = meta.new_entity_category
+                if meta.new_entity_category.value == EntityCategory.CONFIG:
+                    entity._attr_entity_category = EntityCategory.CONFIG
+                elif meta.new_entity_category.value == EntityCategory.DIAGNOSTIC:
+                    entity._attr_entity_category = EntityCategory.DIAGNOSTIC
+                else:
+                    entity._attr_entity_category = None
 
             if meta.new_entity_registry_enabled_default is not None:
                 entity._attr_entity_registry_enabled_default = (

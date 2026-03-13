@@ -10,7 +10,10 @@ from typing import TYPE_CHECKING, Any, overload
 if TYPE_CHECKING:
     from zha.application.platforms.binary_sensor.const import BinarySensorDeviceClass
     from zha.application.platforms.number.const import NumberDeviceClass
-    from zha.application.platforms.sensor.const import SensorDeviceClass
+    from zha.application.platforms.sensor.const import (
+        SensorDeviceClass,
+        SensorStateClass,
+    )
 
 
 def find_state_attributes(states: list[dict], key: str) -> Iterator[Any]:
@@ -96,6 +99,24 @@ def validate_device_class(
             "Quirks provided an invalid device class: %s for platform %s: %s",
             metadata_value,
             platform,
+            ex,
+        )
+        return None
+
+
+def validate_state_class(
+    metadata_value: enum.Enum,
+    logger: logging.Logger,
+) -> SensorStateClass | None:
+    """Validate and return a sensor state class."""
+    from zha.application.platforms.sensor.const import SensorStateClass  # noqa: PLC0415
+
+    try:
+        return SensorStateClass(metadata_value.value)
+    except ValueError as ex:
+        logger.warning(
+            "Quirks provided an invalid state class: %s: %s",
+            metadata_value,
             ex,
         )
         return None
