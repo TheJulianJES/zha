@@ -9,7 +9,7 @@ import logging
 from typing import TYPE_CHECKING, Any, cast
 
 from zhaquirks.quirk_ids import DANFOSS_ALLY_THERMOSTAT, TUYA_PLUG_ONOFF
-from zigpy.profiles import zha, zll
+from zigpy.profiles import zha
 from zigpy.quirks.v2 import SwitchMetadata
 from zigpy.zcl.clusters.closures import ConfigStatus, WindowCovering, WindowCoveringMode
 from zigpy.zcl.clusters.general import Basic, BinaryOutput, OnOff
@@ -28,7 +28,12 @@ from zha.application.platforms import (
     register_entity,
     register_group_entity,
 )
+from zha.application.platforms.helpers import validate_device_class
 from zha.application.platforms.light.const import LIGHT_PROFILE_DEVICE_TYPES
+from zha.application.platforms.switch.const import (
+    OUTLET_PROFILE_DEVICE_TYPES,
+    SwitchDeviceClass,
+)
 from zha.zigbee.cluster_handlers import ClusterAttributeUpdatedEvent
 from zha.zigbee.cluster_handlers.const import (
     AQARA_OPPLE_CLUSTER,
@@ -73,6 +78,7 @@ class BaseSwitch(BaseEntity, ABC):
     """Common base class for zhawss switches."""
 
     PLATFORM = Platform.SWITCH
+    _attr_device_class: SwitchDeviceClass | None = SwitchDeviceClass.SWITCH
 
     @property
     def state(self) -> dict[str, Any]:
@@ -123,12 +129,8 @@ class Switch(PlatformEntity, BaseSwitch):
                 endpoint.zigpy_endpoint.profile_id,
                 endpoint.zigpy_endpoint.device_type,
             )
-            in {
-                (zha.PROFILE_ID, zha.DeviceType.ON_OFF_BALLAST),
-                (zha.PROFILE_ID, zha.DeviceType.ON_OFF_PLUG_IN_UNIT),
-                (zha.PROFILE_ID, zha.DeviceType.SMART_PLUG),
-                (zll.PROFILE_ID, zll.DeviceType.ON_OFF_PLUGIN_UNIT),
-            }
+            in {(zha.PROFILE_ID, zha.DeviceType.ON_OFF_BALLAST)}
+            | OUTLET_PROFILE_DEVICE_TYPES
             | (
                 # For platform overrides, to account for the `unique_id` format from the
                 # Light platform, Switch needs to be aware of the device types that
@@ -146,6 +148,11 @@ class Switch(PlatformEntity, BaseSwitch):
             **kwargs,
             legacy_discovery_unique_id=legacy_discovery_unique_id,
         )
+        if (
+            endpoint.zigpy_endpoint.profile_id,
+            endpoint.zigpy_endpoint.device_type,
+        ) in OUTLET_PROFILE_DEVICE_TYPES:
+            self._attr_device_class = SwitchDeviceClass.OUTLET
         self._on_off_cluster_handler: OnOffClusterHandler = cast(
             OnOffClusterHandler, self.cluster_handlers[CLUSTER_HANDLER_ON_OFF]
         )
@@ -325,6 +332,7 @@ class ConfigurableAttributeSwitch(PlatformEntity):
 
     PLATFORM = Platform.SWITCH
 
+    _attr_device_class: SwitchDeviceClass | None = SwitchDeviceClass.SWITCH
     _attr_entity_category = EntityCategory.CONFIG
     _attribute_name: str
     _inverter_attribute_name: str | None = None
@@ -351,12 +359,8 @@ class ConfigurableAttributeSwitch(PlatformEntity):
                     endpoint.zigpy_endpoint.profile_id,
                     endpoint.zigpy_endpoint.device_type,
                 )
-                in {
-                    (zha.PROFILE_ID, zha.DeviceType.ON_OFF_BALLAST),
-                    (zha.PROFILE_ID, zha.DeviceType.ON_OFF_PLUG_IN_UNIT),
-                    (zha.PROFILE_ID, zha.DeviceType.SMART_PLUG),
-                    (zll.PROFILE_ID, zll.DeviceType.ON_OFF_PLUGIN_UNIT),
-                }
+                in {(zha.PROFILE_ID, zha.DeviceType.ON_OFF_BALLAST)}
+                | OUTLET_PROFILE_DEVICE_TYPES
                 else f"{endpoint.device.ieee}-{endpoint.id}-{int(cluster_handlers[0].cluster.cluster_id)}"
             )
 
@@ -382,6 +386,13 @@ class ConfigurableAttributeSwitch(PlatformEntity):
             self._force_inverted = entity_metadata.force_inverted
         self._off_value = entity_metadata.off_value
         self._on_value = entity_metadata.on_value
+        if (device_class := getattr(entity_metadata, "device_class", None)) is not None:
+            self._attr_device_class = validate_device_class(
+                SwitchDeviceClass,
+                device_class,
+                Platform.SWITCH.value,
+                _LOGGER,
+            )
 
     def _is_supported(self) -> bool:
         if (

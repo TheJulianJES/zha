@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from zha.application.platforms.binary_sensor.const import BinarySensorDeviceClass
     from zha.application.platforms.number.const import NumberDeviceClass
     from zha.application.platforms.sensor.const import SensorDeviceClass
+    from zha.application.platforms.switch.const import SwitchDeviceClass
 
 
 def find_state_attributes(states: list[dict], key: str) -> Iterator[Any]:
@@ -78,16 +79,32 @@ def validate_device_class(
 ) -> NumberDeviceClass | None: ...
 
 
+@overload
+def validate_device_class(
+    device_class_enum: type[SwitchDeviceClass],
+    metadata_value: enum.Enum,
+    platform: str,
+    logger: logging.Logger,
+) -> SwitchDeviceClass | None: ...
+
+
 def validate_device_class(
     device_class_enum: (
         type[BinarySensorDeviceClass]
         | type[SensorDeviceClass]
         | type[NumberDeviceClass]
+        | type[SwitchDeviceClass]
     ),
     metadata_value: enum.Enum,
     platform: str,
     logger: logging.Logger,
-) -> BinarySensorDeviceClass | SensorDeviceClass | NumberDeviceClass | None:
+) -> (
+    BinarySensorDeviceClass
+    | SensorDeviceClass
+    | NumberDeviceClass
+    | SwitchDeviceClass
+    | None
+):
     """Validate and return a device class."""
     try:
         return device_class_enum(metadata_value.value)

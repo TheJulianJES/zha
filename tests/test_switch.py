@@ -40,6 +40,7 @@ from tests.common import (
 from zha.application import Platform
 from zha.application.gateway import Gateway
 from zha.application.platforms import GroupEntity, PlatformEntity
+from zha.application.platforms.switch.const import SwitchDeviceClass
 from zha.exceptions import ZHAException
 from zha.zigbee.device import Device
 from zha.zigbee.group import Group, GroupMemberReference
@@ -217,6 +218,54 @@ async def test_switch(zha_gateway: Gateway) -> None:
         ["on_off"], allow_cache=False, only_cache=False, manufacturer=UNDEFINED
     )
     assert bool(entity.state["state"]) is True
+    assert entity.info_object.device_class == SwitchDeviceClass.SWITCH
+
+
+async def test_switch_device_class_outlet(zha_gateway: Gateway) -> None:
+    """Test smart plugs use the outlet device class."""
+    zigpy_device = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [general.OnOff.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zha.DeviceType.SMART_PLUG,
+                SIG_EP_PROFILE: zha.PROFILE_ID,
+            }
+        },
+    )
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+    entity: PlatformEntity = get_entity(zha_device, Platform.SWITCH)
+
+    assert entity.info_object.device_class == SwitchDeviceClass.OUTLET
+
+
+async def test_switch_device_class_quirks_override(zha_gateway: Gateway) -> None:
+    """Test quirks v2 can override switch device class metadata."""
+    zigpy_device = create_mock_zigpy_device(
+        zha_gateway,
+        ZIGPY_DEVICE,
+        manufacturer="Fake_Manufacturer_switch",
+        model="Fake_Model_switch",
+    )
+
+    (
+        QuirkBuilder(zigpy_device.manufacturer, zigpy_device.model)
+        .change_entity_metadata(
+            endpoint_id=1,
+            cluster_id=general.OnOff.cluster_id,
+            new_device_class=SwitchDeviceClass.OUTLET,
+        )
+        .add_to_registry()
+    )
+
+    zha_device = await join_zigpy_device(
+        zha_gateway, DEVICE_REGISTRY.get_device(zigpy_device)
+    )
+    entity: PlatformEntity = get_entity(zha_device, Platform.SWITCH)
+
+    assert entity.info_object.device_class == SwitchDeviceClass.OUTLET
 
 
 async def test_zha_group_switch_entity(zha_gateway: Gateway) -> None:
