@@ -434,6 +434,7 @@ class ClusterHandler(LogMixin, EventBase):
         event_data: dict[str, dict[str, Any]],
     ) -> None:
         """Parse configure reporting result."""
+        attr_by_id = {attr_def.id: attr_def for attr_def in attrs}
         attr_names = {attr_def.name for attr_def in attrs}
         if not res:
             self.debug(
@@ -463,11 +464,9 @@ class ClusterHandler(LogMixin, EventBase):
             return
 
         for record in res:
-            event_data[self.cluster.find_attribute(record.attrid).name]["status"] = (
-                record.status.name
-            )
+            event_data[attr_by_id[record.attrid].name]["status"] = record.status.name
         failed = [
-            self.cluster.find_attribute(record.attrid).name
+            attr_by_id[record.attrid].name
             for record in res
             if record.status != Status.SUCCESS
         ]
