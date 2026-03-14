@@ -938,13 +938,13 @@ async def test_configure_reporting(zha_gateway: Gateway) -> None:
         spec_set=cluster.bind,
         return_value=[zdo_t.Status.SUCCESS],  # ZDOCmd.Bind_rsp
     )
+
+    def mock_configure_reporting_multiple(config):
+        return dict.fromkeys(config, foundation.Status.SUCCESS)
+
     cluster.configure_reporting_multiple = AsyncMock(
         spec_set=cluster.configure_reporting_multiple,
-        return_value=[
-            foundation.ConfigureReportingResponseRecord(
-                status=foundation.Status.SUCCESS
-            )
-        ],
+        side_effect=mock_configure_reporting_multiple,
     )
 
     cluster_handler = TestZigbeeClusterHandler(cluster, endpoint)
@@ -971,38 +971,31 @@ async def test_configure_reporting(zha_gateway: Gateway) -> None:
 @pytest.mark.parametrize(
     ("response", "expected_statuses"),
     [
-        # Single SUCCESS in a list: all attributes marked as SUCCESS (ZCL 2.5.8.1.3)
+        # All attributes succeeded
         (
-            [
-                foundation.ConfigureReportingResponseRecord(
-                    status=foundation.Status.SUCCESS
-                )
-            ],
+            {
+                Color.AttributeDefs.current_x: foundation.Status.SUCCESS,
+                Color.AttributeDefs.current_y: foundation.Status.SUCCESS,
+            },
             {"current_x": "SUCCESS", "current_y": "SUCCESS"},
         ),
-        # Empty list: unexpected response, all attributes marked as FAILURE
+        # Empty dict: unexpected response, all attributes marked as FAILURE
         (
-            [],
+            {},
             {"current_x": "FAILURE", "current_y": "FAILURE"},
         ),
         # Per-attribute results: mixed success/failure
         (
-            [
-                foundation.ConfigureReportingResponseRecord(
-                    status=foundation.Status.SUCCESS,
-                    attrid=Color.AttributeDefs.current_x.id,
-                ),
-                foundation.ConfigureReportingResponseRecord(
-                    status=foundation.Status.UNSUPPORTED_ATTRIBUTE,
-                    attrid=Color.AttributeDefs.current_y.id,
-                ),
-            ],
+            {
+                Color.AttributeDefs.current_x: foundation.Status.SUCCESS,
+                Color.AttributeDefs.current_y: foundation.Status.UNSUPPORTED_ATTRIBUTE,
+            },
             {"current_x": "SUCCESS", "current_y": "UNSUPPORTED_ATTRIBUTE"},
         ),
     ],
     ids=[
-        "single_success_list",
-        "empty_list",
+        "all_success",
+        "empty_dict",
         "mixed_per_attribute",
     ],
 )
