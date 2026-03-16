@@ -330,6 +330,14 @@ class Device(LogMixin, EventBase):
         and endpoints.  Called from ``__init__`` and after a successful
         re-interview where zigpy swaps the underlying device object.
         """
+        # Clear collections that will be rebuilt below.  During __init__ these
+        # are already empty; after a re-interview on_remove() has cleaned up
+        # the old handlers/entities but the lists themselves still hold stale
+        # references.
+        self._on_remove_callbacks.clear()
+        self._endpoints.clear()
+        self._pending_entities.clear()
+
         self._zigpy_device: ZigpyDevice = zigpy_device
         self.quirk_applied: bool = isinstance(
             self._zigpy_device, zigpy.quirks.BaseCustomDevice
