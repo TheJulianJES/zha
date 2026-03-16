@@ -1487,7 +1487,7 @@ async def test_async_configure_reinterview_success(
         zha_gateway.device_initialized(new_zigpy_dev)
 
     with patch.object(old_zigpy_dev, "reinterview", side_effect=fake_reinterview):
-        await zha_device.async_configure()
+        await zha_device.async_configure(reinterview=True)
 
     await zha_gateway.async_block_till_done()
 
@@ -1520,7 +1520,7 @@ async def test_async_configure_reinterview_no_change(
 
     # reinterview succeeds but doesn't swap the device (no-op)
     with patch.object(old_zigpy_dev, "reinterview", new_callable=AsyncMock):
-        await zha_device.async_configure()
+        await zha_device.async_configure(reinterview=True)
 
     # Device reference should be unchanged
     assert zha_device.device is old_zigpy_dev
@@ -1541,7 +1541,24 @@ async def test_async_configure_reinterview_failure(
     # reinterview raises (device didn't respond) - zigpy handles this internally
     # and doesn't propagate, but let's verify our code handles it gracefully
     with patch.object(old_zigpy_dev, "reinterview", new_callable=AsyncMock):
-        await zha_device.async_configure()
+        await zha_device.async_configure(reinterview=True)
 
     # Device should still be configured
+    assert zha_device.device is old_zigpy_dev
+
+
+async def test_async_configure_without_reinterview(
+    zha_gateway: Gateway,
+) -> None:
+    """Test that async_configure without reinterview=True skips reinterview."""
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    old_zigpy_dev = zha_device.device
+
+    # Default: reinterview should not be called
+    with patch.object(old_zigpy_dev, "reinterview", new_callable=AsyncMock) as mock_ri:
+        await zha_device.async_configure()
+
+    mock_ri.assert_not_called()
     assert zha_device.device is old_zigpy_dev

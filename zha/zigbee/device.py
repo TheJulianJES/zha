@@ -898,6 +898,10 @@ class Device(LogMixin, EventBase):
 
         Returns True if the device was successfully re-interviewed and swapped.
         """
+        if self.is_active_coordinator:
+            self.debug("skipping re-interview for active coordinator")
+            return False
+
         self.debug("starting re-interview")
         await self._zigpy_device.reinterview()
 
@@ -924,11 +928,11 @@ class Device(LogMixin, EventBase):
         self.debug("re-interview rebuild complete")
         return True
 
-    async def async_configure(self) -> None:
+    async def async_configure(self, *, reinterview: bool = False) -> None:
         """Configure the device."""
         self.debug("started configuration")
 
-        reinterviewed = await self._async_reinterview()
+        reinterviewed = await self._async_reinterview() if reinterview else False
 
         await self._zdo_handler.async_configure()
         self._zdo_handler.debug("'async_configure' stage succeeded")
