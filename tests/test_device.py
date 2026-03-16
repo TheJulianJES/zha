@@ -1392,7 +1392,8 @@ async def test_entity_recomputation(zha_gateway: Gateway) -> None:
     assert event_listener.mock_calls == [
         call(
             DeviceEntityRemovedEvent(
-                unique_id="68:0a:e2:ff:fe:8f:fa:33-1-768-start_up_color_temperature"
+                platform=Platform.NUMBER,
+                unique_id="68:0a:e2:ff:fe:8f:fa:33-1-768-start_up_color_temperature",
             )
         )
     ]
@@ -1415,7 +1416,8 @@ async def test_entity_recomputation(zha_gateway: Gateway) -> None:
     assert event_listener.mock_calls == [
         call(
             DeviceEntityAddedEvent(
-                unique_id="68:0a:e2:ff:fe:8f:fa:33-1-768-start_up_color_temperature"
+                platform=Platform.NUMBER,
+                unique_id="68:0a:e2:ff:fe:8f:fa:33-1-768-start_up_color_temperature",
             )
         )
     ]
