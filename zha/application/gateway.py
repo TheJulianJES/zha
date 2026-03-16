@@ -525,12 +525,9 @@ class Gateway(AsyncUtilMixin, EventBase):
             return
 
         await zigpy_device.reinterview()
-
-        # If the device was NOT swapped (reinterview found no changes),
-        # fall back to a normal configure.  If it WAS swapped, the
-        # device_reinterviewed listener already handles the rebuild.
-        if self.application_controller.devices.get(ieee) is zigpy_device:
-            await zha_device.async_configure()
+        # If discovery succeeded, zigpy swaps the device and fires device_reinterviewed.
+        # Our listener handles the full rebuild.
+        # If discovery failed, zigpy restores the old device and logs the error.
 
     def device_left(self, device: zigpy.device.Device) -> None:
         """Handle device leaving the network."""
