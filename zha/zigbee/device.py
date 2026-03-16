@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 from collections import defaultdict
 from collections.abc import Callable, Iterable
+import contextlib
 import copy
 import dataclasses
 from dataclasses import dataclass
@@ -825,9 +826,111 @@ class Device(LogMixin, EventBase):
             endpoint_names=names,
         )
 
+    async def _async_reinterview(self) -> bool:
+        """Re-interview the zigpy device, rebuilding internals if it changed.
+
+        Returns True if the device was successfully re-interviewed and swapped.
+        """
+        self.debug("starting re-interview")
+        await self._zigpy_device.reinterview()
+
+        # Check if zigpy swapped the device for a new one
+        new_zigpy_dev = self._gateway.application_controller.devices.get(self.ieee)
+        if new_zigpy_dev is None or new_zigpy_dev is self._zigpy_device:
+            self.debug("re-interview did not change the device")
+            return False
+
+        self.debug("re-interview succeeded, rebuilding device internals")
+
+        # Cancel the gateway init task that the reinterview callback created,
+        # since we handle the rebuild ourselves here.
+        init_task = self._gateway._device_init_tasks.get(self.ieee)
+        if init_task is not None:
+            init_task.cancel()
+
+        # Tear down old state: run remove callbacks (cleans up ZDO + endpoint handlers)
+        for callback in self._on_remove_callbacks:
+            try:
+                callback()
+            except Exception:  # noqa: BLE001
+                self.debug(
+                    "Failed to execute on_remove callback %s during reinterview",
+                    callback,
+                    exc_info=True,
+                )
+        self._on_remove_callbacks.clear()
+
+        # Remove old platform entities
+        for entity in self._platform_entities.values():
+            await entity.on_remove()
+        self._platform_entities.clear()
+
+        for entity in self._pending_entities:
+            await entity.on_remove()
+        self._pending_entities.clear()
+
+        # Update zigpy device reference and quirk info
+        self._zigpy_device = new_zigpy_dev
+        self.quirk_applied = isinstance(
+            self._zigpy_device, zigpy.quirks.BaseCustomDevice
+        )
+        self.quirk_class = (
+            f"{self._zigpy_device.__class__.__module__}."
+            f"{self._zigpy_device.__class__.__name__}"
+        )
+
+        qid: set[str] | str = getattr(self._zigpy_device, ATTR_QUIRK_ID, set())
+        self.exposes_features = {qid} if isinstance(qid, str) else set(qid)
+        if self.quirk_metadata is not None:
+            self.exposes_features.update(
+                f.feature for f in self.quirk_metadata.exposes_features
+            )
+
+        # Clear cached properties that depend on the zigpy device
+        for attr in (
+            "name",
+            "manufacturer",
+            "model",
+            "device_alerts",
+            "manufacturer_code",
+            "is_mains_powered",
+            "device_type",
+            "is_router",
+            "is_coordinator",
+            "is_end_device",
+            "skip_configuration",
+            "device_automation_commands",
+            "device_automation_triggers",
+            "zigbee_signature",
+        ):
+            with contextlib.suppress(AttributeError):
+                delattr(self, attr)
+
+        # Rebuild ZDO handler
+        self._zdo_handler = ZDOClusterHandler(self)
+        self._zdo_handler.on_add()
+        self._on_remove_callbacks.append(self._zdo_handler.on_remove)
+
+        # Rebuild endpoints from the new zigpy device
+        self._endpoints.clear()
+        for ep_id, endpoint in self._zigpy_device.endpoints.items():
+            if ep_id != 0:
+                ep = Endpoint.new(endpoint, self)
+                self._endpoints[ep_id] = ep
+                self._on_remove_callbacks.append(ep.on_remove)
+
+        # Reset device status so async_initialize runs entity discovery
+        self.status = DeviceStatus.CREATED
+
+        self.debug("re-interview rebuild complete")
+        return True
+
     async def async_configure(self) -> None:
         """Configure the device."""
         self.debug("started configuration")
+
+        reinterviewed = await self._async_reinterview()
+
         await self._zdo_handler.async_configure()
         self._zdo_handler.debug("'async_configure' stage succeeded")
 
@@ -851,6 +954,9 @@ class Device(LogMixin, EventBase):
         )
 
         self.debug("completed configuration")
+
+        if reinterviewed:
+            await self.async_initialize()
 
         if (
             self.gateway.config.config.device_options.enable_identify_on_join
