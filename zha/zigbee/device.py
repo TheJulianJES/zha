@@ -913,12 +913,6 @@ class Device(LogMixin, EventBase):
 
         self.debug("re-interview succeeded, rebuilding device internals")
 
-        # Cancel the gateway init task that the reinterview callback created,
-        # since we handle the rebuild ourselves here.
-        init_task = self._gateway._device_init_tasks.get(self.ieee)
-        if init_task is not None:
-            init_task.cancel()
-
         # Tear down old state with entity events enabled so HA removes
         # stale entities.  (on_remove() suppresses events for shutdown.)
         await self._async_teardown(emit_entity_events=True)
