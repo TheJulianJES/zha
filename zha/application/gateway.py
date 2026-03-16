@@ -500,6 +500,36 @@ class Gateway(AsyncUtilMixin, EventBase):
             ),
         )
 
+    async def async_reconfigure_device(self, ieee: EUI64) -> None:
+        """Reconfigure a device, re-interviewing it first.
+
+        Called by HA when the user triggers a device reconfigure.  If the
+        re-interview discovers changes, the ``device_reinterviewed`` listener
+        handles the full rebuild.  Otherwise a normal configure is performed.
+        """
+        zha_device = self._devices.get(ieee)
+        if zha_device is None:
+            _LOGGER.warning("Device %s not found for reconfigure", ieee)
+            return
+
+        if zha_device.is_active_coordinator:
+            _LOGGER.debug("Skipping reconfigure for active coordinator %s", ieee)
+            await zha_device.async_configure()
+            return
+
+        zigpy_device = self.application_controller.devices.get(ieee)
+        if zigpy_device is None:
+            _LOGGER.warning("Zigpy device %s not found for reconfigure", ieee)
+            return
+
+        await zigpy_device.reinterview()
+
+        # If the device was NOT swapped (reinterview found no changes),
+        # fall back to a normal configure.  If it WAS swapped, the
+        # device_reinterviewed listener already handles the rebuild.
+        if self.application_controller.devices.get(ieee) is zigpy_device:
+            await zha_device.async_configure()
+
     def device_left(self, device: zigpy.device.Device) -> None:
         """Handle device leaving the network."""
         zha_device = self._devices.get(device.ieee)

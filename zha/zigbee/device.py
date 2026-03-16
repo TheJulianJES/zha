@@ -893,24 +893,9 @@ class Device(LogMixin, EventBase):
             endpoint_names=names,
         )
 
-    async def async_configure(self, *, reinterview: bool = False) -> None:
+    async def async_configure(self) -> None:
         """Configure the device."""
         self.debug("started configuration")
-
-        if reinterview and not self.is_active_coordinator:
-            self.debug("starting re-interview")
-            await self._zigpy_device.reinterview()
-
-            # If zigpy swapped the device, the gateway's device_reinterviewed
-            # listener has been called and will handle teardown, rebuild,
-            # configure, and initialize.  Nothing left to do here.
-            new_zigpy_dev = self._gateway.application_controller.devices.get(self.ieee)
-            if new_zigpy_dev is not None and new_zigpy_dev is not self._zigpy_device:
-                self.debug("re-interview succeeded, gateway is rebuilding")
-                return
-
-            self.debug("re-interview did not change the device")
-
         await self._zdo_handler.async_configure()
         self._zdo_handler.debug("'async_configure' stage succeeded")
 
