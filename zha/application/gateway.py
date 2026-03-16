@@ -443,7 +443,9 @@ class Gateway(AsyncUtilMixin, EventBase):
             name=f"device_initialized_task_{str(device.ieee)}:0x{device.nwk:04x}",
             eager_start=True,
         )
-        init_task.add_done_callback(lambda _: self._device_init_tasks.pop(device.ieee))
+        init_task.add_done_callback(
+            lambda _: self._device_init_tasks.pop(device.ieee, None)
+        )
 
     def device_reinterviewed(self, device: zigpy.device.Device) -> None:
         """Handle zigpy device_reinterviewed event (e.g. after OTA or reconfigure)."""
