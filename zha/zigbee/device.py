@@ -919,8 +919,9 @@ class Device(LogMixin, EventBase):
         if init_task is not None:
             init_task.cancel()
 
-        # Tear down old state (handlers, entities, endpoints)
-        await self.on_remove()
+        # Tear down old state with entity events enabled so HA removes
+        # stale entities.  (on_remove() suppresses events for shutdown.)
+        await self._async_teardown(emit_entity_events=True)
 
         # Rebuild everything from the new zigpy device
         self._init_from_zigpy_device(new_zigpy_dev)
@@ -1227,8 +1228,15 @@ class Device(LogMixin, EventBase):
         self.status = DeviceStatus.INITIALIZED
         self.debug("completed initialization")
 
-    async def on_remove(self) -> None:
-        """Cancel tasks this device owns."""
+    async def _async_teardown(self, *, emit_entity_events: bool) -> None:
+        """Tear down handlers, entities, and endpoints.
+
+        Args:
+            emit_entity_events: When True, emit ``DeviceEntityRemovedEvent``
+                for each removed entity so that listeners (e.g. HA) can clean
+                up.  Shutdown paths pass False to avoid unnecessary traffic.
+
+        """
         for callback in self._on_remove_callbacks:
             try:
                 callback()
@@ -1242,9 +1250,9 @@ class Device(LogMixin, EventBase):
 
         for platform_entity in list(self._platform_entities.values()):
             try:
-                # TODO: To avoid unnecessary traffic during shutdown, we don't
-                # need to emit an event for every entity, just the device
-                await self._remove_entity(platform_entity, emit_event=False)
+                await self._remove_entity(
+                    platform_entity, emit_event=emit_entity_events
+                )
             except Exception:
                 _LOGGER.warning(
                     "Failed to remove platform entity %s for device %s",
@@ -1263,6 +1271,10 @@ class Device(LogMixin, EventBase):
                     self,
                     exc_info=True,
                 )
+
+    async def on_remove(self) -> None:
+        """Cancel tasks this device owns (shutdown path)."""
+        await self._async_teardown(emit_entity_events=False)
 
     def async_get_clusters(self) -> dict[int, dict[str, dict[int, Cluster]]]:
         """Get all clusters for this device."""
