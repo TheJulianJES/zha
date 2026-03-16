@@ -910,13 +910,7 @@ class Device(LogMixin, EventBase):
             *(endpoint.async_configure() for endpoint in self._endpoints.values())
         )
 
-        self.emit(
-            ZHA_CLUSTER_HANDLER_CFG_DONE,
-            ClusterHandlerConfigurationComplete(
-                device_ieee=self.ieee,
-                unique_id=self.ieee,
-            ),
-        )
+        self.emit_reconfigure_done()
 
         self.debug("completed configuration")
 
@@ -933,6 +927,21 @@ class Device(LogMixin, EventBase):
                 name=f"({self.nwk},{self.model}) trigger_effect identify",
                 eager_start=True,
             )
+
+    def emit_reconfigure_done(self) -> None:
+        """Emit configuration-complete event.
+
+        Called by the gateway after a reconfigure (successful or not) so that
+        frontends listening for cluster handler messages know the operation
+        has finished.
+        """
+        self.emit(
+            ZHA_CLUSTER_HANDLER_CFG_DONE,
+            ClusterHandlerConfigurationComplete(
+                device_ieee=self.ieee,
+                unique_id=self.ieee,
+            ),
+        )
 
     def _is_entity_removed_by_quirk(self, entity: PlatformEntity) -> bool:
         if self.quirk_metadata is None:

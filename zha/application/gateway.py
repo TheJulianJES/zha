@@ -525,9 +525,12 @@ class Gateway(AsyncUtilMixin, EventBase):
             return
 
         await zigpy_device.reinterview()
-        # If discovery succeeded, zigpy swaps the device and fires device_reinterviewed.
-        # Our listener handles the full rebuild.
-        # If discovery failed, zigpy restores the old device and logs the error.
+
+        # If discovery succeeded, zigpy swaps the device and fires
+        # device_reinterviewed — our listener handles the full rebuild.
+        # If discovery failed, zigpy restores the old device.  Signal
+        # completion so the HA frontend stops showing "reconfiguring".
+        zha_device.emit_reconfigure_done()
 
     def device_left(self, device: zigpy.device.Device) -> None:
         """Handle device leaving the network."""
