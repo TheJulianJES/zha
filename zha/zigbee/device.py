@@ -256,6 +256,25 @@ class Device(LogMixin, EventBase):
 
     unique_id: str
 
+    # Cached properties that depend on the zigpy device and must be invalidated
+    # when the underlying device is swapped (e.g. after a re-interview).
+    _ZIGPY_CACHED_PROPERTIES: Final = (
+        "name",
+        "manufacturer",
+        "model",
+        "device_alerts",
+        "manufacturer_code",
+        "is_mains_powered",
+        "device_type",
+        "is_router",
+        "is_coordinator",
+        "is_end_device",
+        "skip_configuration",
+        "device_automation_commands",
+        "device_automation_triggers",
+        "zigbee_signature",
+    )
+
     def __init__(
         self,
         zigpy_device: zigpy.device.Device,
@@ -265,8 +284,27 @@ class Device(LogMixin, EventBase):
         super().__init__()
 
         self.unique_id = str(zigpy_device.ieee)
-
         self._gateway: Gateway = _gateway
+
+        self._platform_entities: dict[tuple[Platform, str], PlatformEntity] = {}
+        self._pending_entities: list[PlatformEntity] = []
+        self.semaphore: asyncio.Semaphore = asyncio.Semaphore(3)
+        self._on_remove_callbacks: list[Callable[[], None]] = []
+        self._endpoints: dict[int, Endpoint] = {}
+
+        self._available: bool = False
+        self._checkins_missed_count: int = 0
+        self._on_network: bool = True
+
+        self._init_from_zigpy_device(zigpy_device)
+
+    def _init_from_zigpy_device(self, zigpy_device: zigpy.device.Device) -> None:
+        """(Re-)initialize device state from a zigpy device.
+
+        Sets up the zigpy device reference, quirk metadata, cluster handlers,
+        and endpoints.  Called from ``__init__`` and after a successful
+        re-interview where zigpy swaps the underlying device object.
+        """
         self._zigpy_device: ZigpyDevice = zigpy_device
         self.quirk_applied: bool = isinstance(
             self._zigpy_device, zigpy.quirks.BaseCustomDevice
@@ -291,33 +329,29 @@ class Device(LogMixin, EventBase):
         self._basic_ch: ClusterHandler | None = None
         self._firmware_version: str | None = None
 
-        device_options = _gateway.config.config.device_options
+        device_options = self._gateway.config.config.device_options
         if self.is_mains_powered:
             self.consider_unavailable_time: int = (
                 device_options.consider_unavailable_mains
             )
         else:
             self.consider_unavailable_time = device_options.consider_unavailable_battery
-        self._available: bool = self.is_active_coordinator or (
+        self._available = self.is_active_coordinator or (
             self.last_seen is not None
             and time.time() - self.last_seen < self.consider_unavailable_time
         )
-        self._checkins_missed_count: int = 0
-        self._on_network: bool = True
 
-        self._platform_entities: dict[tuple[Platform, str], PlatformEntity] = {}
-        self._pending_entities: list[PlatformEntity] = []
-        self.semaphore: asyncio.Semaphore = asyncio.Semaphore(3)
+        self.status: DeviceStatus = DeviceStatus.CREATED
 
-        self._on_remove_callbacks: list[Callable[[], None]] = []
+        # Clear cached properties that depend on the zigpy device
+        for attr in self._ZIGPY_CACHED_PROPERTIES:
+            with contextlib.suppress(AttributeError):
+                delattr(self, attr)
 
         self._zdo_handler: ZDOClusterHandler = ZDOClusterHandler(self)
         self._zdo_handler.on_add()
         self._on_remove_callbacks.append(self._zdo_handler.on_remove)
 
-        self.status: DeviceStatus = DeviceStatus.CREATED
-
-        self._endpoints: dict[int, Endpoint] = {}
         for ep_id, endpoint in zigpy_device.endpoints.items():
             if ep_id != 0:
                 ep = Endpoint.new(endpoint, self)
@@ -848,79 +882,11 @@ class Device(LogMixin, EventBase):
         if init_task is not None:
             init_task.cancel()
 
-        # Tear down old state: run remove callbacks (cleans up ZDO + endpoint handlers)
-        for callback in self._on_remove_callbacks:
-            try:
-                callback()
-            except Exception:  # noqa: BLE001
-                self.debug(
-                    "Failed to execute on_remove callback %s during reinterview",
-                    callback,
-                    exc_info=True,
-                )
-        self._on_remove_callbacks.clear()
+        # Tear down old state (handlers, entities, endpoints)
+        await self.on_remove()
 
-        # Remove old platform entities
-        for entity in self._platform_entities.values():
-            await entity.on_remove()
-        self._platform_entities.clear()
-
-        for entity in self._pending_entities:
-            await entity.on_remove()
-        self._pending_entities.clear()
-
-        # Update zigpy device reference and quirk info
-        self._zigpy_device = new_zigpy_dev
-        self.quirk_applied = isinstance(
-            self._zigpy_device, zigpy.quirks.BaseCustomDevice
-        )
-        self.quirk_class = (
-            f"{self._zigpy_device.__class__.__module__}."
-            f"{self._zigpy_device.__class__.__name__}"
-        )
-
-        qid: set[str] | str = getattr(self._zigpy_device, ATTR_QUIRK_ID, set())
-        self.exposes_features = {qid} if isinstance(qid, str) else set(qid)
-        if self.quirk_metadata is not None:
-            self.exposes_features.update(
-                f.feature for f in self.quirk_metadata.exposes_features
-            )
-
-        # Clear cached properties that depend on the zigpy device
-        for attr in (
-            "name",
-            "manufacturer",
-            "model",
-            "device_alerts",
-            "manufacturer_code",
-            "is_mains_powered",
-            "device_type",
-            "is_router",
-            "is_coordinator",
-            "is_end_device",
-            "skip_configuration",
-            "device_automation_commands",
-            "device_automation_triggers",
-            "zigbee_signature",
-        ):
-            with contextlib.suppress(AttributeError):
-                delattr(self, attr)
-
-        # Rebuild ZDO handler
-        self._zdo_handler = ZDOClusterHandler(self)
-        self._zdo_handler.on_add()
-        self._on_remove_callbacks.append(self._zdo_handler.on_remove)
-
-        # Rebuild endpoints from the new zigpy device
-        self._endpoints.clear()
-        for ep_id, endpoint in self._zigpy_device.endpoints.items():
-            if ep_id != 0:
-                ep = Endpoint.new(endpoint, self)
-                self._endpoints[ep_id] = ep
-                self._on_remove_callbacks.append(ep.on_remove)
-
-        # Reset device status so async_initialize runs entity discovery
-        self.status = DeviceStatus.CREATED
+        # Rebuild everything from the new zigpy device
+        self._init_from_zigpy_device(new_zigpy_dev)
 
         self.debug("re-interview rebuild complete")
         return True
