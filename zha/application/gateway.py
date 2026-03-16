@@ -445,6 +445,61 @@ class Gateway(AsyncUtilMixin, EventBase):
         )
         init_task.add_done_callback(lambda _: self._device_init_tasks.pop(device.ieee))
 
+    def device_reinterviewed(self, device: zigpy.device.Device) -> None:
+        """Handle zigpy device_reinterviewed event (e.g. after OTA or reconfigure)."""
+        if device.ieee in self._device_init_tasks:
+            _LOGGER.debug(
+                "Cancelling previous initialization task for reinterviewed device %s",
+                str(device.ieee),
+            )
+            self._device_init_tasks[device.ieee].cancel()
+        self._device_init_tasks[device.ieee] = init_task = self.async_create_task(
+            self._async_device_reinterviewed(device),
+            name=f"device_reinterviewed_task_{str(device.ieee)}:0x{device.nwk:04x}",
+            eager_start=True,
+        )
+        init_task.add_done_callback(
+            lambda _: self._device_init_tasks.pop(device.ieee, None)
+        )
+
+    async def _async_device_reinterviewed(
+        self, new_zigpy_device: zigpy.device.Device
+    ) -> None:
+        """Rebuild a ZHA device after zigpy swapped the underlying device."""
+        zha_device = self._devices.get(new_zigpy_device.ieee)
+        if zha_device is None:
+            _LOGGER.warning(
+                "Reinterviewed device %s not found in ZHA",
+                new_zigpy_device.ieee,
+            )
+            return
+
+        _LOGGER.debug(
+            "Rebuilding device %s:%s after reinterview",
+            new_zigpy_device.nwk,
+            new_zigpy_device.ieee,
+        )
+
+        # Tear down old state (emits DeviceEntityRemovedEvent for each entity)
+        await zha_device._async_teardown(emit_entity_events=True)
+
+        # Rebuild from the new zigpy device
+        zha_device._init_from_zigpy_device(new_zigpy_device)
+
+        # Configure + Initialize
+        await zha_device.async_configure()
+        await zha_device.async_initialize()
+
+        self.emit(
+            ZHA_GW_MSG_DEVICE_FULL_INIT,
+            DeviceFullInitEvent(
+                device_info=ExtendedDeviceInfoWithPairingStatus(
+                    pairing_status=DevicePairingStatus.CONFIGURED,
+                    **zha_device.extended_device_info.__dict__,
+                ),
+            ),
+        )
+
     def device_left(self, device: zigpy.device.Device) -> None:
         """Handle device leaving the network."""
         zha_device = self._devices.get(device.ieee)
