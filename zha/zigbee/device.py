@@ -901,16 +901,12 @@ class Device(LogMixin, EventBase):
             self.debug("starting re-interview")
             await self._zigpy_device.reinterview()
 
-            # Check if zigpy swapped the device for a new one.  If so, the
-            # gateway's ``device_reinterviewed`` listener was already called
-            # synchronously and created a task that handles teardown, rebuild,
-            # configure, and initialize.  Await that task and return.
+            # If zigpy swapped the device, the gateway's device_reinterviewed
+            # listener has been called and will handle teardown, rebuild,
+            # configure, and initialize.  Nothing left to do here.
             new_zigpy_dev = self._gateway.application_controller.devices.get(self.ieee)
             if new_zigpy_dev is not None and new_zigpy_dev is not self._zigpy_device:
-                self.debug("re-interview succeeded, awaiting gateway rebuild")
-                init_task = self._gateway._device_init_tasks.get(self.ieee)
-                if init_task is not None:
-                    await init_task
+                self.debug("re-interview succeeded, gateway is rebuilding")
                 return
 
             self.debug("re-interview did not change the device")
