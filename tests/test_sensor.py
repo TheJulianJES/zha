@@ -2071,36 +2071,30 @@ async def test_ignore_non_value(zha_gateway: Gateway) -> None:
 async def test_ignore_nan_value(zha_gateway: Gateway) -> None:
     """Test sensor updates ignoring NaN values (e.g. from CO concentration sensors)."""
 
-    zigpy_dev = create_mock_zigpy_device(
-        zha_gateway,
-        {
-            1: {
-                SIG_EP_INPUT: [
-                    measurement.CarbonMonoxideConcentration.cluster_id,
-                ],
-                SIG_EP_OUTPUT: [],
-                SIG_EP_TYPE: zha.DeviceType.IAS_ZONE,
-                SIG_EP_PROFILE: zha.PROFILE_ID,
-            },
-        },
-        attributes={
-            1: {
-                "carbon_monoxide_concentration": {
-                    "measured_value": 0.001,
-                },
-            },
-        },
+    zigpy_dev = await zigpy_device_from_json(
+        zha_gateway.application_controller,
+        "tests/data/devices/frient-a-s-scazb-141.json",
     )
 
     zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
-    cluster = zha_device.device.endpoints[1].carbon_monoxide_concentration
+    cluster = zha_device.device.endpoints[46].carbon_monoxide_concentration
     entity = get_entity(
         zha_device,
         platform=Platform.SENSOR,
         entity_type=sensor.CarbonMonoxideConcentration,
     )
 
-    # Normal value
+    # Initial value from the diagnostics file (0.0 * 1e6 = 0.0 ppm)
+    assert entity.state["state"] == 0.0
+
+    # Normal attribute report
+    await send_attributes_report(
+        zha_gateway,
+        cluster,
+        {
+            measurement.CarbonMonoxideConcentration.AttributeDefs.measured_value.id: 0.001
+        },
+    )
     assert entity.state["state"] == 1000.0
 
     # NaN attribute value should result in None state
