@@ -162,6 +162,9 @@ async def setup_test_data(
         )
     )
 
+    # Prevent post-OTA reinterview side effects in OTA-focused tests
+    zigpy_device.reinterview = AsyncMock()
+
     zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
 
     return zha_device, ota_cluster, fw_image, installed_fw_version
