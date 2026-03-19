@@ -3,9 +3,7 @@
 from unittest.mock import ANY, AsyncMock, call, patch
 
 import pytest
-import zigpy.device as zigpy_device_mod
 from zigpy.device import Device as ZigpyDevice
-import zigpy.endpoint as zigpy_endpoint_mod
 from zigpy.exceptions import DeliveryError
 from zigpy.ota import OtaImagesResult, OtaImageWithMetadata
 import zigpy.ota.image as firmware
@@ -207,51 +205,35 @@ async def test_firmware_update_notification_from_zigpy(zha_gateway: Gateway) -> 
 
 
 @patch("zigpy.device.AFTER_OTA_ATTR_READ_DELAY", 0.01)
-async def test_firmware_update_success(monkeypatch, zha_gateway: Gateway) -> None:
+async def test_firmware_update_success(zha_gateway: Gateway) -> None:
     """Test ZHA update platform - firmware update success and post-OTA reinterview."""
     zigpy_device = zigpy_device_mock(zha_gateway)
     zha_device, ota_cluster, fw_image, installed_fw_version = await setup_test_data(
         zha_gateway, zigpy_device
     )
 
-    # Undo the reinterview mock from setup_test_data — we want the real
-    # post-OTA reinterview to run end-to-end.
-    del zigpy_device.reinterview
-
-    # Monkeypatch class-level methods so the shadow's _discover() works
-    node_desc = zigpy_device.node_desc
-
-    async def mock_get_node_descriptor(self):
-        self.node_desc = node_desc
-        return node_desc
-
-    async def mock_active_ep_req(*args, **kwargs):
-        return [0, None, [0, 1]]
-
-    async def mock_ep_initialize(self, *args, **kwargs):
-        self.status = zigpy_endpoint_mod.Status.ZDO_INIT
-        self.add_input_cluster(general.Basic.cluster_id)
-        self.add_input_cluster(general.OnOff.cluster_id)
-        self.add_output_cluster(general.Ota.cluster_id)
-
-    async def mock_ep_get_model_info(self):
-        return "FakeModel", "FakeManufacturer"
-
-    monkeypatch.setattr(
-        zigpy_device_mod.Device, "get_node_descriptor", mock_get_node_descriptor
-    )
-    monkeypatch.setattr(zigpy_endpoint_mod.Endpoint, "initialize", mock_ep_initialize)
-    monkeypatch.setattr(
-        zigpy_endpoint_mod.Endpoint, "get_model_info", mock_ep_get_model_info
+    # Replace the reinterview mock from setup_test_data with one that
+    # simulates a successful device swap via the gateway listener.
+    new_zigpy_device = create_mock_zigpy_device(
+        zha_gateway,
+        endpoints={
+            1: {
+                SIG_EP_INPUT: [general.Basic.cluster_id, general.OnOff.cluster_id],
+                SIG_EP_OUTPUT: [general.Ota.cluster_id],
+                SIG_EP_TYPE: zha.DeviceType.ON_OFF_SWITCH,
+                SIG_EP_PROFILE: zha.PROFILE_ID,
+            }
+        },
+        ieee=str(zigpy_device.ieee),
+        manufacturer="FakeManufacturer",
+        model="FakeModel",
     )
 
-    original_init = zigpy_device_mod.Device.__init__
+    async def fake_reinterview():
+        zha_gateway.application_controller.devices[zigpy_device.ieee] = new_zigpy_device
+        zha_gateway.device_reinterviewed(new_zigpy_device)
 
-    def patched_init(self, *args, **kwargs):
-        original_init(self, *args, **kwargs)
-        self.zdo.Active_EP_req = mock_active_ep_req
-
-    monkeypatch.setattr(zigpy_device_mod.Device, "__init__", patched_init)
+    zigpy_device.reinterview = fake_reinterview
 
     old_zigpy_device = zha_device.device
 
