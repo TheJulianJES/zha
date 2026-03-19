@@ -1536,7 +1536,9 @@ async def test_gateway_device_reinterviewed_ota_path(
     zha_gateway.application_controller.devices[zigpy_dev.ieee] = new_zigpy_dev
 
     # Simulate zigpy firing device_reinterviewed (e.g. after OTA)
-    zha_gateway.device_reinterviewed(new_zigpy_dev)
+    zha_gateway.application_controller.listener_event(
+        "device_reinterviewed", new_zigpy_dev
+    )
     await zha_gateway.async_block_till_done()
 
     assert zha_device.device is new_zigpy_dev
