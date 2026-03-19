@@ -504,8 +504,8 @@ class Gateway(AsyncUtilMixin, EventBase):
             ),
         )
 
-    async def async_reconfigure_device(self, ieee: EUI64) -> None:
-        """Reconfigure a device by re-interviewing it.
+    async def async_reinterview_device(self, ieee: EUI64) -> None:
+        """Re-interview a device.
 
         Called by HA when the user triggers a device reconfigure.  If the
         re-interview succeeds, the ``device_reinterviewed`` listener handles
@@ -513,17 +513,16 @@ class Gateway(AsyncUtilMixin, EventBase):
         """
         zha_device = self._devices.get(ieee)
         if zha_device is None:
-            _LOGGER.warning("Device %s not found for reconfigure", ieee)
+            _LOGGER.warning("Device %s not found for reinterview", ieee)
             return
 
         if zha_device.is_active_coordinator:
-            _LOGGER.debug("Skipping reconfigure for active coordinator %s", ieee)
-            await zha_device.async_configure()
+            _LOGGER.debug("Skipping reinterview for active coordinator %s", ieee)
             return
 
         zigpy_device = self.application_controller.devices.get(ieee)
         if zigpy_device is None:
-            _LOGGER.warning("Zigpy device %s not found for reconfigure", ieee)
+            _LOGGER.warning("Zigpy device %s not found for reinterview", ieee)
             return
 
         await zigpy_device.reinterview()

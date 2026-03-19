@@ -1455,7 +1455,7 @@ async def test_remove_entity_nonexistent(zha_gateway: Gateway) -> None:
 async def test_gateway_reconfigure_with_swap(
     zha_gateway: Gateway,
 ) -> None:
-    """Test gateway.async_reconfigure_device rebuilds when reinterview swaps."""
+    """Test gateway.async_reinterview_device rebuilds when reinterview swaps."""
     zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
     zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
 
@@ -1481,7 +1481,7 @@ async def test_gateway_reconfigure_with_swap(
         zha_gateway.device_reinterviewed(new_zigpy_dev)
 
     with patch.object(zigpy_dev, "reinterview", side_effect=fake_reinterview):
-        await zha_gateway.async_reconfigure_device(zigpy_dev.ieee)
+        await zha_gateway.async_reinterview_device(zigpy_dev.ieee)
 
     await zha_gateway.async_block_till_done()
 
@@ -1496,7 +1496,7 @@ async def test_gateway_reconfigure_with_swap(
 async def test_gateway_reconfigure_no_swap(
     zha_gateway: Gateway,
 ) -> None:
-    """Test gateway.async_reconfigure_device does normal configure when no swap."""
+    """Test gateway.async_reinterview_device does normal configure when no swap."""
     zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
     zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
 
@@ -1504,7 +1504,7 @@ async def test_gateway_reconfigure_no_swap(
     old_entities = dict(zha_device.platform_entities)
 
     with patch.object(zigpy_dev, "reinterview", new_callable=AsyncMock):
-        await zha_gateway.async_reconfigure_device(zigpy_dev.ieee)
+        await zha_gateway.async_reinterview_device(zigpy_dev.ieee)
 
     assert zha_device.device is old_zigpy_dev
     assert zha_device.platform_entities == old_entities
