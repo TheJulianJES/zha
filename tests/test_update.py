@@ -207,12 +207,53 @@ async def test_firmware_update_notification_from_zigpy(zha_gateway: Gateway) -> 
 
 
 @patch("zigpy.device.AFTER_OTA_ATTR_READ_DELAY", 0.01)
-async def test_firmware_update_success(zha_gateway: Gateway) -> None:
-    """Test ZHA update platform - firmware update success."""
+async def test_firmware_update_success(monkeypatch, zha_gateway: Gateway) -> None:
+    """Test ZHA update platform - firmware update success and post-OTA reinterview."""
     zigpy_device = zigpy_device_mock(zha_gateway)
     zha_device, ota_cluster, fw_image, installed_fw_version = await setup_test_data(
         zha_gateway, zigpy_device
     )
+
+    # Undo the reinterview mock from setup_test_data — we want the real
+    # post-OTA reinterview to run end-to-end.
+    del zigpy_device.reinterview
+
+    # Monkeypatch class-level methods so the shadow's _discover() works
+    node_desc = zigpy_device.node_desc
+
+    async def mock_get_node_descriptor(self):
+        self.node_desc = node_desc
+        return node_desc
+
+    async def mock_active_ep_req(*args, **kwargs):
+        return [0, None, [0, 1]]
+
+    async def mock_ep_initialize(self, *args, **kwargs):
+        self.status = zigpy_endpoint_mod.Status.ZDO_INIT
+        self.add_input_cluster(general.Basic.cluster_id)
+        self.add_input_cluster(general.OnOff.cluster_id)
+        self.add_output_cluster(general.Ota.cluster_id)
+
+    async def mock_ep_get_model_info(self):
+        return "FakeModel", "FakeManufacturer"
+
+    monkeypatch.setattr(
+        zigpy_device_mod.Device, "get_node_descriptor", mock_get_node_descriptor
+    )
+    monkeypatch.setattr(zigpy_endpoint_mod.Endpoint, "initialize", mock_ep_initialize)
+    monkeypatch.setattr(
+        zigpy_endpoint_mod.Endpoint, "get_model_info", mock_ep_get_model_info
+    )
+
+    original_init = zigpy_device_mod.Device.__init__
+
+    def patched_init(self, *args, **kwargs):
+        original_init(self, *args, **kwargs)
+        self.zdo.Active_EP_req = mock_active_ep_req
+
+    monkeypatch.setattr(zigpy_device_mod.Device, "__init__", patched_init)
+
+    old_zigpy_device = zha_device.device
 
     assert installed_fw_version < fw_image.firmware.header.file_version
 
@@ -383,164 +424,8 @@ async def test_firmware_update_success(zha_gateway: Gateway) -> None:
 
     assert not entity.state[ATTR_IN_PROGRESS]
 
-
-@patch("zigpy.device.AFTER_OTA_ATTR_READ_DELAY", 0.01)
-async def test_firmware_update_reinterview(monkeypatch, zha_gateway: Gateway) -> None:
-    """Test that a successful OTA triggers reinterview and ZHA rebuild."""
-    zigpy_dev = zigpy_device_mock(zha_gateway)
-    zha_device, ota_cluster, fw_image, installed_fw_version = await setup_test_data(
-        zha_gateway, zigpy_dev
-    )
-
-    # Undo the reinterview mock from setup_test_data — we want the real one
-    del zigpy_dev.reinterview
-
-    # Monkeypatch class-level methods so the shadow's _discover() works
-    node_desc = zigpy_dev.node_desc
-
-    async def mock_get_node_descriptor(self):
-        self.node_desc = node_desc
-        return node_desc
-
-    async def mock_active_ep_req(*args, **kwargs):
-        return [0, None, [0, 1]]
-
-    async def mock_ep_initialize(self, *args, **kwargs):
-        self.status = zigpy_endpoint_mod.Status.ZDO_INIT
-        self.add_input_cluster(general.Basic.cluster_id)
-        self.add_input_cluster(general.OnOff.cluster_id)
-        self.add_output_cluster(general.Ota.cluster_id)
-
-    async def mock_ep_get_model_info(self):
-        return "FakeModel", "FakeManufacturer"
-
-    monkeypatch.setattr(
-        zigpy_device_mod.Device, "get_node_descriptor", mock_get_node_descriptor
-    )
-    monkeypatch.setattr(zigpy_endpoint_mod.Endpoint, "initialize", mock_ep_initialize)
-    monkeypatch.setattr(
-        zigpy_endpoint_mod.Endpoint, "get_model_info", mock_ep_get_model_info
-    )
-
-    # Patch Device.__init__ so the shadow gets Active_EP_req mocked
-    original_init = zigpy_device_mod.Device.__init__
-
-    def patched_init(self, *args, **kwargs):
-        original_init(self, *args, **kwargs)
-        self.zdo.Active_EP_req = mock_active_ep_req
-
-    monkeypatch.setattr(zigpy_device_mod.Device, "__init__", patched_init)
-
-    # Run the OTA flow (same as test_firmware_update_success)
-    await ota_cluster._handle_query_next_image(
-        foundation.ZCLHeader.cluster(
-            tsn=0x12, command_id=general.Ota.ServerCommandDefs.query_next_image.id
-        ),
-        general.QueryNextImageCommand(
-            field_control=fw_image.firmware.header.field_control,
-            manufacturer_code=zha_device.manufacturer_code,
-            image_type=fw_image.firmware.header.image_type,
-            current_file_version=installed_fw_version,
-        ),
-    )
-    await zha_gateway.async_block_till_done()
-
-    async def endpoint_reply(cluster, sequence, data, **kwargs):
-        if cluster == general.Ota.cluster_id:
-            hdr, cmd = ota_cluster.deserialize(data)
-            if isinstance(cmd, general.Ota.ImageNotifyCommand):
-                zigpy_dev.packet_received(
-                    make_packet(
-                        zigpy_dev,
-                        ota_cluster,
-                        general.Ota.ServerCommandDefs.query_next_image.name,
-                        field_control=general.Ota.QueryNextImageCommand.FieldControl.HardwareVersion,
-                        manufacturer_code=fw_image.firmware.header.manufacturer_id,
-                        image_type=fw_image.firmware.header.image_type,
-                        current_file_version=fw_image.firmware.header.file_version - 10,
-                        hardware_version=1,
-                    )
-                )
-            elif isinstance(
-                cmd, general.Ota.ClientCommandDefs.query_next_image_response.schema
-            ):
-                zigpy_dev.packet_received(
-                    make_packet(
-                        zigpy_dev,
-                        ota_cluster,
-                        general.Ota.ServerCommandDefs.image_block.name,
-                        field_control=general.Ota.ImageBlockCommand.FieldControl.RequestNodeAddr,
-                        manufacturer_code=fw_image.firmware.header.manufacturer_id,
-                        image_type=fw_image.firmware.header.image_type,
-                        file_version=fw_image.firmware.header.file_version,
-                        file_offset=0,
-                        maximum_data_size=40,
-                        request_node_addr=zigpy_dev.ieee,
-                    )
-                )
-            elif isinstance(
-                cmd, general.Ota.ClientCommandDefs.image_block_response.schema
-            ):
-                if cmd.file_offset == 0:
-                    zigpy_dev.packet_received(
-                        make_packet(
-                            zigpy_dev,
-                            ota_cluster,
-                            general.Ota.ServerCommandDefs.image_block.name,
-                            field_control=general.Ota.ImageBlockCommand.FieldControl.RequestNodeAddr,
-                            manufacturer_code=fw_image.firmware.header.manufacturer_id,
-                            image_type=fw_image.firmware.header.image_type,
-                            file_version=fw_image.firmware.header.file_version,
-                            file_offset=40,
-                            maximum_data_size=40,
-                            request_node_addr=zigpy_dev.ieee,
-                        )
-                    )
-                elif cmd.file_offset == 40:
-                    zigpy_dev.packet_received(
-                        make_packet(
-                            zigpy_dev,
-                            ota_cluster,
-                            general.Ota.ServerCommandDefs.upgrade_end.name,
-                            status=foundation.Status.SUCCESS,
-                            manufacturer_code=fw_image.firmware.header.manufacturer_id,
-                            image_type=fw_image.firmware.header.image_type,
-                            file_version=fw_image.firmware.header.file_version,
-                        )
-                    )
-            elif isinstance(
-                cmd, general.Ota.ClientCommandDefs.upgrade_end_response.schema
-            ):
-
-                def read_new_fw_version(*args, **kwargs):
-                    ota_cluster.update_attribute(
-                        attrid=general.Ota.AttributeDefs.current_file_version.id,
-                        value=fw_image.firmware.header.file_version,
-                    )
-                    return {
-                        general.Ota.AttributeDefs.current_file_version.id: (
-                            fw_image.firmware.header.file_version
-                        )
-                    }, {}
-
-                ota_cluster.read_attributes.side_effect = read_new_fw_version
-
-    ota_cluster.endpoint.reply = AsyncMock(side_effect=endpoint_reply)
-
-    entity = get_entity(zha_device, platform=Platform.UPDATE)
-    old_zigpy_dev = zha_device.device
-
-    await entity.async_install(version=None)
-    await zha_gateway.async_block_till_done()
-
-    # OTA succeeded
-    assert (
-        entity.state[ATTR_INSTALLED_VERSION]
-        == f"0x{fw_image.firmware.header.file_version:08x}"
-    )
-
-    # Reinterview swapped the zigpy device — the ZHA device was rebuilt
-    assert zha_device.device is not old_zigpy_dev
+    # Post-OTA reinterview should have swapped the zigpy device and rebuilt ZHA
+    assert zha_device.device is not old_zigpy_device
     assert zha_device.status.name == "INITIALIZED"
     assert len(zha_device.platform_entities) > 0
 
