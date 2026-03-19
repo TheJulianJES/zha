@@ -482,15 +482,17 @@ class Gateway(AsyncUtilMixin, EventBase):
             new_zigpy_device.ieee,
         )
 
-        # Tear down old state (emits DeviceEntityRemovedEvent for each entity)
-        await zha_device._async_teardown(emit_entity_events=True)
+        await zha_device.async_rebuild_from_zigpy_device(new_zigpy_device)
 
-        # Rebuild from the new zigpy device
-        zha_device._init_from_zigpy_device(new_zigpy_device)
-
-        # Configure + Initialize
-        await zha_device.async_configure()
-        await zha_device.async_initialize()
+        try:
+            await zha_device.async_configure()
+            await zha_device.async_initialize()
+        except Exception:  # noqa: BLE001
+            _LOGGER.warning(
+                "Failed to configure/initialize device %s after reinterview",
+                new_zigpy_device.ieee,
+                exc_info=True,
+            )
 
         self.emit(
             ZHA_GW_MSG_DEVICE_FULL_INIT,

@@ -928,6 +928,18 @@ class Device(LogMixin, EventBase):
                 eager_start=True,
             )
 
+    async def async_rebuild_from_zigpy_device(
+        self, zigpy_device: zigpy.device.Device
+    ) -> None:
+        """Tear down and rebuild this device from a new zigpy device.
+
+        Called by the gateway after a successful re-interview swaps the
+        underlying zigpy device.  Emits entity removal events so listeners
+        (e.g. HA) can clean up stale entities.
+        """
+        await self._async_teardown(emit_entity_events=True)
+        self._init_from_zigpy_device(zigpy_device)
+
     def emit_reconfigure_done(self) -> None:
         """Emit configuration-complete event.
 
