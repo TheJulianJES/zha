@@ -505,11 +505,11 @@ class Gateway(AsyncUtilMixin, EventBase):
         )
 
     async def async_reconfigure_device(self, ieee: EUI64) -> None:
-        """Reconfigure a device, re-interviewing it first.
+        """Reconfigure a device by re-interviewing it.
 
         Called by HA when the user triggers a device reconfigure.  If the
-        re-interview discovers changes, the ``device_reinterviewed`` listener
-        handles the full rebuild.  Otherwise a normal configure is performed.
+        re-interview succeeds, the ``device_reinterviewed`` listener handles
+        the full rebuild.  If it fails, zigpy preserves the old device.
         """
         zha_device = self._devices.get(ieee)
         if zha_device is None:
