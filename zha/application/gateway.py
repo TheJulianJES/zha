@@ -494,6 +494,12 @@ class Gateway(AsyncUtilMixin, EventBase):
                 exc_info=True,
             )
 
+        # Refresh group subscriptions so groups re-subscribe to the new
+        # platform entities.  Without this, group state updates break
+        # because the old entity subscriptions are dead.
+        for group in self._groups.values():
+            group.update_entity_subscriptions()
+
         self.emit(
             ZHA_GW_MSG_DEVICE_FULL_INIT,
             DeviceFullInitEvent(
