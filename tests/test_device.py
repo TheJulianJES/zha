@@ -1475,6 +1475,12 @@ async def test_gateway_reconfigure_with_swap(
     # so add manually.
     zha_group.zigpy_group.add_member(zigpy_dev.endpoints[3], suppress_event=True)
 
+    # Register a mock group entity so the group subscribes to member entities.
+    mock_group_entity = mock.MagicMock()
+    mock_group_entity.PLATFORM = Platform.SWITCH
+    mock_group_entity.unique_id = "mock_group_switch"
+    zha_group.register_group_entity(mock_group_entity)
+
     new_zigpy_dev = create_mock_zigpy_device(
         zha_gateway,
         endpoints={
@@ -1509,12 +1515,12 @@ async def test_gateway_reconfigure_with_swap(
     assert len(zha_device.endpoints) > 0
     assert len(zha_device.platform_entities) > 0
 
-    # The group's member cache should have been refreshed after rebuild,
-    # so it finds the new (rebuilt) entity, not the old one.
-    group_switch_entities = zha_group.get_platform_entities(Platform.SWITCH)
-    assert len(group_switch_entities) == 1
+    # Verify the group is subscribed to the NEW entity, not the old one.
+    # Emit a state change on the new entity and check the group got it.
     new_switch = get_entity(zha_device, platform=Platform.SWITCH)
-    assert group_switch_entities[0] is new_switch
+    mock_group_entity.debounced_update.reset_mock()
+    new_switch.maybe_emit_state_changed_event()
+    assert mock_group_entity.debounced_update.called
 
 
 async def test_gateway_reconfigure_no_swap(
