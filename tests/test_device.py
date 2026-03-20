@@ -1490,17 +1490,11 @@ async def test_gateway_reconfigure_with_swap(
     )
 
     async def fake_reinterview():
-        # Migrate group memberships to the new device (as zigpy does)
-        for ep in zigpy_dev.non_zdo_endpoints:
-            for group in list(ep.member_of.values()):
-                group.remove_member(ep, suppress_event=True)
-                if ep.endpoint_id in new_zigpy_dev.endpoints:
-                    group.add_member(
-                        new_zigpy_dev.endpoints[ep.endpoint_id],
-                        suppress_event=True,
-                    )
-
+        # Simulate the end result of a successful zigpy reinterview.
         zha_gateway.application_controller.devices[zigpy_dev.ieee] = new_zigpy_dev
+        zha_group.zigpy_group.add_member(
+            new_zigpy_dev.endpoints[3], suppress_event=True
+        )
         zha_gateway.device_reinterviewed(new_zigpy_dev)
 
     with patch.object(zigpy_dev, "reinterview", side_effect=fake_reinterview):
