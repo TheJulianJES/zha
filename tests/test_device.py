@@ -63,7 +63,7 @@ from zha.zigbee.device import (
     ZHAEvent,
     get_device_automation_triggers,
 )
-from zha.zigbee.group import Group
+from zha.zigbee.group import Group, GroupMemberReference
 
 
 def zigpy_device(
@@ -1462,6 +1462,19 @@ async def test_gateway_reconfigure_with_swap(
     assert zha_device.status.name == "INITIALIZED"
     assert len(zha_device.platform_entities) > 0
 
+    # Create a group containing this device so we can verify that group
+    # subscriptions are refreshed after the reinterview rebuild.
+    zha_group = await zha_gateway.async_create_zigpy_group(
+        "Test Group",
+        [GroupMemberReference(ieee=zigpy_dev.ieee, endpoint_id=3)],
+    )
+    await zha_gateway.async_block_till_done()
+    assert zha_group is not None
+
+    # The mock endpoint.request doesn't actually add to the zigpy group,
+    # so add manually.
+    zha_group.zigpy_group.add_member(zigpy_dev.endpoints[3], suppress_event=True)
+
     new_zigpy_dev = create_mock_zigpy_device(
         zha_gateway,
         endpoints={
@@ -1477,6 +1490,16 @@ async def test_gateway_reconfigure_with_swap(
     )
 
     async def fake_reinterview():
+        # Migrate group memberships to the new device (as zigpy does)
+        for ep in zigpy_dev.non_zdo_endpoints:
+            for group in list(ep.member_of.values()):
+                group.remove_member(ep, suppress_event=True)
+                if ep.endpoint_id in new_zigpy_dev.endpoints:
+                    group.add_member(
+                        new_zigpy_dev.endpoints[ep.endpoint_id],
+                        suppress_event=True,
+                    )
+
         zha_gateway.application_controller.devices[zigpy_dev.ieee] = new_zigpy_dev
         zha_gateway.device_reinterviewed(new_zigpy_dev)
 
@@ -1491,6 +1514,13 @@ async def test_gateway_reconfigure_with_swap(
     assert zha_device.status.name == "INITIALIZED"
     assert len(zha_device.endpoints) > 0
     assert len(zha_device.platform_entities) > 0
+
+    # The group's member cache should have been refreshed after rebuild,
+    # so it finds the new (rebuilt) entity, not the old one.
+    group_switch_entities = zha_group.get_platform_entities(Platform.SWITCH)
+    assert len(group_switch_entities) == 1
+    new_switch = get_entity(zha_device, platform=Platform.SWITCH)
+    assert group_switch_entities[0] is new_switch
 
 
 async def test_gateway_reconfigure_no_swap(
