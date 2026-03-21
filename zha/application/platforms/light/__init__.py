@@ -463,7 +463,6 @@ class CoordinatorLED(BaseLight):
         xy_color: tuple[int, int] | None = None,
     ) -> None:
         """Turn the entity on."""
-        del transition, effect, flash, color_temp
 
         resolved_xy_color: tuple[float, float] | None = None
         if xy_color is not None:
@@ -478,7 +477,6 @@ class CoordinatorLED(BaseLight):
 
     async def async_turn_off(self, *, transition: float | None = None) -> None:
         """Turn the entity off."""
-        del transition
         await self._async_set_led_state(red=0, green=0, blue=0)
         self._state = False
         self.maybe_emit_state_changed_event()
