@@ -267,6 +267,7 @@ class BaseLight(BaseEntity, ABC):
 
 
 DEFAULT_COORDINATOR_LED_XY_COLOR = (0.3127, 0.3290)
+DEFAULT_COORDINATOR_LED_BRIGHTNESS = 75
 
 
 def _clamp_rgb_channel(value: float) -> int:
@@ -329,7 +330,7 @@ class CoordinatorLED(BaseLight):
         super().__init__(unique_id=f"{slugified_device_id}_coordinator_led")
         self._device = zha_device
         self._state = False
-        self._brightness = 255
+        self._brightness = DEFAULT_COORDINATOR_LED_BRIGHTNESS
         self._color_mode = ColorMode.XY
         self._supported_color_modes = {ColorMode.XY}
         self._xy_color = DEFAULT_COORDINATOR_LED_XY_COLOR
@@ -425,7 +426,7 @@ class CoordinatorLED(BaseLight):
             target_brightness = max(DEFAULT_MIN_BRIGHTNESS, min(255, brightness))
             self._brightness = target_brightness
         elif self._brightness is None:
-            target_brightness = 255
+            target_brightness = DEFAULT_COORDINATOR_LED_BRIGHTNESS
             self._brightness = target_brightness
         else:
             target_brightness = self._brightness
