@@ -12,6 +12,7 @@ import tests.conftest as test_conftest
 from zha.application import Platform
 from zha.application.gateway import Gateway
 from zha.application.platforms.light import (
+    DEFAULT_COORDINATOR_LED_BRIGHTNESS,
     DEFAULT_COORDINATOR_LED_XY_COLOR,
     CoordinatorLED,
     _xy_brightness_to_rgb,
@@ -88,6 +89,33 @@ async def test_coordinator_led_entity(zbt2_gateway: Gateway) -> None:
         "blue": 0,
     }
     assert entity.state["on"] is False
+
+
+async def test_coordinator_led_first_turn_on_uses_firmware_dim_white_default(
+    zbt2_gateway: Gateway,
+) -> None:
+    """Test that the first turn_on without a brightness uses the firmware dim white level."""
+    entity = get_entity(
+        zbt2_gateway.coordinator_zha_device,
+        platform=Platform.LIGHT,
+        exact_entity_type=CoordinatorLED,
+    )
+    ezsp = zbt2_gateway.application_controller._ezsp
+
+    await entity.async_turn_on()
+    await zbt2_gateway.async_block_till_done()
+
+    expected_red, expected_green, expected_blue = _xy_brightness_to_rgb(
+        DEFAULT_COORDINATOR_LED_XY_COLOR[0],
+        DEFAULT_COORDINATOR_LED_XY_COLOR[1],
+        DEFAULT_COORDINATOR_LED_BRIGHTNESS,
+    )
+    assert ezsp.xncp_set_led_state.await_args_list[0].kwargs == {
+        "red": expected_red,
+        "green": expected_green,
+        "blue": expected_blue,
+    }
+    assert entity.state["brightness"] == DEFAULT_COORDINATOR_LED_BRIGHTNESS
 
 
 async def test_coordinator_led_brightness_uses_current_xy_color(
