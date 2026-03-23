@@ -99,6 +99,6 @@ IAS_ZONE_CLASS_MAPPING = {
     IasZone.ZoneType.Contact_Switch: BinarySensorDeviceClass.OPENING,
     IasZone.ZoneType.Fire_Sensor: BinarySensorDeviceClass.SMOKE,
     IasZone.ZoneType.Water_Sensor: BinarySensorDeviceClass.MOISTURE,
-    IasZone.ZoneType.Carbon_Monoxide_Sensor: BinarySensorDeviceClass.GAS,
+    IasZone.ZoneType.Carbon_Monoxide_Sensor: BinarySensorDeviceClass.CO,
     IasZone.ZoneType.Vibration_Movement_Sensor: BinarySensorDeviceClass.VIBRATION,
 }
