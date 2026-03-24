@@ -314,6 +314,7 @@ class FirmwareUpdateEntity(BaseFirmwareUpdateEntity):
         """Call when entity is added."""
         super().on_add()
 
+        ota_cluster = self._ota_cluster_handler.cluster
         self._on_remove_callbacks.append(
             self._ota_cluster_handler.on_event(
                 CLUSTER_HANDLER_ATTRIBUTE_UPDATED,
@@ -321,10 +322,15 @@ class FirmwareUpdateEntity(BaseFirmwareUpdateEntity):
             )
         )
         self._on_remove_callbacks.append(
-            self._ota_cluster_handler.cluster.on_event(
+            ota_cluster.on_event(
                 OtaImageAvailableEvent.event_type,
                 self._handle_ota_image_available,
             )
+        )
+
+        # Check for cached OTA image availability from zigpy
+        ota_cluster.create_catching_task(
+            self.device.device.application.ota.check_cluster_for_ota(ota_cluster)
         )
 
     def _get_cluster_version(self) -> str | None:
@@ -368,6 +374,7 @@ class FirmwareUpdateServerEntity(BaseFirmwareUpdateEntity):
         """Call when entity is added."""
         super().on_add()
 
+        ota_cluster = self._ota_cluster_handler.cluster
         self._on_remove_callbacks.append(
             self._ota_cluster_handler.on_event(
                 CLUSTER_HANDLER_ATTRIBUTE_UPDATED,
@@ -375,10 +382,15 @@ class FirmwareUpdateServerEntity(BaseFirmwareUpdateEntity):
             )
         )
         self._on_remove_callbacks.append(
-            self._ota_cluster_handler.cluster.on_event(
+            ota_cluster.on_event(
                 OtaImageAvailableEvent.event_type,
                 self._handle_ota_image_available,
             )
+        )
+
+        # Check for cached OTA image availability from zigpy
+        ota_cluster.create_catching_task(
+            self.device.device.application.ota.check_cluster_for_ota(ota_cluster)
         )
 
     def _get_cluster_version(self) -> str | None:
