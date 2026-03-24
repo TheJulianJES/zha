@@ -313,7 +313,8 @@ class BasicSiren(BaseZclSiren):
             self._off_listener = None
         siren_duration = duration if duration is not None else DEFAULT_DURATION
         await self._cluster_handler.issue_start_warning(
-            mode=WARNING_DEVICE_MODE_EMERGENCY,
+            # some Frient sensors send INVALID_VALUE for EMERGENCY
+            mode=WARNING_DEVICE_MODE_BURGLAR,
             warning_duration=siren_duration,
             siren_level=WARNING_DEVICE_SOUND_HIGH,
             strobe=WARNING_DEVICE_STROBE_NO,
