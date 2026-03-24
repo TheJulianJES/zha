@@ -1358,3 +1358,19 @@ async def test_device_on_remove_pending_entity_failure(
 
     assert "Failed to remove pending entity" in caplog.text
     assert "Pending entity removal failed" in caplog.text
+
+
+async def test_initialize_endpoint_failure(zha_gateway: Gateway) -> None:
+    """Test that a failing endpoint doesn't prevent device initialization."""
+    zigpy_dev = await zigpy_device_from_json(
+        zha_gateway.application_controller,
+        "tests/data/devices/ikea-of-sweden-tradfri-bulb-gu10-ws-400lm.json",
+    )
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    with patch.object(
+        list(zha_device.endpoints.values())[0],
+        "async_initialize",
+        side_effect=Exception("endpoint init failed"),
+    ):
+        await zha_device.async_initialize(from_cache=True)
