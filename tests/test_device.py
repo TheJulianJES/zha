@@ -1369,8 +1369,10 @@ async def test_initialize_endpoint_failure(zha_gateway: Gateway) -> None:
     zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
 
     with patch.object(
-        list(zha_device.endpoints.values())[0],
+        zha_device.endpoints[1],
         "async_initialize",
         side_effect=Exception("endpoint init failed"),
-    ):
+    ) as mock_async_initialize:
         await zha_device.async_initialize(from_cache=True)
+
+    assert mock_async_initialize.call_count == 1
