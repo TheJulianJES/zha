@@ -5,12 +5,6 @@ from datetime import UTC, datetime
 from zigpy.quirks.v2.homeassistant.sensor import SensorDeviceClass, SensorStateClass
 from zigpy.zcl.clusters.general_const import AnalogInputType
 
-# Re-exported from zigpy for use throughout ZHA
-__all__ = [
-    "SensorDeviceClass",
-    "SensorStateClass",
-]
-
 from zha.units import (
     CONCENTRATION_PARTS_PER_MILLION,
     COUNT,
@@ -25,6 +19,12 @@ from zha.units import (
     UnitOfTemperature,
     UnitOfTime,
 )
+
+# Re-exported from zigpy for use throughout ZHA
+__all__ = [
+    "SensorDeviceClass",
+    "SensorStateClass",
+]
 
 NON_NUMERIC_DEVICE_CLASSES = {
     SensorDeviceClass.DATE,
