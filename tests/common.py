@@ -55,9 +55,7 @@ def patch_cluster_for_testing(cluster: zigpy.zcl.Cluster) -> None:
 
     cluster.bind = AsyncMock(return_value=[0])
     cluster.configure_reporting = AsyncMock(
-        return_value=[
-            [zcl_f.ConfigureReportingResponseRecord(zcl_f.Status.SUCCESS, 0x00, 0xAABB)]
-        ]
+        side_effect=lambda config: dict.fromkeys(config, zcl_f.Status.SUCCESS)
     )
     cluster.configure_reporting_multiple = AsyncMock(
         side_effect=lambda config: dict.fromkeys(config, zcl_f.Status.SUCCESS)

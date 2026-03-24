@@ -1083,11 +1083,7 @@ async def test_invalid_cluster_handler(zha_gateway: Gateway, caplog) -> None:  #
     cluster = zigpy_ep.add_input_cluster(Color.cluster_id)
     cluster.configure_reporting_multiple = AsyncMock(
         spec_set=cluster.configure_reporting_multiple,
-        return_value=[
-            foundation.ConfigureReportingResponseRecord(
-                status=foundation.Status.SUCCESS
-            )
-        ],
+        side_effect=lambda config: dict.fromkeys(config, foundation.Status.SUCCESS),
     )
 
     mock_zha_device = mock.AsyncMock(spec=Device)
@@ -1128,11 +1124,7 @@ async def test_standard_cluster_handler(
     cluster = zigpy_ep.add_input_cluster(Color.cluster_id)
     cluster.configure_reporting_multiple = AsyncMock(
         spec_set=cluster.configure_reporting_multiple,
-        return_value=[
-            foundation.ConfigureReportingResponseRecord(
-                status=foundation.Status.SUCCESS
-            )
-        ],
+        side_effect=lambda config: dict.fromkeys(config, foundation.Status.SUCCESS),
     )
 
     mock_zha_device = mock.AsyncMock(spec=Device)
@@ -1168,11 +1160,7 @@ async def test_exposed_feature_cluster_handler(
     cluster = zigpy_ep.add_input_cluster(Color.cluster_id)
     cluster.configure_reporting_multiple = AsyncMock(
         spec_set=cluster.configure_reporting_multiple,
-        return_value=[
-            foundation.ConfigureReportingResponseRecord(
-                status=foundation.Status.SUCCESS
-            )
-        ],
+        side_effect=lambda config: dict.fromkeys(config, foundation.Status.SUCCESS),
     )
 
     mock_zha_device = mock.AsyncMock(spec=Device)
