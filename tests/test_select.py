@@ -335,12 +335,12 @@ async def test_bega_color_temperature_channel_select_unsupported(
     )
 
     cluster = zigpy_device.endpoints[1].in_clusters[general.LevelControl.cluster_id]
-    # Set both color temperatures to 0xFFFF (unsupported)
-    cluster._attr_cache[cluster.find_attribute("switchable_color_temperature_1").id] = (
-        0xFFFF
+    # Override color temperatures to 0xFFFF (unsupported)
+    cluster.update_attribute(
+        cluster.find_attribute("switchable_color_temperature_1").id, 0xFFFF
     )
-    cluster._attr_cache[cluster.find_attribute("switchable_color_temperature_2").id] = (
-        0xFFFF
+    cluster.update_attribute(
+        cluster.find_attribute("switchable_color_temperature_2").id, 0xFFFF
     )
 
     zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
