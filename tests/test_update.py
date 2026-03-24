@@ -764,3 +764,74 @@ async def test_firmware_update_multiple_upgrades_combined_release_notes(
         "Release notes for v1."
     )
     assert entity.state[ATTR_RELEASE_NOTES] == expected_release_notes
+
+
+async def test_firmware_update_cached_on_startup(zha_gateway: Gateway) -> None:
+    """Test that entities pick up cached OTA state from zigpy on startup."""
+    zigpy_device = zigpy_device_mock(zha_gateway)
+    installed_fw_version = 0x12345678
+
+    ota_cluster = zigpy_device.endpoints[1].out_clusters[general.Ota.cluster_id]
+    ota_cluster.PLUGGED_ATTR_READS = {
+        general.Ota.AttributeDefs.current_file_version.name: installed_fw_version
+    }
+    update_attribute_cache(ota_cluster)
+
+    fw_image = create_fw_image(installed_fw_version + 10)
+
+    zigpy_device.application.ota.get_ota_images = AsyncMock(
+        return_value=OtaImagesResult(
+            upgrades=(fw_image,),
+            downgrades=(),
+        )
+    )
+
+    # Pre-populate the cluster's cached query command (as if the device had
+    # previously sent a query_next_image before ZHA restarted)
+    ota_cluster.last_query_cmd = general.QueryNextImageCommand(
+        field_control=fw_image.firmware.header.field_control,
+        manufacturer_code=zigpy_device.node_desc.manufacturer_code,
+        image_type=fw_image.firmware.header.image_type,
+        current_file_version=installed_fw_version,
+    )
+
+    # Join the device — on_add triggers check_cluster_for_ota
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+    await zha_gateway.async_block_till_done()
+
+    entity = get_entity(zha_device, platform=Platform.UPDATE)
+    assert entity.state[ATTR_INSTALLED_VERSION] == f"0x{installed_fw_version:08x}"
+    assert (
+        entity.state[ATTR_LATEST_VERSION]
+        == f"0x{fw_image.firmware.header.file_version:08x}"
+    )
+
+
+async def test_firmware_update_no_cached_query_on_startup(
+    zha_gateway: Gateway,
+) -> None:
+    """Test that entities don't error when there's no cached query on startup."""
+    zigpy_device = zigpy_device_mock(zha_gateway)
+    installed_fw_version = 0x12345678
+
+    ota_cluster = zigpy_device.endpoints[1].out_clusters[general.Ota.cluster_id]
+    ota_cluster.PLUGGED_ATTR_READS = {
+        general.Ota.AttributeDefs.current_file_version.name: installed_fw_version
+    }
+    update_attribute_cache(ota_cluster)
+
+    zigpy_device.application.ota.get_ota_images = AsyncMock(
+        return_value=OtaImagesResult(upgrades=(), downgrades=())
+    )
+
+    # No last_query_cmd — check_cluster_for_ota should be a no-op
+    assert ota_cluster.last_query_cmd is None
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+    await zha_gateway.async_block_till_done()
+
+    entity = get_entity(zha_device, platform=Platform.UPDATE)
+    assert entity.state[ATTR_INSTALLED_VERSION] == f"0x{installed_fw_version:08x}"
+    assert entity.state[ATTR_LATEST_VERSION] is None
+    # get_ota_images should not have been called since there's no cached query
+    zigpy_device.application.ota.get_ota_images.assert_not_called()
