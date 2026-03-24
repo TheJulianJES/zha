@@ -399,7 +399,7 @@ class ClusterHandler(LogMixin, EventBase):
                 res = await RETRYABLE_REQUEST_DECORATOR(
                     self.cluster.configure_reporting_multiple
                 )(reports)
-                self._configure_reporting_status(res, event_data)
+                self._configure_reporting_status(res, event_data, set(reports.keys()))
             except (zigpy.exceptions.ZigbeeException, TimeoutError) as ex:
                 self.debug(
                     "failed to set reporting on '%s' cluster for: %s",
@@ -426,11 +426,12 @@ class ClusterHandler(LogMixin, EventBase):
         self,
         res: dict[ZCLAttributeDef, Status],
         event_data: dict[str, dict[str, Any]],
+        requested_attrs: set[ZCLAttributeDef],
     ) -> None:
         """Parse configure reporting result."""
         if not res:
-            for data in event_data.values():
-                data["status"] = Status.FAILURE.name
+            for attr_def in requested_attrs:
+                event_data[attr_def.name]["status"] = Status.FAILURE.name
             return
 
         for attr_def, status in res.items():
