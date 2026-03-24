@@ -1041,3 +1041,19 @@ class BegaColorTemperatureChannelSelect(ZCLEnumSelectEntity):
         cluster_handlers=frozenset({CLUSTER_HANDLER_LEVEL}),
         exposed_features=frozenset({BEGA_LIGHT_SWITCHABLE_WHITE}),
     )
+
+    def _is_supported(self) -> bool:
+        """Check if the light supports switchable color temperatures."""
+        cluster = self._cluster_handler.cluster
+        temp_1 = cluster.get("switchable_color_temperature_1")
+        temp_2 = cluster.get("switchable_color_temperature_2")
+
+        if temp_1 == 0xFFFF and temp_2 == 0xFFFF:
+            _LOGGER.debug(
+                "Both color temperatures are 0xFFFF (unsupported) - "
+                "skipping %s entity creation",
+                self.__class__.__name__,
+            )
+            return False
+
+        return super()._is_supported()
