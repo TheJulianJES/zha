@@ -3,6 +3,7 @@
 import asyncio
 from unittest.mock import patch
 
+from zhaquirks.quirk_ids import SIREN_BASIC
 from zigpy.const import SIG_EP_PROFILE
 from zigpy.profiles import zha
 from zigpy.zcl.clusters import general, security
@@ -42,7 +43,7 @@ async def siren_mock(
     )
 
     if basic:
-        zigpy_device.quirk_id = {"siren_basic"}
+        zigpy_device.quirk_id = {SIREN_BASIC}
 
     zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
     return zha_device, zigpy_device.endpoints[1].ias_wd

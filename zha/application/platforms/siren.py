@@ -10,6 +10,7 @@ from enum import IntFlag
 import functools
 from typing import TYPE_CHECKING, Any, Final, cast
 
+from zhaquirks.quirk_ids import SIREN_BASIC
 from zigpy.profiles import zha
 from zigpy.zcl.clusters.security import IasWd
 
@@ -280,7 +281,7 @@ class BasicSiren(BaseZclSiren):
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_WD}),
-        exposed_features=frozenset({"siren_basic"}),
+        exposed_features=frozenset({SIREN_BASIC}),
         feature_priority=(PlatformFeatureGroup.SIREN, 1),
     )
 
