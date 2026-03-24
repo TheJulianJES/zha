@@ -1024,8 +1024,8 @@ class SinopeLightLEDOnColorSelect(ZCLEnumSelectEntity):
 class BegaColorTemperatureChannel(types.enum8):
     """BEGA switchable white color temperature channel enum."""
 
-    Warm_White = 0x00
-    Cool_White = 0x01
+    Warm_white = 0x00
+    Cool_white = 0x01
 
 
 @register_entity(LevelControl.cluster_id)

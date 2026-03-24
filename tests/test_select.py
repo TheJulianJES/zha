@@ -286,16 +286,16 @@ async def test_bega_color_temperature_channel_select(zha_gateway: Gateway) -> No
         platform=Platform.SELECT,
         qualifier="switchable_white",
     )
-    assert entity.state["state"] == "Warm White"
-    assert entity.info_object.options == ["Warm White", "Cool White"]
+    assert entity.state["state"] == "Warm white"
+    assert entity.info_object.options == ["Warm white", "Cool white"]
 
     # send attribute report from device
     await send_attributes_report(
         zha_gateway,
         cluster,
-        {"switchable_white": BegaColorTemperatureChannel.Cool_White},
+        {"switchable_white": BegaColorTemperatureChannel.Cool_white},
     )
-    assert entity.state["state"] == "Cool White"
+    assert entity.state["state"] == "Cool white"
 
     # test selecting an option
     Write_Attributes_rsp = foundation.GENERAL_COMMANDS[
@@ -315,12 +315,12 @@ async def test_bega_color_temperature_channel_select(zha_gateway: Gateway) -> No
         ),
         patch.object(cluster, "write_attributes", wraps=cluster.write_attributes),
     ):
-        await entity.async_select_option("Warm White")
+        await entity.async_select_option("Warm white")
         await zha_gateway.async_block_till_done()
-        assert entity.state["state"] == "Warm White"
+        assert entity.state["state"] == "Warm white"
         assert cluster.write_attributes.call_count == 1
         assert cluster.write_attributes.call_args == call(
-            {"switchable_white": BegaColorTemperatureChannel.Warm_White},
+            {"switchable_white": BegaColorTemperatureChannel.Warm_white},
             manufacturer=UNDEFINED,
         )
 
