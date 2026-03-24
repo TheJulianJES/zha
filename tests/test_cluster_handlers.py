@@ -1116,11 +1116,45 @@ async def test_configure_reporting_status_empty_second_chunk(
 
     await cluster_handler.async_configure()
 
-    cfg_rpt_event = mock_emit.call_args_list[1][0][1]
-    assert cfg_rpt_event.attributes["current_x"]["status"] == "SUCCESS"
-    assert cfg_rpt_event.attributes["current_y"]["status"] == "SUCCESS"
-    assert cfg_rpt_event.attributes["current_hue"]["status"] == "SUCCESS"
-    assert cfg_rpt_event.attributes["color_temperature"]["status"] == "FAILURE"
+    expected_statuses = {
+        "current_x": "SUCCESS",
+        "current_y": "SUCCESS",
+        "current_hue": "SUCCESS",
+        "color_temperature": "FAILURE",
+    }
+
+    assert mock_emit.call_args_list == [
+        mock.call(
+            ZHA_CLUSTER_HANDLER_MSG_BIND,
+            ClusterBindEvent(
+                cluster_name=cluster.name,
+                cluster_id=cluster.cluster_id,
+                cluster_handler_unique_id=cluster_handler.unique_id,
+                success=True,
+            ),
+        ),
+        mock.call(
+            ZHA_CLUSTER_HANDLER_MSG_CFG_RPT,
+            ClusterConfigureReportingEvent(
+                cluster_name=cluster.name,
+                cluster_id=cluster.cluster_id,
+                cluster_handler_unique_id=cluster_handler.unique_id,
+                attributes={
+                    attr_name: {
+                        "min": 1,
+                        "max": 60,
+                        "id": attr_name,
+                        "name": attr_name,
+                        "change": idx + 1,
+                        "status": expected_status,
+                    }
+                    for idx, (attr_name, expected_status) in enumerate(
+                        expected_statuses.items()
+                    )
+                },
+            ),
+        ),
+    ]
 
 
 async def test_invalid_cluster_handler(zha_gateway: Gateway, caplog) -> None:  # pylint: disable=unused-argument
