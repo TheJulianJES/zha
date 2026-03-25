@@ -941,14 +941,14 @@
           "group_id": null,
           "enum": "BegaColorTemperatureChannel",
           "options": [
-            "Warm White",
-            "Cool White"
+            "Warm white",
+            "Cool white"
           ]
         },
         "state": {
           "class_name": "BegaColorTemperatureChannelSelect",
           "available": true,
-          "state": "Warm White"
+          "state": "Warm white"
         }
       }
     ],
