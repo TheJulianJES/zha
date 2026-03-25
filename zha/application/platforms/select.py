@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 from zhaquirks.danfoss import thermostat as danfoss_thermostat
 from zhaquirks.quirk_ids import (
     DANFOSS_ALLY_THERMOSTAT,
+    SIREN_BASIC,
     TUYA_PLUG_MANUFACTURER,
     TUYA_PLUG_ONOFF,
 )
@@ -165,7 +166,7 @@ class DefaultToneSelectEntity(NonZCLSelectEntity):
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_WD}),
-        not_exposed_features=frozenset({"siren_basic"}),
+        not_exposed_features=frozenset({SIREN_BASIC}),
     )
 
 
@@ -179,7 +180,7 @@ class DefaultSirenLevelSelectEntity(NonZCLSelectEntity):
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_WD}),
-        not_exposed_features=frozenset({"siren_basic"}),
+        not_exposed_features=frozenset({SIREN_BASIC}),
     )
 
 
@@ -193,7 +194,7 @@ class DefaultStrobeLevelSelectEntity(NonZCLSelectEntity):
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_WD}),
-        not_exposed_features=frozenset({"siren_basic"}),
+        not_exposed_features=frozenset({SIREN_BASIC}),
     )
 
 
@@ -207,7 +208,7 @@ class DefaultStrobeSelectEntity(NonZCLSelectEntity):
 
     _cluster_handler_match = ClusterHandlerMatch(
         cluster_handlers=frozenset({CLUSTER_HANDLER_IAS_WD}),
-        not_exposed_features=frozenset({"siren_basic"}),
+        not_exposed_features=frozenset({SIREN_BASIC}),
     )
 
 
