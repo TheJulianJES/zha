@@ -168,6 +168,7 @@ class BaseZclSiren(BaseSiren, ABC):
 
     async def async_turn_off(self) -> None:
         """Turn off siren."""
+        self._cancel_off_listener()
         await self._cluster_handler.issue_start_warning(
             mode=WARNING_DEVICE_MODE_STOP, strobe=WARNING_DEVICE_STROBE_NO
         )
