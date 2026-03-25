@@ -583,7 +583,7 @@
           "unique_id": "00:15:bc:00:33:00:76:9a-35-1282",
           "migrate_unique_ids": [],
           "platform": "siren",
-          "class_name": "Siren",
+          "class_name": "BasicSiren",
           "translation_key": null,
           "translation_placeholders": null,
           "device_class": null,
@@ -612,18 +612,11 @@
           "endpoint_id": 35,
           "available": true,
           "group_id": null,
-          "available_tones": {
-            "1": "Burglar",
-            "2": "Fire",
-            "3": "Emergency",
-            "4": "Police Panic",
-            "5": "Fire Panic",
-            "6": "Emergency Panic"
-          },
-          "supported_features": 31
+          "available_tones": {},
+          "supported_features": 19
         },
         "state": {
-          "class_name": "Siren",
+          "class_name": "BasicSiren",
           "available": true,
           "state": false
         }

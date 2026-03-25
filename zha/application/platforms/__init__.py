@@ -75,6 +75,9 @@ class PlatformFeatureGroup(StrEnum):
     # Prefer OTA client update entities over OTA server update entities
     OTA_UPDATE = "ota_update"
 
+    # IAS WD siren entity selection
+    SIREN = "siren"
+
 
 @dataclasses.dataclass(frozen=True)
 class ClusterHandlerMatch:
