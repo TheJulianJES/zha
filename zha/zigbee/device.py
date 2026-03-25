@@ -25,7 +25,7 @@ from zigpy.types import uint1_t, uint8_t, uint16_t
 from zigpy.types.named import EUI64, NWK, ExtendedPanId
 from zigpy.typing import UNDEFINED, UndefinedType
 from zigpy.zcl.clusters import Cluster
-from zigpy.zcl.clusters.general import Groups, Identify
+from zigpy.zcl.clusters.general import Groups, Identify, Ota
 from zigpy.zcl.foundation import (
     Status as ZclStatus,
     WriteAttributesResponse,
@@ -1620,6 +1620,19 @@ class Device(LogMixin, EventBase):
                         "cluster_id": f"0x{cluster_id:04x}",
                         "endpoint_attribute": cluster.ep_attribute,
                         "attributes": get_cluster_attr_data(cluster),
+                        **(
+                            {
+                                "last_query_cmd": {
+                                    "manufacturer_code": cluster.last_query_cmd.manufacturer_code,
+                                    "image_type": cluster.last_query_cmd.image_type,
+                                    "current_file_version": cluster.last_query_cmd.current_file_version,
+                                    "hardware_version": cluster.last_query_cmd.hardware_version,
+                                }
+                            }
+                            if isinstance(cluster, Ota)
+                            and getattr(cluster, "last_query_cmd", None) is not None
+                            else {}
+                        ),
                     }
                     for cluster_id, cluster in sorted(endpoint.out_clusters.items())
                 ],
