@@ -139,7 +139,22 @@ class BaseZclSiren(BaseSiren, ABC):
         """Init ZCL siren base."""
         self._cluster_handler = cast(IasWdClusterHandler, cluster_handlers[0])
         self._off_listener = None
-        super().__init__(cluster_handlers, endpoint, device, **kwargs)
+
+        legacy_discovery_unique_id = (
+            f"{endpoint.device.ieee}-{endpoint.id}"
+            if (
+                endpoint.zigpy_endpoint.device_type == zha.DeviceType.IAS_WARNING_DEVICE
+            )
+            else f"{endpoint.device.ieee}-{endpoint.id}-{int(IasWd.cluster_id)}"
+        )
+
+        super().__init__(
+            cluster_handlers,
+            endpoint,
+            device,
+            legacy_discovery_unique_id=legacy_discovery_unique_id,
+            **kwargs,
+        )
 
     def _cancel_off_listener(self) -> None:
         """Cancel and clean up the off listener."""
@@ -186,21 +201,7 @@ class AdvancedSiren(BaseZclSiren):
         **kwargs: Any,
     ) -> None:
         """Init this siren."""
-        legacy_discovery_unique_id = (
-            f"{endpoint.device.ieee}-{endpoint.id}"
-            if (
-                endpoint.zigpy_endpoint.device_type == zha.DeviceType.IAS_WARNING_DEVICE
-            )
-            else f"{endpoint.device.ieee}-{endpoint.id}-{int(IasWd.cluster_id)}"
-        )
-
-        super().__init__(
-            cluster_handlers,
-            endpoint,
-            device,
-            **kwargs,
-            legacy_discovery_unique_id=legacy_discovery_unique_id,
-        )
+        super().__init__(cluster_handlers, endpoint, device, **kwargs)
         self._attr_supported_features = (
             SirenEntityFeature.TURN_ON
             | SirenEntityFeature.TURN_OFF
