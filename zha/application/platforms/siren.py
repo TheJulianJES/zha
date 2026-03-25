@@ -141,6 +141,16 @@ class BaseZclSiren(BaseSiren, ABC):
         self._off_listener = None
         super().__init__(cluster_handlers, endpoint, device, **kwargs)
 
+    def _cancel_off_listener(self) -> None:
+        """Cancel and clean up the off listener."""
+        if self._off_listener:
+            self._off_listener.cancel()
+
+            with contextlib.suppress(ValueError):
+                self._tracked_handles.remove(self._off_listener)
+
+            self._off_listener = None
+
     async def async_turn_off(self) -> None:
         """Turn off siren."""
         await self._cluster_handler.issue_start_warning(
@@ -152,13 +162,7 @@ class BaseZclSiren(BaseSiren, ABC):
     def _async_set_off(self) -> None:
         """Set is_on to False and write HA state."""
         self._attr_is_on = False
-        if self._off_listener:
-            self._off_listener.cancel()
-
-            with contextlib.suppress(ValueError):
-                self._tracked_handles.remove(self._off_listener)
-
-            self._off_listener = None
+        self._cancel_off_listener()
         self.maybe_emit_state_changed_event()
 
 
@@ -220,9 +224,7 @@ class AdvancedSiren(BaseZclSiren):
         volume_level: int | None = None,
     ) -> None:
         """Turn on siren."""
-        if self._off_listener:
-            self._off_listener.cancel()
-            self._off_listener = None
+        self._cancel_off_listener()
         tone_cache = self._cluster_handler.data_cache.get(
             IasWd.Warning.WarningMode.__name__
         )
@@ -308,9 +310,7 @@ class BasicSiren(BaseZclSiren):
         volume_level: int | None = None,
     ) -> None:
         """Turn on siren with fixed tone, level, and strobe."""
-        if self._off_listener:
-            self._off_listener.cancel()
-            self._off_listener = None
+        self._cancel_off_listener()
         siren_duration = duration if duration is not None else DEFAULT_DURATION
         await self._cluster_handler.issue_start_warning(
             # some Frient sensors send INVALID_VALUE for EMERGENCY
