@@ -91,6 +91,7 @@ class ClusterHandlerMatch:
     manufacturers: frozenset[str] | None = None
     models: frozenset[str] | None = None
     exposed_features: frozenset[str] | None = None
+    not_exposed_features: frozenset[str] | None = None
 
     # If present, device must match one of the given profile and device type combinations.
     # This will be ignored if `platform_override` is used.
