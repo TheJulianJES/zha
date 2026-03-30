@@ -126,6 +126,7 @@ class ThermostatClusterHandler(ClusterHandler):
         Thermostat.AttributeDefs.min_heat_setpoint_limit.name: True,
         Thermostat.AttributeDefs.local_temperature_calibration.name: True,
         Thermostat.AttributeDefs.setpoint_change_source.name: True,
+        Thermostat.AttributeDefs.setpoint_change_source_timestamp.name: True,
     }
 
     @property
