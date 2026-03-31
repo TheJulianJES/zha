@@ -180,10 +180,11 @@ class WindowCoveringClusterHandler(ClusterHandler):
         lift_percentage = self.cluster.get(
             WindowCovering.AttributeDefs.current_position_lift_percentage.name
         )
-        if lift_percentage is not None:
-            # the 100 - value is because we need to invert the value before giving it to the entity
-            lift_percentage = 100 - lift_percentage
-        return lift_percentage
+        if lift_percentage is None or lift_percentage > 100:
+            # ZCL uses 255 (0xFF) to indicate the position is unknown
+            return None
+        # the 100 - value is because we need to invert the value before giving it to the entity
+        return 100 - lift_percentage
 
     @property
     def current_position_tilt_percentage(self) -> t.uint16_t | None:
@@ -191,10 +192,11 @@ class WindowCoveringClusterHandler(ClusterHandler):
         tilt_percentage = self.cluster.get(
             WindowCovering.AttributeDefs.current_position_tilt_percentage.name
         )
-        if tilt_percentage is not None:
-            # the 100 - value is because we need to invert the value before giving it to the entity
-            tilt_percentage = 100 - tilt_percentage
-        return tilt_percentage
+        if tilt_percentage is None or tilt_percentage > 100:
+            # ZCL uses 255 (0xFF) to indicate the position is unknown
+            return None
+        # the 100 - value is because we need to invert the value before giving it to the entity
+        return 100 - tilt_percentage
 
     @property
     def installed_open_limit_lift(self) -> t.uint16_t | None:

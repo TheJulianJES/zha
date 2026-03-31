@@ -1268,3 +1268,37 @@ async def test_cover_state_restore_timer_cancellation_on_remove(
 
     # remove entity
     await entity.on_remove()
+
+
+async def test_cover_unknown_position_value(zha_gateway: Gateway) -> None:
+    """Test that ZCL unknown position value (255) is treated as None."""
+
+    # 255 means "unknown" in ZCL for percentage attributes
+    zha_device, zigpy_cover_device = await device_cover_mock(
+        zha_gateway,
+        current_position_lift_percentage=255,
+        current_position_tilt_percentage=255,
+        window_covering_type=WCT.Tilt_blind_tilt_and_lift,
+    )
+
+    entity = get_entity(zha_device, platform=Platform.COVER)
+    cluster = zigpy_cover_device.endpoints[1].window_covering
+
+    # Position should be unknown (None), not a negative value
+    assert entity.state[ATTR_CURRENT_POSITION] is None
+    assert entity.state[ATTR_CURRENT_TILT_POSITION] is None
+
+    # SET_POSITION should still be advertised as a supported feature
+    assert entity.supported_features & CoverEntityFeature.SET_POSITION
+    assert entity.supported_features & CoverEntityFeature.SET_TILT_POSITION
+
+    # After receiving a valid position update, it should work normally
+    await send_attributes_report(
+        zha_gateway, cluster, {WCAttrs.current_position_lift_percentage.id: 50}
+    )
+    assert entity.state[ATTR_CURRENT_POSITION] == 50
+
+    await send_attributes_report(
+        zha_gateway, cluster, {WCAttrs.current_position_tilt_percentage.id: 50}
+    )
+    assert entity.state[ATTR_CURRENT_TILT_POSITION] == 50
