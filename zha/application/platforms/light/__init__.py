@@ -484,7 +484,13 @@ class BaseClusterHandlerLight(BaseLight):
             and effect != EFFECT_COLORLOOP
         )
 
-        await self._async_deactivate_effect_before_turn_on(effect, t_log)
+        if (
+            self._color_cluster_handler is not None
+            and self._state
+            and self._effect == EFFECT_COLORLOOP
+            and effect != EFFECT_COLORLOOP
+        ):
+            await self._async_deactivate_color_loop(t_log)
 
         try:
             await self._async_turn_on_commands(
@@ -516,7 +522,7 @@ class BaseClusterHandlerLight(BaseLight):
         self.async_transition_start_timer(transition_time)
 
         if deactivate_effect_after_turn_on:
-            await self._async_deactivate_effect_after_turn_on(t_log)
+            await self._async_deactivate_color_loop(t_log)
 
         if self._color_cluster_handler is not None and effect == EFFECT_COLORLOOP:
             result = await self._color_cluster_handler.color_loop_set(
@@ -546,35 +552,11 @@ class BaseClusterHandlerLight(BaseLight):
         self.debug("turned on: %s", t_log)
         self.maybe_emit_state_changed_event()
 
-    async def _async_deactivate_effect_before_turn_on(
-        self,
-        effect: str | None,
-        t_log: dict[str, Any],
-    ) -> None:
-        """Disable an active effect before sending other state-changing commands."""
-        if (
-            self._color_cluster_handler is None
-            or not self._state
-            or self._effect != EFFECT_COLORLOOP
-            or effect == EFFECT_COLORLOOP
-        ):
-            return
-
-        result = await self._color_cluster_handler.color_loop_set(
-            update_flags=Color.ColorLoopUpdateFlags.Action,
-            action=Color.ColorLoopAction.Deactivate,
-            direction=Color.ColorLoopDirection.Decrement,
-            time=0,
-            start_hue=0,
-        )
-        t_log["color_loop_set"] = result
-        self._effect = EFFECT_OFF
-
-    async def _async_deactivate_effect_after_turn_on(
+    async def _async_deactivate_color_loop(
         self,
         t_log: dict[str, Any],
     ) -> None:
-        """Disable an active effect after turn-on when the light started off."""
+        """Deactivate the color loop effect."""
         assert self._color_cluster_handler is not None
 
         result = await self._color_cluster_handler.color_loop_set(
