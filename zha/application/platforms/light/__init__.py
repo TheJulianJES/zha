@@ -10,6 +10,7 @@ from collections import Counter
 import contextlib
 import dataclasses
 from dataclasses import dataclass
+from enum import Enum
 import functools
 import itertools
 import logging
@@ -92,6 +93,20 @@ if TYPE_CHECKING:
     from zha.zigbee.group import Group
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class _ZCLFailureAction(Enum):
+    """Action to take when a ZCL command fails."""
+
+    COMPLETE_IF_NO_LISTENER = "complete_if_no_listener"
+    START_TIMER = "start_timer"
+
+
+class _ZCLCommandFailure(Exception):
+    """Raised when a ZCL command does not return Status.SUCCESS."""
+
+    def __init__(self, action: _ZCLFailureAction) -> None:
+        self.action = action
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -288,6 +303,12 @@ class BaseClusterHandlerLight(BaseLight):
 
         self._internal_supported_color_modes: set[ColorMode] = set()
 
+    @staticmethod
+    def _check_result(result, on_failure: _ZCLFailureAction) -> None:
+        """Raise _ZCLCommandFailure if the ZCL command did not succeed."""
+        if result[1] is not Status.SUCCESS:
+            raise _ZCLCommandFailure(on_failure)
+
     @property
     @abstractmethod
     def _gateway(self) -> Gateway:
@@ -394,7 +415,7 @@ class BaseClusterHandlerLight(BaseLight):
             # the light does not get stuck in a transitioning state indefinitely.
             self._async_cleanup_transition_if_stuck(set_transition_flag)
 
-    async def _async_turn_on_impl(  # noqa: C901
+    async def _async_turn_on_impl(
         self,
         *,
         transition: float | None,
@@ -454,127 +475,31 @@ class BaseClusterHandlerLight(BaseLight):
         else:
             level = self._brightness or 254
 
-        t_log = {}
+        t_log: dict[str, Any] = {}
 
-        if new_color_provided_while_off:
-            assert self._level_cluster_handler is not None
-
-            # If the light is currently off, we first need to turn it on at a low
-            # brightness level with no transition.
-            # After that, we set it to the desired color/temperature with no transition.
-            result = await self._level_cluster_handler.move_to_level_with_on_off(
-                level=DEFAULT_MIN_BRIGHTNESS,
-                transition_time=int(10 * self._DEFAULT_MIN_TRANSITION_TIME),
-            )
-            t_log["move_to_level_with_on_off"] = result
-            if result[1] is not Status.SUCCESS:
-                # First 'move to level' call failed, so if the transitioning delay
-                # isn't running from a previous call,
-                # the flag can be unset immediately
-                if set_transition_flag and not self._transition_listener:
-                    self.async_transition_complete()
-                self.debug("turned on: %s", t_log)
-                return
-            # Currently only setting it to "on", as the correct level state will
-            # be set at the second move_to_level call
-            self._state = True
-
-        if execute_if_off_supported:
-            self.debug("handling color commands before turning on/level")
-            if not await self.async_handle_color_commands(
-                color_temp,
-                duration,  # duration is ignored by lights when off
-                xy_color,
-                new_color_provided_while_off,
-                t_log,
-            ):
-                # Color calls before on/level calls failed,
-                # so if the transitioning delay isn't running from a previous call,
-                # the flag can be unset immediately
-                if set_transition_flag and not self._transition_listener:
-                    self.async_transition_complete()
-                self.debug("turned on: %s", t_log)
-                return
-
-        if (
-            (brightness is not None or transition is not None)
-            and not new_color_provided_while_off
-            and brightness_supported
-        ):
-            assert self._level_cluster_handler is not None
-
-            result = await self._level_cluster_handler.move_to_level_with_on_off(
+        try:
+            await self._async_turn_on_commands(
+                brightness=brightness,
+                transition=transition,
+                color_temp=color_temp,
+                xy_color=xy_color,
+                duration=duration,
                 level=level,
-                transition_time=int(10 * duration),
+                execute_if_off_supported=execute_if_off_supported,
+                brightness_supported=brightness_supported,
+                set_transition_flag=set_transition_flag,
+                transition_time=transition_time,
+                new_color_provided_while_off=new_color_provided_while_off,
+                t_log=t_log,
             )
-            t_log["move_to_level_with_on_off"] = result
-            if result[1] is not Status.SUCCESS:
-                # First 'move to level' call failed, so if the transitioning delay
-                # isn't running from a previous call, the flag can be unset immediately
+        except _ZCLCommandFailure as exc:
+            if exc.action == _ZCLFailureAction.COMPLETE_IF_NO_LISTENER:
                 if set_transition_flag and not self._transition_listener:
                     self.async_transition_complete()
-                self.debug("turned on: %s", t_log)
-                return
-            self._state = bool(level)
-            if level:
-                self._brightness = level
-
-        if (
-            (brightness is None and transition is None)
-            and not new_color_provided_while_off
-            or (self._FORCE_ON and brightness != 0)
-        ):
-            assert self._on_off_cluster_handler is not None
-
-            # since FORCE_ON lights don't turn on with move_to_level_with_on_off,
-            # we should call the on command on the on_off cluster
-            # if brightness is not 0.
-            result = await self._on_off_cluster_handler.on()
-            t_log["on_off"] = result
-            if result[1] is not Status.SUCCESS:
-                # 'On' call failed, but as brightness may still transition
-                # (for FORCE_ON lights), we start the timer to unset the flag after
-                # the transition_time if necessary.
+            elif exc.action == _ZCLFailureAction.START_TIMER:
                 self.async_transition_start_timer(transition_time)
-                self.debug("turned on: %s", t_log)
-                return
-            self._state = True
-
-        if not execute_if_off_supported:
-            self.debug("handling color commands after turning on/level")
-            if not await self.async_handle_color_commands(
-                color_temp,
-                duration,
-                xy_color,
-                new_color_provided_while_off,
-                t_log,
-            ):
-                # Color calls failed, but as brightness may still transition,
-                # we start the timer to unset the flag
-                self.async_transition_start_timer(transition_time)
-                self.debug("turned on: %s", t_log)
-                return
-
-        if new_color_provided_while_off:
-            assert self._level_cluster_handler is not None
-
-            # The light has the correct color, so we can now transition
-            # it to the correct brightness level.
-            result = await self._level_cluster_handler.move_to_level(
-                level=level, transition_time=int(10 * duration)
-            )
-            t_log["move_to_level_if_color"] = result
-            if result[1] is not Status.SUCCESS:
-                # Second 'move to level' call failed; the light is on but at the
-                # wrong brightness. If no previous timer is running, unset the flag
-                # immediately so attribute reports are not ignored indefinitely.
-                if set_transition_flag and not self._transition_listener:
-                    self.async_transition_complete()
-                self.debug("turned on: %s", t_log)
-                return
-            self._state = bool(level)
-            if level:
-                self._brightness = level
+            self.debug("turned on: %s", t_log)
+            return
 
         # Our light is guaranteed to have just started the transitioning process
         # if necessary, so we start the delay for the transition (to stop parsing
@@ -619,6 +544,123 @@ class BaseClusterHandlerLight(BaseLight):
         self._off_brightness = None
         self.debug("turned on: %s", t_log)
         self.maybe_emit_state_changed_event()
+
+    async def _async_turn_on_commands(  # noqa: C901
+        self,
+        *,
+        brightness: int | None,
+        transition: float | None,
+        color_temp: int | None,
+        xy_color: tuple[int, int] | None,
+        duration: float,
+        level: int,
+        execute_if_off_supported: bool,
+        brightness_supported: bool,
+        set_transition_flag: bool,
+        transition_time: float,
+        new_color_provided_while_off: bool,
+        t_log: dict,
+    ) -> None:
+        """Execute ZCL commands for turning on. Raises _ZCLCommandFailure on failure."""
+
+        if new_color_provided_while_off:
+            assert self._level_cluster_handler is not None
+
+            # If the light is currently off, we first need to turn it on at a low
+            # brightness level with no transition.
+            # After that, we set it to the desired color/temperature with no transition.
+            result = await self._level_cluster_handler.move_to_level_with_on_off(
+                level=DEFAULT_MIN_BRIGHTNESS,
+                transition_time=int(10 * self._DEFAULT_MIN_TRANSITION_TIME),
+            )
+            t_log["move_to_level_with_on_off"] = result
+            # First 'move to level' call failed, so if the transitioning delay
+            # isn't running from a previous call, the flag can be unset immediately
+            self._check_result(result, _ZCLFailureAction.COMPLETE_IF_NO_LISTENER)
+            # Currently only setting it to "on", as the correct level state will
+            # be set at the second move_to_level call
+            self._state = True
+
+        if execute_if_off_supported:
+            self.debug("handling color commands before turning on/level")
+            # Color calls before on/level calls failed,
+            # so if the transitioning delay isn't running from a previous call,
+            # the flag can be unset immediately
+            await self.async_handle_color_commands(
+                color_temp,
+                duration,  # duration is ignored by lights when off
+                xy_color,
+                new_color_provided_while_off,
+                t_log,
+                on_failure=_ZCLFailureAction.COMPLETE_IF_NO_LISTENER,
+            )
+
+        if (
+            (brightness is not None or transition is not None)
+            and not new_color_provided_while_off
+            and brightness_supported
+        ):
+            assert self._level_cluster_handler is not None
+
+            result = await self._level_cluster_handler.move_to_level_with_on_off(
+                level=level,
+                transition_time=int(10 * duration),
+            )
+            t_log["move_to_level_with_on_off"] = result
+            # First 'move to level' call failed, so if the transitioning delay
+            # isn't running from a previous call, the flag can be unset immediately
+            self._check_result(result, _ZCLFailureAction.COMPLETE_IF_NO_LISTENER)
+            self._state = bool(level)
+            if level:
+                self._brightness = level
+
+        if (
+            (brightness is None and transition is None)
+            and not new_color_provided_while_off
+            or (self._FORCE_ON and brightness != 0)
+        ):
+            assert self._on_off_cluster_handler is not None
+
+            # since FORCE_ON lights don't turn on with move_to_level_with_on_off,
+            # we should call the on command on the on_off cluster
+            # if brightness is not 0.
+            result = await self._on_off_cluster_handler.on()
+            t_log["on_off"] = result
+            # 'On' call failed, but as brightness may still transition
+            # (for FORCE_ON lights), we start the timer to unset the flag after
+            # the transition_time if necessary.
+            self._check_result(result, _ZCLFailureAction.START_TIMER)
+            self._state = True
+
+        if not execute_if_off_supported:
+            self.debug("handling color commands after turning on/level")
+            # Color calls failed, but as brightness may still transition,
+            # we start the timer to unset the flag
+            await self.async_handle_color_commands(
+                color_temp,
+                duration,
+                xy_color,
+                new_color_provided_while_off,
+                t_log,
+                on_failure=_ZCLFailureAction.START_TIMER,
+            )
+
+        if new_color_provided_while_off:
+            assert self._level_cluster_handler is not None
+
+            # The light has the correct color, so we can now transition
+            # it to the correct brightness level.
+            result = await self._level_cluster_handler.move_to_level(
+                level=level, transition_time=int(10 * duration)
+            )
+            t_log["move_to_level_if_color"] = result
+            # Second 'move to level' call failed; the light is on but at the
+            # wrong brightness. If no previous timer is running, unset the flag
+            # immediately so attribute reports are not ignored indefinitely.
+            self._check_result(result, _ZCLFailureAction.COMPLETE_IF_NO_LISTENER)
+            self._state = bool(level)
+            if level:
+                self._brightness = level
 
     async def async_turn_off(self, *, transition: float | None = None) -> None:
         """Turn the entity off."""
@@ -687,8 +729,9 @@ class BaseClusterHandlerLight(BaseLight):
         xy_color,
         new_color_provided_while_off,
         t_log,
-    ):
-        """Process ZCL color commands."""
+        on_failure: _ZCLFailureAction,
+    ) -> None:
+        """Process ZCL color commands. Raises _ZCLCommandFailure on failure."""
         transition_time = (
             self._DEFAULT_MIN_TRANSITION_TIME
             if new_color_provided_while_off
@@ -703,8 +746,7 @@ class BaseClusterHandlerLight(BaseLight):
                 transition_time=int(10 * transition_time),
             )
             t_log["move_to_color_temp"] = result
-            if result[1] is not Status.SUCCESS:
-                return False
+            self._check_result(result, on_failure)
             self._color_mode = ColorMode.COLOR_TEMP
             self._color_temp = color_temp
             self._xy_color = None
@@ -718,13 +760,10 @@ class BaseClusterHandlerLight(BaseLight):
                 transition_time=int(10 * transition_time),
             )
             t_log["move_to_color"] = result
-            if result[1] is not Status.SUCCESS:
-                return False
+            self._check_result(result, on_failure)
             self._color_mode = ColorMode.XY
             self._xy_color = xy_color
             self._color_temp = None
-
-        return True
 
     @property
     def is_transitioning(self) -> bool:
