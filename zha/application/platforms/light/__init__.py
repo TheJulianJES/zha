@@ -368,21 +368,21 @@ class BaseClusterHandlerLight(BaseLight):
         set_transition_flag = (
             brightness_supported or color_temp is not None or xy_color is not None
         ) and self._zha_config_enable_light_transitioning_flag
-        transition_time = (
-            (
-                duration + DEFAULT_EXTRA_TRANSITION_DELAY_SHORT
-                if (
-                    (brightness is not None or transition is not None)
-                    and brightness_supported
-                    or (self._off_with_transition and self._off_brightness is not None)
-                    or color_temp is not None
-                    or xy_color is not None
-                )
-                else DEFAULT_ON_OFF_TRANSITION + DEFAULT_EXTRA_TRANSITION_DELAY_SHORT
+
+        if not set_transition_flag:
+            transition_time = 0.0
+        elif (
+            (brightness is not None or transition is not None)
+            and brightness_supported
+            or (self._off_with_transition and self._off_brightness is not None)
+            or color_temp is not None
+            or xy_color is not None
+        ):
+            transition_time = duration + DEFAULT_EXTRA_TRANSITION_DELAY_SHORT
+        else:
+            transition_time = (
+                DEFAULT_ON_OFF_TRANSITION + DEFAULT_EXTRA_TRANSITION_DELAY_SHORT
             )
-            if set_transition_flag
-            else 0
-        )
 
         # If we need to pause attribute report parsing, we'll do so here.
         # After successful calls, we later start a timer to unset the flag after
