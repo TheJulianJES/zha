@@ -345,12 +345,10 @@ class BaseClusterHandlerLight(BaseLight):
         xy_color: tuple[int, int] | None = None,
     ) -> None:
         """Turn the entity on."""
+        # If 0 is passed in, some devices still need the minimum default
         duration = (
             transition if transition is not None else self._zha_config_transition
-        ) or (
-            # if 0 is passed in some devices still need the minimum default
-            self._DEFAULT_MIN_TRANSITION_TIME
-        )
+        ) or self._DEFAULT_MIN_TRANSITION_TIME
 
         execute_if_off_supported = (
             self._GROUP_SUPPORTS_EXECUTE_IF_OFF
