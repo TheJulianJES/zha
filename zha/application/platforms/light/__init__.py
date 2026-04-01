@@ -350,12 +350,13 @@ class BaseClusterHandlerLight(BaseLight):
             transition if transition is not None else self._zha_config_transition
         ) or self._DEFAULT_MIN_TRANSITION_TIME
 
-        execute_if_off_supported = (
-            self._GROUP_SUPPORTS_EXECUTE_IF_OFF
-            if isinstance(self, LightGroup)
-            else self._color_cluster_handler
-            and self._color_cluster_handler.execute_if_off_supported
-        )
+        if isinstance(self, LightGroup):
+            execute_if_off_supported = self._GROUP_SUPPORTS_EXECUTE_IF_OFF
+        else:
+            execute_if_off_supported = (
+                self._color_cluster_handler is not None
+                and self._color_cluster_handler.execute_if_off_supported
+            )
 
         # A device theoretically could lie about having brightness support and omit the
         # actual LevelControl cluster needed to control it
