@@ -401,6 +401,7 @@ class DefaultMoveRateConfigurationEntity(NumberConfigurationEntity):
     """Representation of a ZHA default move rate configuration entity."""
 
     _unique_id_suffix = "default_move_rate"
+    _attr_entity_registry_enabled_default = False
     _attr_native_min_value: float = 0x00
     _attr_native_max_value: float = 0xFE
     _attribute_name = "default_move_rate"
