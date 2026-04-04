@@ -501,8 +501,6 @@ class BaseClusterHandlerLight(BaseLight):
                 level=level,
                 execute_if_off_supported=execute_if_off_supported,
                 brightness_supported=brightness_supported,
-                set_transition_flag=set_transition_flag,
-                transition_time=transition_time,
                 new_color_provided_while_off=new_color_provided_while_off,
                 t_log=t_log,
             )
@@ -579,10 +577,8 @@ class BaseClusterHandlerLight(BaseLight):
         level: int,
         execute_if_off_supported: bool,
         brightness_supported: bool,
-        set_transition_flag: bool,
-        transition_time: float,
         new_color_provided_while_off: bool,
-        t_log: dict,
+        t_log: dict[str, Any],
     ) -> None:
         """Execute ZCL commands for turning on. Raises _ZCLCommandFailure on failure."""
 
@@ -692,11 +688,14 @@ class BaseClusterHandlerLight(BaseLight):
             and self._level_cluster_handler is not None
         )
 
-        transition_time = (
-            transition or self._DEFAULT_MIN_TRANSITION_TIME
-            if transition is not None
-            else DEFAULT_ON_OFF_TRANSITION
-        ) + DEFAULT_EXTRA_TRANSITION_DELAY_SHORT
+        if transition is not None:
+            transition_time = (
+                transition or self._DEFAULT_MIN_TRANSITION_TIME
+            ) + DEFAULT_EXTRA_TRANSITION_DELAY_SHORT
+        else:
+            transition_time = (
+                DEFAULT_ON_OFF_TRANSITION + DEFAULT_EXTRA_TRANSITION_DELAY_SHORT
+            )
 
         # Start pausing attribute report parsing
         if self._zha_config_enable_light_transitioning_flag:
@@ -735,7 +734,7 @@ class BaseClusterHandlerLight(BaseLight):
                     # current_level is set to 1 after transitioning to level 0,
                     # needed for correct state with light groups
                     self._brightness = 1
-                    self._off_with_transition = transition is not None
+                    self._off_with_transition = True
 
             self.maybe_emit_state_changed_event()
         finally:
@@ -747,11 +746,11 @@ class BaseClusterHandlerLight(BaseLight):
 
     async def async_handle_color_commands(
         self,
-        color_temp,
-        duration,
-        xy_color,
-        new_color_provided_while_off,
-        t_log,
+        color_temp: int | None,
+        duration: float,
+        xy_color: tuple[int, int] | None,
+        new_color_provided_while_off: bool,
+        t_log: dict[str, Any],
         on_failure: _ZCLFailureAction,
     ) -> None:
         """Process ZCL color commands. Raises _ZCLCommandFailure on failure."""
@@ -827,10 +826,11 @@ class BaseClusterHandlerLight(BaseLight):
         """Unsubscribe transition listener."""
         if self._transition_listener:
             self._transition_listener.cancel()
-            self._transition_listener = None
 
             with contextlib.suppress(ValueError):
                 self._tracked_handles.remove(self._transition_listener)
+
+            self._transition_listener = None
 
     def _async_cleanup_transition_if_stuck(self, guarded: bool) -> None:
         """Call async_transition_complete if the flag is set but no timer is running.
