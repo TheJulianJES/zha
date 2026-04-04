@@ -1048,9 +1048,9 @@ class BegaColorTemperatureChannelSelect(ZCLEnumSelectEntity):
         temp_1 = cluster.get("switchable_color_temperature_1")
         temp_2 = cluster.get("switchable_color_temperature_2")
 
-        if temp_1 == 0xFFFF and temp_2 == 0xFFFF:
+        if temp_1 == 0xFFFF or temp_2 == 0xFFFF:
             _LOGGER.debug(
-                "Both color temperatures are 0xFFFF (unsupported) - "
+                "A color temperature is 0xFFFF (unsupported) - "
                 "skipping %s entity creation",
                 self.__class__.__name__,
             )
