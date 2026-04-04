@@ -483,7 +483,7 @@
           "device_class": null,
           "state_class": null,
           "entity_category": "config",
-          "entity_registry_enabled_default": true,
+          "entity_registry_enabled_default": false,
           "enabled": true,
           "primary": false,
           "cluster_handlers": [
@@ -577,7 +577,7 @@
           "device_class": null,
           "state_class": null,
           "entity_category": "config",
-          "entity_registry_enabled_default": true,
+          "entity_registry_enabled_default": false,
           "enabled": true,
           "primary": false,
           "cluster_handlers": [
@@ -624,7 +624,7 @@
           "device_class": null,
           "state_class": null,
           "entity_category": "config",
-          "entity_registry_enabled_default": true,
+          "entity_registry_enabled_default": false,
           "enabled": true,
           "primary": false,
           "cluster_handlers": [
