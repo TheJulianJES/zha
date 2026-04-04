@@ -341,6 +341,7 @@ class OnOffTransitionTimeConfigurationEntity(NumberConfigurationEntity):
     """Representation of a ZHA on off transition time configuration entity."""
 
     _unique_id_suffix = "on_off_transition_time"
+    _attr_entity_registry_enabled_default = False
     _attr_native_min_value: float = 0x0000
     _attr_native_max_value: float = 0xFFFF
     _attribute_name = "on_off_transition_time"
@@ -371,6 +372,7 @@ class OnTransitionTimeConfigurationEntity(NumberConfigurationEntity):
     """Representation of a ZHA on transition time configuration entity."""
 
     _unique_id_suffix = "on_transition_time"
+    _attr_entity_registry_enabled_default = False
     _attr_native_min_value: float = 0x0000
     _attr_native_max_value: float = 0xFFFE
     _attribute_name = "on_transition_time"
@@ -386,6 +388,7 @@ class OffTransitionTimeConfigurationEntity(NumberConfigurationEntity):
     """Representation of a ZHA off transition time configuration entity."""
 
     _unique_id_suffix = "off_transition_time"
+    _attr_entity_registry_enabled_default = False
     _attr_native_min_value: float = 0x0000
     _attr_native_max_value: float = 0xFFFE
     _attribute_name = "off_transition_time"
