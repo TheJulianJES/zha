@@ -325,22 +325,31 @@ async def test_bega_color_temperature_channel_select(zha_gateway: Gateway) -> No
         )
 
 
+@pytest.mark.parametrize(
+    ("temp_1", "temp_2"),
+    [
+        (0xFFFF, 0xFFFF),
+        (0xFFFF, 3000),
+        (3000, 0xFFFF),
+    ],
+)
 async def test_bega_color_temperature_channel_select_unsupported(
     zha_gateway: Gateway,
+    temp_1: int,
+    temp_2: int,
 ) -> None:
-    """Test BEGA select entity is not created when color temps are 0xFFFF."""
+    """Test BEGA select entity is not created when a color temp is 0xFFFF."""
     zigpy_device = await zigpy_device_from_json(
         zha_gateway.application_controller,
         "tests/data/devices/bega-gantenbrink-leuchten-kg-smart-dimmable-light.json",
     )
 
     cluster = zigpy_device.endpoints[1].in_clusters[general.LevelControl.cluster_id]
-    # Override color temperatures to 0xFFFF (unsupported)
     cluster.update_attribute(
-        cluster.find_attribute("switchable_color_temperature_1").id, 0xFFFF
+        cluster.find_attribute("switchable_color_temperature_1").id, temp_1
     )
     cluster.update_attribute(
-        cluster.find_attribute("switchable_color_temperature_2").id, 0xFFFF
+        cluster.find_attribute("switchable_color_temperature_2").id, temp_2
     )
 
     zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
