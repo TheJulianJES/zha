@@ -21,8 +21,6 @@ dependencies = [
     "zigpy-xbee==0.21.1",
     "zigpy-zigate==0.14.0",
     "zha-quirks==1.1.1",
-    "pyserial==3.5",
-    "pyserial-asyncio-fast",
 ]
 
 [tool.setuptools.packages.find]
