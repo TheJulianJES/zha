@@ -26,7 +26,7 @@ from zigpy.types import uint1_t, uint8_t, uint16_t
 from zigpy.types.named import EUI64, NWK, ExtendedPanId
 from zigpy.typing import UNDEFINED, UndefinedType
 from zigpy.zcl.clusters import Cluster
-from zigpy.zcl.clusters.general import Groups, Identify
+from zigpy.zcl.clusters.general import Groups, Identify, Ota
 from zigpy.zcl.foundation import (
     Status as ZclStatus,
     WriteAttributesResponse,
@@ -197,6 +197,7 @@ class DeviceEntityRemovedEvent:
 
     platform: Platform
     unique_id: str
+    remove: bool = False
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -313,6 +314,7 @@ class Device(LogMixin, EventBase):
 
         self._platform_entities: dict[tuple[Platform, str], PlatformEntity] = {}
         self._pending_entities: list[PlatformEntity] = []
+        self._initialized: bool = False
         self.semaphore: asyncio.Semaphore = asyncio.Semaphore(3)
         self._on_remove_callbacks: list[Callable[[], None]] = []
         self._endpoints: dict[int, Endpoint] = {}
@@ -1065,7 +1067,7 @@ class Device(LogMixin, EventBase):
             entity.on_add()
             self._pending_entities.append(entity)
 
-    def _add_entity(self, entity: PlatformEntity) -> None:
+    def _add_entity(self, entity: PlatformEntity, *, emit_event: bool = True) -> None:
         """Add an entity to the device."""
         key = (entity.PLATFORM, entity.unique_id)
 
@@ -1074,20 +1076,26 @@ class Device(LogMixin, EventBase):
                 f"Cannot add entity {entity!r}, unique ID already taken by {self._platform_entities[key]!r}"
             )
 
-        _LOGGER.debug("Discovered new entity %s", entity)
+        self.debug("Discovered new entity %s", entity)
 
         # `entity.on_add()` is assumed to have been called already
         self._platform_entities[key] = entity
-        self.emit(
-            DeviceEntityAddedEvent.event_type,
-            DeviceEntityAddedEvent(
-                platform=entity.PLATFORM,
-                unique_id=entity.unique_id,
-            ),
-        )
+
+        if emit_event:
+            self.emit(
+                DeviceEntityAddedEvent.event_type,
+                DeviceEntityAddedEvent(
+                    platform=entity.PLATFORM,
+                    unique_id=entity.unique_id,
+                ),
+            )
 
     async def _remove_entity(
-        self, entity: BaseEntity, *, emit_event: bool = True
+        self,
+        entity: BaseEntity,
+        *,
+        emit_event: bool = True,
+        remove: bool = False,
     ) -> None:
         """Remove an entity from the device."""
         key = (entity.PLATFORM, entity.unique_id)
@@ -1104,10 +1112,11 @@ class Device(LogMixin, EventBase):
                 DeviceEntityRemovedEvent(
                     platform=entity.PLATFORM,
                     unique_id=entity.unique_id,
+                    remove=remove,
                 ),
             )
 
-    async def _add_pending_entities(self) -> None:
+    async def _add_pending_entities(self, *, emit_event: bool = True) -> None:
         """Add pending entities to the device."""
         all_entities = dict(self._platform_entities)
         new_entities: dict[tuple[Platform, str], PlatformEntity] = {}
@@ -1139,7 +1148,7 @@ class Device(LogMixin, EventBase):
 
         # Finally, add the new entities
         for entity in new_entities.values():
-            self._add_entity(entity)
+            self._add_entity(entity, emit_event=emit_event)
 
     async def recompute_entities(self) -> None:
         """Recompute all entities for this device."""
@@ -1153,7 +1162,7 @@ class Device(LogMixin, EventBase):
 
             if not entity.is_supported() or not entity.is_supported_in_list(entities):
                 self.debug("Removing unsupported entity %s", entity)
-                await self._remove_entity(entity)
+                await self._remove_entity(entity, remove=True)
                 entities.remove(entity)
 
         # Discover new entities
@@ -1180,8 +1189,9 @@ class Device(LogMixin, EventBase):
             except Exception:  # pylint: disable=broad-exception-caught
                 self.debug("Failed to initialize endpoint", exc_info=True)
 
-        # And add them after
-        await self._add_pending_entities()
+        # And add them after. Emit events only on re-initialization, not the first.
+        await self._add_pending_entities(emit_event=self._initialized)
+        self._initialized = True
 
         # Sync the device's firmware version with the first platform entity
         for (platform, _unique_id), entity in self.platform_entities.items():
@@ -1250,6 +1260,10 @@ class Device(LogMixin, EventBase):
                     self,
                     exc_info=True,
                 )
+
+        # Ensure stale pending entities aren't reprocessed if the device is
+        # re-initialized after removal (e.g. re-interview).
+        self._pending_entities.clear()
 
     async def on_remove(self) -> None:
         """Cancel tasks this device owns (shutdown path)."""
@@ -1681,6 +1695,19 @@ class Device(LogMixin, EventBase):
                         "cluster_id": f"0x{cluster_id:04x}",
                         "endpoint_attribute": cluster.ep_attribute,
                         "attributes": get_cluster_attr_data(cluster),
+                        **(
+                            {
+                                "last_query_cmd": {
+                                    "manufacturer_code": cluster.last_query_cmd.manufacturer_code,
+                                    "image_type": cluster.last_query_cmd.image_type,
+                                    "current_file_version": cluster.last_query_cmd.current_file_version,
+                                    "hardware_version": cluster.last_query_cmd.hardware_version,
+                                }
+                            }
+                            if isinstance(cluster, Ota)
+                            and getattr(cluster, "last_query_cmd", None) is not None
+                            else {}
+                        ),
                     }
                     for cluster_id, cluster in sorted(endpoint.out_clusters.items())
                 ],

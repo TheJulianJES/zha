@@ -10,6 +10,7 @@ from datetime import date, datetime, timedelta
 import enum
 import functools
 import logging
+import math
 import numbers
 import typing
 from typing import TYPE_CHECKING, Any, cast
@@ -298,7 +299,7 @@ class Sensor(BaseSensor):
     ) -> SensorStateClass | None:
         """Validate and return a state class."""
         try:
-            return SensorStateClass(state_class_value.value)
+            return SensorStateClass(state_class_value)
         except ValueError as ex:
             _LOGGER.warning(
                 "Quirks provided an invalid state class: %s: %s",
@@ -364,6 +365,9 @@ class Sensor(BaseSensor):
         self, value: int | float, *, attr_def: foundation.ZCLAttributeDef | None = None
     ) -> bool:
         """Ignore non-value numerical values."""
+        if isinstance(value, float) and math.isnan(value):
+            return True
+
         if attr_def is None:
             attr_def = self._attr_def
 
