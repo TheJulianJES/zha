@@ -341,6 +341,13 @@ class Device(LogMixin, EventBase):
         self._pending_entities.clear()
 
         self._zigpy_device: ZigpyDevice = zigpy_device
+
+        # Invalidate cached properties that depend on the zigpy device before
+        # they are read below (e.g. is_mains_powered, is_coordinator).
+        for attr in self._ZIGPY_CACHED_PROPERTIES:
+            with contextlib.suppress(AttributeError):
+                delattr(self, attr)
+
         self.quirk_applied: bool = isinstance(
             self._zigpy_device, zigpy.quirks.BaseCustomDevice
         )
@@ -377,11 +384,6 @@ class Device(LogMixin, EventBase):
         )
 
         self.status: DeviceStatus = DeviceStatus.CREATED
-
-        # Clear cached properties that depend on the zigpy device
-        for attr in self._ZIGPY_CACHED_PROPERTIES:
-            with contextlib.suppress(AttributeError):
-                delattr(self, attr)
 
         self._zdo_handler: ZDOClusterHandler = ZDOClusterHandler(self)
         self._zdo_handler.on_add()
