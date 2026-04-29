@@ -526,12 +526,7 @@ class Gateway(AsyncUtilMixin, EventBase):
             _LOGGER.debug("Skipping reinterview for active coordinator %s", ieee)
             return
 
-        zigpy_device = self.application_controller.devices.get(ieee)
-        if zigpy_device is None:
-            _LOGGER.warning("Zigpy device %s not found for reinterview", ieee)
-            return
-
-        await zigpy_device.reinterview()
+        await zha_device.device.reinterview()
 
         # If discovery succeeded, zigpy swaps the device and fires
         # device_reinterviewed — our listener handles the full rebuild.

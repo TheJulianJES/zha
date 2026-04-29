@@ -1804,19 +1804,3 @@ async def test_async_reinterview_device_active_coordinator(
 
     assert "Skipping reinterview for active coordinator" in caplog.text
     mock_reinterview.assert_not_called()
-
-
-async def test_async_reinterview_device_zigpy_device_missing(
-    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
-) -> None:
-    """Test that async_reinterview_device warns when the zigpy device is gone."""
-    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
-    await join_zigpy_device(zha_gateway, zigpy_dev)
-
-    # Remove the zigpy device from the controller while ZHA still tracks it
-    del zha_gateway.application_controller.devices[zigpy_dev.ieee]
-
-    with caplog.at_level(logging.WARNING):
-        await zha_gateway.async_reinterview_device(zigpy_dev.ieee)
-
-    assert "Zigpy device" in caplog.text and "not found for reinterview" in caplog.text
