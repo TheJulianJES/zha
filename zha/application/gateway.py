@@ -494,17 +494,20 @@ class Gateway(AsyncUtilMixin, EventBase):
 
         await zha_device.async_rebuild_from_zigpy_device(new_zigpy_device)
 
-        configured_ok = True
+        configure_succeeded = False
+        all_succeeded = False
         try:
             await zha_device.async_configure()
+            # `async_configure()` reached its own `emit_reconfigure_done()`.
+            configure_succeeded = True
             await zha_device.async_initialize()
+            all_succeeded = True
         except Exception:  # noqa: BLE001
             _LOGGER.warning(
                 "Failed to configure/initialize device %s after reinterview",
                 new_zigpy_device.ieee,
                 exc_info=True,
             )
-            configured_ok = False
 
         # Refresh group subscriptions so groups drop stale references to
         # torn-down entities and re-subscribe to whatever new entities exist.
@@ -512,11 +515,16 @@ class Gateway(AsyncUtilMixin, EventBase):
         for group in self._groups.values():
             group.update_entity_subscriptions()
 
-        if not configured_ok:
-            # `async_configure()` didn't reach its own `emit_reconfigure_done`,
-            # so emit explicitly to unstick the HA reconfigure dialog.  Don't
-            # emit `DeviceFullInitEvent(CONFIGURED)` — entities are partial.
+        if not configure_succeeded:
+            # `async_configure()` didn't reach its own emit; emit explicitly so
+            # the HA reconfigure dialog unsticks.  Skipped when configure
+            # already emitted (avoids a duplicate signal even if `initialize`
+            # raised afterwards).
             zha_device.emit_reconfigure_done()
+
+        if not all_succeeded:
+            # Don't emit `DeviceFullInitEvent(CONFIGURED)` — entities are
+            # partial after a failed rebuild.
             return
 
         self.emit(
