@@ -57,6 +57,7 @@ from zha.application.platforms.switch import Switch
 from zha.exceptions import ZHAException
 from zha.zigbee.device import (
     ClusterBinding,
+    Device,
     DeviceEntityAddedEvent,
     DeviceEntityRemovedEvent,
     DeviceFirmwareInfoUpdatedEvent,
@@ -1661,6 +1662,55 @@ async def test_gateway_reconfigure_no_swap(
 
     assert zha_device.device is old_zigpy_dev
     assert zha_device.platform_entities == old_entities
+
+
+async def test_gateway_reconfigure_with_swap_rebuild_failure(
+    zha_gateway: Gateway,
+) -> None:
+    """Test that a rebuild failure unsticks the frontend without lying.
+
+    On configure/initialize failure after a swap, `async_configure()` doesn't
+    reach its own `emit_reconfigure_done`, so the gateway emits explicitly to
+    unstick the HA reconfigure dialog.  The `DeviceFullInitEvent(CONFIGURED)`
+    is suppressed because entities are partial — reporting CONFIGURED would
+    mislead the frontend's pairing-status display.
+    """
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    new_zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        endpoints={
+            3: {
+                SIG_EP_INPUT: [general.OnOff.cluster_id, general.Basic.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.ON_OFF_SWITCH,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+    )
+    zha_gateway.application_controller.devices[zigpy_dev.ieee] = new_zigpy_dev
+
+    full_init_listener = mock.Mock()
+    zha_gateway.on_event("device_fully_initialized", full_init_listener)
+
+    with (
+        patch.object(
+            Device,
+            "async_configure",
+            side_effect=Exception("configure failed"),
+        ),
+        patch.object(zha_device, "emit_reconfigure_done") as mock_emit,
+    ):
+        zha_gateway.application_controller.listener_event(
+            "device_reinterviewed", new_zigpy_dev
+        )
+        await zha_gateway.async_block_till_done()
+
+    # Reconfigure-done emit MUST fire to unstick the HA dialog.
+    assert mock_emit.call_count == 1
+    # FullInit must NOT fire — entities are partial after a failed rebuild.
+    assert full_init_listener.call_count == 0
 
 
 async def test_gateway_reconfigure_reinterview_raises_still_emits(

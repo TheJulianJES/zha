@@ -494,6 +494,7 @@ class Gateway(AsyncUtilMixin, EventBase):
 
         await zha_device.async_rebuild_from_zigpy_device(new_zigpy_device)
 
+        configured_ok = True
         try:
             await zha_device.async_configure()
             await zha_device.async_initialize()
@@ -503,12 +504,20 @@ class Gateway(AsyncUtilMixin, EventBase):
                 new_zigpy_device.ieee,
                 exc_info=True,
             )
+            configured_ok = False
 
-        # Refresh group subscriptions so groups re-subscribe to the new
-        # platform entities.  Without this, group state updates break
-        # because the old entity subscriptions are dead.
+        # Refresh group subscriptions so groups drop stale references to
+        # torn-down entities and re-subscribe to whatever new entities exist.
+        # Run this even on partial rebuild — old subscriptions are always dead.
         for group in self._groups.values():
             group.update_entity_subscriptions()
+
+        if not configured_ok:
+            # `async_configure()` didn't reach its own `emit_reconfigure_done`,
+            # so emit explicitly to unstick the HA reconfigure dialog.  Don't
+            # emit `DeviceFullInitEvent(CONFIGURED)` — entities are partial.
+            zha_device.emit_reconfigure_done()
+            return
 
         self.emit(
             ZHA_GW_MSG_DEVICE_FULL_INIT,
