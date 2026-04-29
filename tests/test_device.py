@@ -1664,6 +1664,32 @@ async def test_gateway_reconfigure_no_swap(
     assert zha_device.platform_entities == old_entities
 
 
+async def test_remove_entity_drops_mapping_on_on_remove_failure(
+    zha_gateway: Gateway,
+) -> None:
+    """Regression test: `on_remove()` failure must not leave a zombie entry.
+
+    If `_remove_entity` left the entity in `_platform_entities` after
+    `on_remove()` raised, a re-interview rediscovering the same unique_id
+    would silently drop the replacement and the stale entity would shadow
+    it indefinitely.
+    """
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    entity = next(iter(zha_device.platform_entities.values()))
+    key = (entity.PLATFORM, entity.unique_id)
+    assert key in zha_device._platform_entities
+
+    with (
+        patch.object(entity, "on_remove", side_effect=Exception("boom")),
+        pytest.raises(Exception, match="boom"),
+    ):
+        await zha_device._remove_entity(entity)
+
+    assert key not in zha_device._platform_entities
+
+
 async def test_gateway_reconfigure_with_swap_rebuild_failure(
     zha_gateway: Gateway,
 ) -> None:

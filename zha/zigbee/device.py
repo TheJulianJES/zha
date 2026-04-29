@@ -1105,18 +1105,22 @@ class Device(LogMixin, EventBase):
         if key not in self._platform_entities:
             raise ValueError(f"Cannot remove entity {entity!r}, unique ID not found")
 
-        await entity.on_remove()
-        del self._platform_entities[key]
-
-        if emit_event:
-            self.emit(
-                DeviceEntityRemovedEvent.event_type,
-                DeviceEntityRemovedEvent(
-                    platform=entity.PLATFORM,
-                    unique_id=entity.unique_id,
-                    remove=remove,
-                ),
-            )
+        try:
+            await entity.on_remove()
+        finally:
+            # Always drop the mapping entry — otherwise a re-interview that
+            # rediscovers the same unique_id would skip the replacement and
+            # leave the stale entity shadowing it indefinitely.
+            del self._platform_entities[key]
+            if emit_event:
+                self.emit(
+                    DeviceEntityRemovedEvent.event_type,
+                    DeviceEntityRemovedEvent(
+                        platform=entity.PLATFORM,
+                        unique_id=entity.unique_id,
+                        remove=remove,
+                    ),
+                )
 
     async def _add_pending_entities(self, *, emit_event: bool = True) -> None:
         """Add pending entities to the device."""
