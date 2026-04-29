@@ -1663,6 +1663,31 @@ async def test_gateway_reconfigure_no_swap(
     assert zha_device.platform_entities == old_entities
 
 
+async def test_gateway_reconfigure_reinterview_raises_still_emits(
+    zha_gateway: Gateway,
+) -> None:
+    """Test that a `reinterview()` exception still emits reconfigure_done.
+
+    Without the `finally`, an exception left the HA frontend stuck on
+    "reconfiguring" indefinitely.
+    """
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    with (
+        patch.object(
+            zigpy_dev,
+            "reinterview",
+            side_effect=ZigbeeException("reinterview failed"),
+        ),
+        patch.object(zha_device, "emit_reconfigure_done") as mock_emit,
+        pytest.raises(ZigbeeException),
+    ):
+        await zha_gateway.async_reinterview_device(zigpy_dev.ieee)
+
+    assert mock_emit.call_count == 1
+
+
 async def test_gateway_device_reinterviewed_ota_path(
     zha_gateway: Gateway,
 ) -> None:
