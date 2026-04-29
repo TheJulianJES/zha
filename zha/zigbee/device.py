@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Sequence
+import contextlib
 import copy
 import dataclasses
 from dataclasses import dataclass
@@ -281,6 +282,25 @@ class Device(LogMixin, EventBase):
 
     unique_id: str
 
+    # Cached properties that depend on the zigpy device and must be invalidated
+    # when the underlying device is swapped (e.g. after a re-interview).
+    _ZIGPY_CACHED_PROPERTIES: Final = (
+        "name",
+        "manufacturer",
+        "model",
+        "device_alerts",
+        "manufacturer_code",
+        "is_mains_powered",
+        "device_type",
+        "is_router",
+        "is_coordinator",
+        "is_end_device",
+        "skip_configuration",
+        "device_automation_commands",
+        "device_automation_triggers",
+        "zigbee_signature",
+    )
+
     def __init__(
         self,
         zigpy_device: zigpy.device.Device,
@@ -290,9 +310,44 @@ class Device(LogMixin, EventBase):
         super().__init__()
 
         self.unique_id = str(zigpy_device.ieee)
-
         self._gateway: Gateway = _gateway
+
+        self._platform_entities: dict[tuple[Platform, str], PlatformEntity] = {}
+        self._pending_entities: list[PlatformEntity] = []
+        self._initialized: bool = False
+        self.semaphore: asyncio.Semaphore = asyncio.Semaphore(3)
+        self._on_remove_callbacks: list[Callable[[], None]] = []
+        self._endpoints: dict[int, Endpoint] = {}
+
+        self._available: bool = False
+        self._checkins_missed_count: int = 0
+        self._on_network: bool = True
+
+        self._init_from_zigpy_device(zigpy_device)
+
+    def _init_from_zigpy_device(self, zigpy_device: zigpy.device.Device) -> None:
+        """(Re-)initialize device state from a zigpy device.
+
+        Sets up the zigpy device reference, quirk metadata, cluster handlers,
+        and endpoints.  Called from ``__init__`` and after a successful
+        re-interview where zigpy swaps the underlying device object.
+        """
+        # Clear collections that will be rebuilt below.  During __init__ these
+        # are already empty; after a re-interview on_remove() has cleaned up
+        # the old handlers/entities but the lists themselves still hold stale
+        # references.
+        self._on_remove_callbacks.clear()
+        self._endpoints.clear()
+        self._pending_entities.clear()
+
         self._zigpy_device: ZigpyDevice = zigpy_device
+
+        # Invalidate cached properties that depend on the zigpy device before
+        # they are read below (e.g. is_mains_powered, is_coordinator).
+        for attr in self._ZIGPY_CACHED_PROPERTIES:
+            with contextlib.suppress(AttributeError):
+                delattr(self, attr)
+
         self.quirk_applied: bool = isinstance(
             self._zigpy_device, zigpy.quirks.BaseCustomDevice
         )
@@ -316,34 +371,24 @@ class Device(LogMixin, EventBase):
         self._basic_ch: ClusterHandler | None = None
         self._firmware_version: str | None = None
 
-        device_options = _gateway.config.config.device_options
+        device_options = self._gateway.config.config.device_options
         if self.is_mains_powered:
             self.consider_unavailable_time: int = (
                 device_options.consider_unavailable_mains
             )
         else:
             self.consider_unavailable_time = device_options.consider_unavailable_battery
-        self._available: bool = self.is_active_coordinator or (
+        self._available = self.is_active_coordinator or (
             self.last_seen is not None
             and time.time() - self.last_seen < self.consider_unavailable_time
         )
-        self._checkins_missed_count: int = 0
-        self._on_network: bool = True
 
-        self._platform_entities: dict[tuple[Platform, str], PlatformEntity] = {}
-        self._pending_entities: list[PlatformEntity] = []
-        self._initialized: bool = False
-        self.semaphore: asyncio.Semaphore = asyncio.Semaphore(3)
-
-        self._on_remove_callbacks: list[Callable[[], None]] = []
+        self.status: DeviceStatus = DeviceStatus.CREATED
 
         self._zdo_handler: ZDOClusterHandler = ZDOClusterHandler(self)
         self._zdo_handler.on_add()
         self._on_remove_callbacks.append(self._zdo_handler.on_remove)
 
-        self.status: DeviceStatus = DeviceStatus.CREATED
-
-        self._endpoints: dict[int, Endpoint] = {}
         for ep_id, endpoint in zigpy_device.endpoints.items():
             if ep_id != 0:
                 ep = Endpoint.new(endpoint, self)
@@ -869,13 +914,7 @@ class Device(LogMixin, EventBase):
             *(endpoint.async_configure() for endpoint in self._endpoints.values())
         )
 
-        self.emit(
-            ZHA_CLUSTER_HANDLER_CFG_DONE,
-            ClusterHandlerConfigurationComplete(
-                device_ieee=self.ieee,
-                unique_id=self.ieee,
-            ),
-        )
+        self.emit_reconfigure_done()
 
         self.debug("completed configuration")
 
@@ -892,6 +931,33 @@ class Device(LogMixin, EventBase):
                 name=f"({self.nwk},{self.model}) trigger_effect identify",
                 eager_start=True,
             )
+
+    async def async_rebuild_from_zigpy_device(
+        self, zigpy_device: zigpy.device.Device
+    ) -> None:
+        """Tear down and rebuild this device from a new zigpy device.
+
+        Called by the gateway after a successful re-interview swaps the
+        underlying zigpy device.  Emits entity removal events so listeners
+        (e.g. HA) can clean up stale entities.
+        """
+        await self._async_teardown(emit_entity_events=True)
+        self._init_from_zigpy_device(zigpy_device)
+
+    def emit_reconfigure_done(self) -> None:
+        """Emit configuration-complete event.
+
+        Called by the gateway after a reconfigure (successful or not) so that
+        frontends listening for cluster handler messages know the operation
+        has finished.
+        """
+        self.emit(
+            ZHA_CLUSTER_HANDLER_CFG_DONE,
+            ClusterHandlerConfigurationComplete(
+                device_ieee=self.ieee,
+                unique_id=self.ieee,
+            ),
+        )
 
     def _is_entity_removed_by_quirk(self, entity: PlatformEntity) -> bool:
         if self.quirk_metadata is None:
@@ -1039,18 +1105,22 @@ class Device(LogMixin, EventBase):
         if key not in self._platform_entities:
             raise ValueError(f"Cannot remove entity {entity!r}, unique ID not found")
 
-        await entity.on_remove()
-        del self._platform_entities[key]
-
-        if emit_event:
-            self.emit(
-                DeviceEntityRemovedEvent.event_type,
-                DeviceEntityRemovedEvent(
-                    platform=entity.PLATFORM,
-                    unique_id=entity.unique_id,
-                    remove=remove,
-                ),
-            )
+        try:
+            await entity.on_remove()
+        finally:
+            # Always drop the mapping entry — otherwise a re-interview that
+            # rediscovers the same unique_id would skip the replacement and
+            # leave the stale entity shadowing it indefinitely.
+            del self._platform_entities[key]
+            if emit_event:
+                self.emit(
+                    DeviceEntityRemovedEvent.event_type,
+                    DeviceEntityRemovedEvent(
+                        platform=entity.PLATFORM,
+                        unique_id=entity.unique_id,
+                        remove=remove,
+                    ),
+                )
 
     async def _add_pending_entities(self, *, emit_event: bool = True) -> None:
         """Add pending entities to the device."""
@@ -1153,8 +1223,15 @@ class Device(LogMixin, EventBase):
         self.status = DeviceStatus.INITIALIZED
         self.debug("completed initialization")
 
-    async def on_remove(self) -> None:
-        """Cancel tasks this device owns."""
+    async def _async_teardown(self, *, emit_entity_events: bool) -> None:
+        """Tear down handlers, entities, and endpoints.
+
+        Args:
+            emit_entity_events: When True, emit ``DeviceEntityRemovedEvent``
+                for each removed entity so that listeners (e.g. HA) can clean
+                up.  Shutdown paths pass False to avoid unnecessary traffic.
+
+        """
         for callback in self._on_remove_callbacks:
             try:
                 callback()
@@ -1168,9 +1245,9 @@ class Device(LogMixin, EventBase):
 
         for platform_entity in list(self._platform_entities.values()):
             try:
-                # XXX: To avoid unnecessary traffic during shutdown, we don't
-                # need to emit an event for every entity, just the device
-                await self._remove_entity(platform_entity, emit_event=False)
+                await self._remove_entity(
+                    platform_entity, emit_event=emit_entity_events
+                )
             except Exception:
                 _LOGGER.warning(
                     "Failed to remove platform entity %s for device %s",
@@ -1193,6 +1270,10 @@ class Device(LogMixin, EventBase):
         # Ensure stale pending entities aren't reprocessed if the device is
         # re-initialized after removal (e.g. re-interview).
         self._pending_entities.clear()
+
+    async def on_remove(self) -> None:
+        """Cancel tasks this device owns (shutdown path)."""
+        await self._async_teardown(emit_entity_events=False)
 
     def async_get_clusters(self) -> dict[int, dict[str, dict[int, Cluster]]]:
         """Get all clusters for this device."""

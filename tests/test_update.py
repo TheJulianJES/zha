@@ -162,6 +162,9 @@ async def setup_test_data(
         )
     )
 
+    # Prevent post-OTA reinterview side effects in OTA-focused tests
+    zigpy_device.reinterview = AsyncMock()
+
     zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
 
     return zha_device, ota_cluster, fw_image, installed_fw_version
@@ -203,11 +206,36 @@ async def test_firmware_update_notification_from_zigpy(zha_gateway: Gateway) -> 
 
 @patch("zigpy.device.AFTER_OTA_ATTR_READ_DELAY", 0.01)
 async def test_firmware_update_success(zha_gateway: Gateway) -> None:
-    """Test ZHA update platform - firmware update success."""
+    """Test ZHA update platform - firmware update success and post-OTA reinterview."""
     zigpy_device = zigpy_device_mock(zha_gateway)
     zha_device, ota_cluster, fw_image, installed_fw_version = await setup_test_data(
         zha_gateway, zigpy_device
     )
+
+    # Replace the reinterview mock from setup_test_data with one that
+    # simulates a successful device swap via the gateway listener.
+    new_zigpy_device = create_mock_zigpy_device(
+        zha_gateway,
+        endpoints={
+            1: {
+                SIG_EP_INPUT: [general.Basic.cluster_id, general.OnOff.cluster_id],
+                SIG_EP_OUTPUT: [general.Ota.cluster_id],
+                SIG_EP_TYPE: zha.DeviceType.ON_OFF_SWITCH,
+                SIG_EP_PROFILE: zha.PROFILE_ID,
+            }
+        },
+        ieee=str(zigpy_device.ieee),
+        manufacturer="FakeManufacturer",
+        model="FakeModel",
+    )
+
+    async def fake_reinterview():
+        zha_gateway.application_controller.devices[zigpy_device.ieee] = new_zigpy_device
+        zha_gateway.device_reinterviewed(new_zigpy_device)
+
+    zigpy_device.reinterview = fake_reinterview
+
+    old_zigpy_device = zha_device.device
 
     assert installed_fw_version < fw_image.firmware.header.file_version
 
@@ -391,6 +419,11 @@ async def test_firmware_update_success(zha_gateway: Gateway) -> None:
     entity._update_progress(50, 100, 0.50)
 
     assert not entity.state[ATTR_IN_PROGRESS]
+
+    # Post-OTA reinterview should have swapped the zigpy device and rebuilt ZHA
+    assert zha_device.device is not old_zigpy_device
+    assert zha_device.status.name == "INITIALIZED"
+    assert len(zha_device.platform_entities) > 0
 
 
 async def test_firmware_update_raises(zha_gateway: Gateway) -> None:

@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from unittest import mock
-from unittest.mock import call, patch
+from unittest.mock import AsyncMock, call, patch
 
 import pytest
 from zigpy.exceptions import ZigbeeException
@@ -57,13 +57,14 @@ from zha.application.platforms.switch import Switch
 from zha.exceptions import ZHAException
 from zha.zigbee.device import (
     ClusterBinding,
+    Device,
     DeviceEntityAddedEvent,
     DeviceEntityRemovedEvent,
     DeviceFirmwareInfoUpdatedEvent,
     ZHAEvent,
     get_device_automation_triggers,
 )
-from zha.zigbee.group import Group
+from zha.zigbee.group import Group, GroupMemberReference
 
 
 def zigpy_device(
@@ -1562,3 +1563,406 @@ async def test_remove_entity_nonexistent(zha_gateway: Gateway) -> None:
 
     with pytest.raises(ValueError, match="unique ID not found"):
         await zha_device._remove_entity(existing_entity)
+
+
+async def test_gateway_reconfigure_with_swap(
+    zha_gateway: Gateway,
+) -> None:
+    """Test gateway.async_reinterview_device rebuilds when reinterview swaps."""
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    assert zha_device.status.name == "INITIALIZED"
+    assert len(zha_device.platform_entities) > 0
+
+    # Create a group containing this device so we can verify that group
+    # subscriptions are refreshed after the reinterview rebuild.
+    zha_group = await zha_gateway.async_create_zigpy_group(
+        "Test Group",
+        [GroupMemberReference(ieee=zigpy_dev.ieee, endpoint_id=3)],
+    )
+    await zha_gateway.async_block_till_done()
+    assert zha_group is not None
+
+    # The mock endpoint.request doesn't actually add to the zigpy group,
+    # so add manually.
+    zha_group.zigpy_group.add_member(zigpy_dev.endpoints[3], suppress_event=True)
+
+    # Register a mock group entity so the group subscribes to member entities.
+    mock_group_entity = mock.MagicMock()
+    mock_group_entity.PLATFORM = Platform.SWITCH
+    mock_group_entity.unique_id = "mock_group_switch"
+    zha_group.register_group_entity(mock_group_entity)
+
+    new_zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        endpoints={
+            3: {
+                SIG_EP_INPUT: [general.OnOff.cluster_id, general.Basic.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.ON_OFF_SWITCH,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+        manufacturer="NewManufacturer",
+        model="NewModel",
+    )
+
+    async def fake_reinterview():
+        # Simulate the end result of a successful zigpy reinterview.
+        zha_gateway.application_controller.devices[zigpy_dev.ieee] = new_zigpy_dev
+        zha_group.zigpy_group.add_member(
+            new_zigpy_dev.endpoints[3], suppress_event=True
+        )
+        zha_gateway.device_reinterviewed(new_zigpy_dev)
+
+    with (
+        patch.object(zigpy_dev, "reinterview", side_effect=fake_reinterview),
+        patch.object(zha_device, "emit_reconfigure_done") as mock_emit,
+    ):
+        await zha_gateway.async_reinterview_device(zigpy_dev.ieee)
+        # On swap, async_reinterview_device must not emit reconfigure_done
+        # itself — the rebuild path emits via async_configure().
+        assert mock_emit.call_count == 0
+
+    await zha_gateway.async_block_till_done()
+
+    assert zha_device.device is new_zigpy_dev
+    assert zha_device.manufacturer == "NewManufacturer"
+    assert zha_device.model == "NewModel"
+    assert zha_device.status.name == "INITIALIZED"
+    assert len(zha_device.endpoints) > 0
+    assert len(zha_device.platform_entities) > 0
+
+    # Verify the group is subscribed to the NEW entity, not the old one.
+    # Emit a state change on the new entity and check the group got it.
+    new_switch = get_entity(zha_device, platform=Platform.SWITCH)
+    mock_group_entity.debounced_update.reset_mock()
+    new_switch.maybe_emit_state_changed_event()
+    assert mock_group_entity.debounced_update.called
+
+
+async def test_gateway_reconfigure_no_swap(
+    zha_gateway: Gateway,
+) -> None:
+    """Test gateway.async_reinterview_device does normal configure when no swap."""
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    old_zigpy_dev = zha_device.device
+    old_entities = dict(zha_device.platform_entities)
+
+    with (
+        patch.object(zigpy_dev, "reinterview", new_callable=AsyncMock),
+        patch.object(zha_device, "emit_reconfigure_done") as mock_emit,
+    ):
+        await zha_gateway.async_reinterview_device(zigpy_dev.ieee)
+        # No swap → emit reconfigure_done so the HA frontend unsticks.
+        assert mock_emit.call_count == 1
+
+    assert zha_device.device is old_zigpy_dev
+    assert zha_device.platform_entities == old_entities
+
+
+async def test_remove_entity_drops_mapping_on_on_remove_failure(
+    zha_gateway: Gateway,
+) -> None:
+    """Regression test: `on_remove()` failure must not leave a zombie entry.
+
+    If `_remove_entity` left the entity in `_platform_entities` after
+    `on_remove()` raised, a re-interview rediscovering the same unique_id
+    would silently drop the replacement and the stale entity would shadow
+    it indefinitely.
+    """
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    entity = next(iter(zha_device.platform_entities.values()))
+    key = (entity.PLATFORM, entity.unique_id)
+    assert key in zha_device._platform_entities
+
+    with (
+        patch.object(entity, "on_remove", side_effect=Exception("boom")),
+        pytest.raises(Exception, match="boom"),
+    ):
+        await zha_device._remove_entity(entity)
+
+    assert key not in zha_device._platform_entities
+
+
+async def test_gateway_reconfigure_with_swap_rebuild_failure(
+    zha_gateway: Gateway,
+) -> None:
+    """Test that a rebuild failure unsticks the frontend without lying.
+
+    On configure/initialize failure after a swap, `async_configure()` doesn't
+    reach its own `emit_reconfigure_done`, so the gateway emits explicitly to
+    unstick the HA reconfigure dialog.  The `DeviceFullInitEvent(CONFIGURED)`
+    is suppressed because entities are partial — reporting CONFIGURED would
+    mislead the frontend's pairing-status display.
+    """
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    new_zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        endpoints={
+            3: {
+                SIG_EP_INPUT: [general.OnOff.cluster_id, general.Basic.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.ON_OFF_SWITCH,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+    )
+    zha_gateway.application_controller.devices[zigpy_dev.ieee] = new_zigpy_dev
+
+    full_init_listener = mock.Mock()
+    zha_gateway.on_event("device_fully_initialized", full_init_listener)
+
+    with (
+        patch.object(
+            Device,
+            "async_configure",
+            side_effect=Exception("configure failed"),
+        ),
+        patch.object(zha_device, "emit_reconfigure_done") as mock_emit,
+    ):
+        zha_gateway.application_controller.listener_event(
+            "device_reinterviewed", new_zigpy_dev
+        )
+        await zha_gateway.async_block_till_done()
+
+    # Reconfigure-done emit MUST fire to unstick the HA dialog.
+    assert mock_emit.call_count == 1
+    # FullInit must NOT fire — entities are partial after a failed rebuild.
+    assert full_init_listener.call_count == 0
+
+
+async def test_gateway_reconfigure_with_swap_initialize_failure(
+    zha_gateway: Gateway,
+) -> None:
+    """Test that a configure-success + initialize-failure doesn't double-emit.
+
+    `async_configure()` emits `reconfigure_done` internally on success.  If
+    `async_initialize()` then raises, the gateway must NOT emit a second
+    `reconfigure_done`.
+    """
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    new_zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        endpoints={
+            3: {
+                SIG_EP_INPUT: [general.OnOff.cluster_id, general.Basic.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.ON_OFF_SWITCH,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+    )
+    zha_gateway.application_controller.devices[zigpy_dev.ieee] = new_zigpy_dev
+
+    full_init_listener = mock.Mock()
+    zha_gateway.on_event("device_fully_initialized", full_init_listener)
+
+    with (
+        patch.object(
+            Device,
+            "async_initialize",
+            side_effect=Exception("initialize failed"),
+        ),
+        patch.object(
+            zha_device, "emit_reconfigure_done", wraps=zha_device.emit_reconfigure_done
+        ) as mock_emit,
+    ):
+        zha_gateway.application_controller.listener_event(
+            "device_reinterviewed", new_zigpy_dev
+        )
+        await zha_gateway.async_block_till_done()
+
+    # `async_configure()` succeeded and emitted `reconfigure_done` once.
+    # The gateway must NOT emit a second time on the initialize failure.
+    assert mock_emit.call_count == 1
+    # FullInit must NOT fire — entities are partial.
+    assert full_init_listener.call_count == 0
+
+
+async def test_gateway_reconfigure_reinterview_raises_still_emits(
+    zha_gateway: Gateway,
+) -> None:
+    """Test that a `reinterview()` exception still emits reconfigure_done.
+
+    Without the `finally`, an exception left the HA frontend stuck on
+    "reconfiguring" indefinitely.
+    """
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    with (
+        patch.object(
+            zigpy_dev,
+            "reinterview",
+            side_effect=ZigbeeException("reinterview failed"),
+        ),
+        patch.object(zha_device, "emit_reconfigure_done") as mock_emit,
+        pytest.raises(ZigbeeException),
+    ):
+        await zha_gateway.async_reinterview_device(zigpy_dev.ieee)
+
+    assert mock_emit.call_count == 1
+
+
+async def test_gateway_device_reinterviewed_ota_path(
+    zha_gateway: Gateway,
+) -> None:
+    """Test that the gateway handles device_reinterviewed from OTA/zigpy."""
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    assert zha_device.status.name == "INITIALIZED"
+    assert len(zha_device.platform_entities) > 0
+
+    new_zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        endpoints={
+            3: {
+                SIG_EP_INPUT: [general.OnOff.cluster_id, general.Basic.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.ON_OFF_SWITCH,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+        manufacturer="OTAManufacturer",
+        model="OTAModel",
+    )
+    zha_gateway.application_controller.devices[zigpy_dev.ieee] = new_zigpy_dev
+
+    # Simulate zigpy firing device_reinterviewed (e.g. after OTA)
+    zha_gateway.application_controller.listener_event(
+        "device_reinterviewed", new_zigpy_dev
+    )
+    await zha_gateway.async_block_till_done()
+
+    assert zha_device.device is new_zigpy_dev
+    assert zha_device.manufacturer == "OTAManufacturer"
+    assert zha_device.model == "OTAModel"
+    assert zha_device.status.name == "INITIALIZED"
+    assert len(zha_device.platform_entities) > 0
+
+
+async def test_device_reinterviewed_cancels_pending_init_task(
+    zha_gateway: Gateway,
+) -> None:
+    """Test that device_reinterviewed cancels an in-flight init task for the device."""
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    pending_task = mock.MagicMock()
+    zha_gateway._device_init_tasks[zigpy_dev.ieee] = pending_task
+
+    zha_gateway.device_reinterviewed(zigpy_dev)
+    await zha_gateway.async_block_till_done()
+
+    pending_task.cancel.assert_called_once()
+    assert zha_device.device is zigpy_dev
+
+
+async def test_device_reinterviewed_unknown_device(
+    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that device_reinterviewed logs a warning for an unknown device."""
+    unknown_zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        endpoints={
+            1: {
+                SIG_EP_INPUT: [general.Basic.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.ON_OFF_SWITCH,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+        ieee="11:22:33:44:55:66:77:88",
+    )
+
+    with caplog.at_level(logging.WARNING):
+        zha_gateway.application_controller.listener_event(
+            "device_reinterviewed", unknown_zigpy_dev
+        )
+        await zha_gateway.async_block_till_done()
+
+    assert "not found in ZHA" in caplog.text
+
+
+async def test_device_reinterviewed_configure_failure(
+    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that a configure failure during reinterview is logged but not raised."""
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    new_zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        endpoints={
+            3: {
+                SIG_EP_INPUT: [general.OnOff.cluster_id, general.Basic.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.ON_OFF_SWITCH,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+    )
+    zha_gateway.application_controller.devices[zigpy_dev.ieee] = new_zigpy_dev
+
+    with (
+        patch.object(
+            zha_device,
+            "async_configure",
+            side_effect=Exception("configure failed"),
+        ),
+        caplog.at_level(logging.WARNING),
+    ):
+        zha_gateway.application_controller.listener_event(
+            "device_reinterviewed", new_zigpy_dev
+        )
+        await zha_gateway.async_block_till_done()
+
+    assert "Failed to configure/initialize device" in caplog.text
+
+
+async def test_async_reinterview_device_unknown_ieee(
+    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that async_reinterview_device warns when the ZHA device is unknown."""
+    unknown_ieee = zigpy.types.EUI64.convert("11:22:33:44:55:66:77:88")
+
+    with caplog.at_level(logging.WARNING):
+        await zha_gateway.async_reinterview_device(unknown_ieee)
+
+    assert "not found for reinterview" in caplog.text
+
+
+async def test_async_reinterview_device_active_coordinator(
+    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that async_reinterview_device skips the active coordinator."""
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    with (
+        patch.object(
+            type(zha_device),
+            "is_active_coordinator",
+            new_callable=mock.PropertyMock,
+            return_value=True,
+        ),
+        patch.object(
+            zigpy_dev, "reinterview", new_callable=AsyncMock
+        ) as mock_reinterview,
+        caplog.at_level(logging.DEBUG),
+    ):
+        await zha_gateway.async_reinterview_device(zigpy_dev.ieee)
+
+    assert "Skipping reinterview for active coordinator" in caplog.text
+    mock_reinterview.assert_not_called()
