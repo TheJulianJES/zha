@@ -1688,3 +1688,135 @@ async def test_gateway_device_reinterviewed_ota_path(
     assert zha_device.model == "OTAModel"
     assert zha_device.status.name == "INITIALIZED"
     assert len(zha_device.platform_entities) > 0
+
+
+async def test_device_reinterviewed_cancels_pending_init_task(
+    zha_gateway: Gateway,
+) -> None:
+    """Test that device_reinterviewed cancels an in-flight init task for the device."""
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    pending_task = mock.MagicMock()
+    zha_gateway._device_init_tasks[zigpy_dev.ieee] = pending_task
+
+    zha_gateway.device_reinterviewed(zigpy_dev)
+    await zha_gateway.async_block_till_done()
+
+    pending_task.cancel.assert_called_once()
+    assert zha_device.device is zigpy_dev
+
+
+async def test_device_reinterviewed_unknown_device(
+    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that device_reinterviewed logs a warning for an unknown device."""
+    unknown_zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        endpoints={
+            1: {
+                SIG_EP_INPUT: [general.Basic.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.ON_OFF_SWITCH,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+        ieee="11:22:33:44:55:66:77:88",
+    )
+
+    with caplog.at_level(logging.WARNING):
+        zha_gateway.application_controller.listener_event(
+            "device_reinterviewed", unknown_zigpy_dev
+        )
+        await zha_gateway.async_block_till_done()
+
+    assert "not found in ZHA" in caplog.text
+
+
+async def test_device_reinterviewed_configure_failure(
+    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that a configure failure during reinterview is logged but not raised."""
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    new_zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        endpoints={
+            3: {
+                SIG_EP_INPUT: [general.OnOff.cluster_id, general.Basic.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.ON_OFF_SWITCH,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+    )
+    zha_gateway.application_controller.devices[zigpy_dev.ieee] = new_zigpy_dev
+
+    with (
+        patch.object(
+            zha_device,
+            "async_configure",
+            side_effect=Exception("configure failed"),
+        ),
+        caplog.at_level(logging.WARNING),
+    ):
+        zha_gateway.application_controller.listener_event(
+            "device_reinterviewed", new_zigpy_dev
+        )
+        await zha_gateway.async_block_till_done()
+
+    assert "Failed to configure/initialize device" in caplog.text
+
+
+async def test_async_reinterview_device_unknown_ieee(
+    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that async_reinterview_device warns when the ZHA device is unknown."""
+    unknown_ieee = zigpy.types.EUI64.convert("11:22:33:44:55:66:77:88")
+
+    with caplog.at_level(logging.WARNING):
+        await zha_gateway.async_reinterview_device(unknown_ieee)
+
+    assert "not found for reinterview" in caplog.text
+
+
+async def test_async_reinterview_device_active_coordinator(
+    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that async_reinterview_device skips the active coordinator."""
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    with (
+        patch.object(
+            type(zha_device),
+            "is_active_coordinator",
+            new_callable=mock.PropertyMock,
+            return_value=True,
+        ),
+        patch.object(
+            zigpy_dev, "reinterview", new_callable=AsyncMock
+        ) as mock_reinterview,
+        caplog.at_level(logging.DEBUG),
+    ):
+        await zha_gateway.async_reinterview_device(zigpy_dev.ieee)
+
+    assert "Skipping reinterview for active coordinator" in caplog.text
+    mock_reinterview.assert_not_called()
+
+
+async def test_async_reinterview_device_zigpy_device_missing(
+    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that async_reinterview_device warns when the zigpy device is gone."""
+    zigpy_dev = zigpy_device(zha_gateway, with_basic_cluster_handler=True)
+    await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    # Remove the zigpy device from the controller while ZHA still tracks it
+    del zha_gateway.application_controller.devices[zigpy_dev.ieee]
+
+    with caplog.at_level(logging.WARNING):
+        await zha_gateway.async_reinterview_device(zigpy_dev.ieee)
+
+    assert "Zigpy device" in caplog.text and "not found for reinterview" in caplog.text
