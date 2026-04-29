@@ -1,6 +1,7 @@
 """Test ZHA Gateway."""
 
 import asyncio
+from contextlib import suppress
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, call, patch
 
 import pytest
@@ -595,6 +596,40 @@ async def test_gateway_device_initialized_no_keyerror_on_rapid_rejoin(
     keyerrors = [e for e in captured_exceptions if isinstance(e, KeyError)]
     assert not keyerrors, f"done-callback raised KeyError(s): {keyerrors}"
     assert zigpy_dev_basic.ieee not in zha_gateway._device_init_tasks
+
+
+async def test_gateway_device_reinterviewed_no_bookkeeping_loss_on_rapid_event(
+    zha_gateway: Gateway,
+) -> None:
+    """Regression test for the `_device_init_tasks` bookkeeping race.
+
+    Cancelled task's done-callback must not clear the replacement task's
+    entry.  Same race as #748/#749 but in `device_reinterviewed`.  The
+    previous `pop(..., None)` pattern silently dropped the replacement
+    task's entry, which meant a third event would fail to cancel the
+    in-flight task.
+    """
+    zigpy_dev = create_mock_zigpy_device(zha_gateway, ZIGPY_DEVICE_BASIC)
+    await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    zha_gateway.device_reinterviewed(zigpy_dev)
+    task_1 = zha_gateway._device_init_tasks[zigpy_dev.ieee]
+
+    zha_gateway.device_reinterviewed(zigpy_dev)
+    task_2 = zha_gateway._device_init_tasks[zigpy_dev.ieee]
+    assert task_2 is not task_1
+
+    # Let task_1's cancellation propagate and its done-callback run.
+    with suppress(asyncio.CancelledError):
+        await task_1
+    await asyncio.sleep(0)
+
+    # The cancelled task's done-callback must not have cleared the dict;
+    # the replacement task is still in flight.
+    assert zha_gateway._device_init_tasks.get(zigpy_dev.ieee) is task_2
+
+    await zha_gateway.async_block_till_done()
+    assert zigpy_dev.ieee not in zha_gateway._device_init_tasks
 
 
 def test_gateway_raw_device_initialized(
