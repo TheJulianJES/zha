@@ -536,13 +536,15 @@ class Gateway(AsyncUtilMixin, EventBase):
             _LOGGER.debug("Skipping reinterview for active coordinator %s", ieee)
             return
 
-        await zha_device.device.reinterview()
+        old_zigpy_device = zha_device.device
+        await old_zigpy_device.reinterview()
 
-        # If discovery succeeded, zigpy swaps the device and fires
-        # device_reinterviewed — our listener handles the full rebuild.
-        # If discovery failed, zigpy restores the old device.  Signal
-        # completion so the HA frontend stops showing "reconfiguring".
-        zha_device.emit_reconfigure_done()
+        # On swap success, zigpy fires `device_reinterviewed` and the resulting
+        # rebuild calls `async_configure()` which emits its own reconfigure-done
+        # signal.  Only emit here when no swap occurred so the HA frontend
+        # unsticks on the no-op/failure path without a duplicate signal.
+        if self.application_controller.devices.get(ieee) is old_zigpy_device:
+            zha_device.emit_reconfigure_done()
 
     def device_left(self, device: zigpy.device.Device) -> None:
         """Handle device leaving the network."""

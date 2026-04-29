@@ -1615,8 +1615,14 @@ async def test_gateway_reconfigure_with_swap(
         )
         zha_gateway.device_reinterviewed(new_zigpy_dev)
 
-    with patch.object(zigpy_dev, "reinterview", side_effect=fake_reinterview):
+    with (
+        patch.object(zigpy_dev, "reinterview", side_effect=fake_reinterview),
+        patch.object(zha_device, "emit_reconfigure_done") as mock_emit,
+    ):
         await zha_gateway.async_reinterview_device(zigpy_dev.ieee)
+        # On swap, async_reinterview_device must not emit reconfigure_done
+        # itself — the rebuild path emits via async_configure().
+        assert mock_emit.call_count == 0
 
     await zha_gateway.async_block_till_done()
 
@@ -1645,8 +1651,13 @@ async def test_gateway_reconfigure_no_swap(
     old_zigpy_dev = zha_device.device
     old_entities = dict(zha_device.platform_entities)
 
-    with patch.object(zigpy_dev, "reinterview", new_callable=AsyncMock):
+    with (
+        patch.object(zigpy_dev, "reinterview", new_callable=AsyncMock),
+        patch.object(zha_device, "emit_reconfigure_done") as mock_emit,
+    ):
         await zha_gateway.async_reinterview_device(zigpy_dev.ieee)
+        # No swap → emit reconfigure_done so the HA frontend unsticks.
+        assert mock_emit.call_count == 1
 
     assert zha_device.device is old_zigpy_dev
     assert zha_device.platform_entities == old_entities
