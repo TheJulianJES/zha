@@ -251,15 +251,19 @@ class Sensor(BaseSensor):
         self._cluster_handler: ClusterHandler = cluster_handlers[0]
         self._attr_def: foundation.ZCLAttributeDef | None = None
 
+        super().__init__(cluster_handlers, endpoint, device, **kwargs)
+
+        # `_attribute_name` may be set by `_init_from_quirks_metadata` (called
+        # from `super().__init__()`) for quirks v2 entities, so resolve the
+        # attribute definition only after that.
         if self._attribute_name is not None:
-            # If the attribute definition does not exist, this entity will be filtered
-            # out via `is_supported`
+            # If the attribute definition does not exist, this entity will be
+            # filtered out via `is_supported`
             with contextlib.suppress(KeyError):
                 self._attr_def = self._cluster_handler.cluster.find_attribute(
                     self._attribute_name
                 )
 
-        super().__init__(cluster_handlers, endpoint, device, **kwargs)
         self.recompute_capabilities()
 
     def on_add(self) -> None:
