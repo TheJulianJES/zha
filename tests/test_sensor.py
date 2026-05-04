@@ -2069,60 +2069,29 @@ async def test_ignore_non_value(zha_gateway: Gateway) -> None:
 
 
 async def test_ignore_non_value_quirks_v2(zha_gateway: Gateway) -> None:
-    """Test quirks v2 sensor entities ignore ZCL datatype non-values."""
+    """Test quirks v2 sensor entities ignore ZCL datatype non-values.
 
-    registry = DeviceRegistry()
-    zigpy_dev = create_mock_zigpy_device(
-        zha_gateway,
-        {
-            1: {
-                SIG_EP_INPUT: [
-                    general.Basic.cluster_id,
-                    measurement.RelativeHumidity.cluster_id,
-                ],
-                SIG_EP_OUTPUT: [],
-                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.SIMPLE_SENSOR,
-                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
-            }
-        },
-        manufacturer="manufacturer",
-        model="model",
+    Regression for the frient AQSZB-110 VOC sensor (custom develco
+    `develco_voc_level` cluster `0xfc03`), which is a generic
+    `sensor.Sensor` entity created via quirks v2 metadata.
+    """
+
+    zigpy_dev = await zigpy_device_from_json(
+        zha_gateway.application_controller,
+        "tests/data/devices/frient-a-s-aqszb-110.json",
     )
+    assert isinstance(zigpy_dev, CustomDeviceV2)
 
-    (
-        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model, registry=registry)
-        .sensor(
-            measurement.RelativeHumidity.AttributeDefs.measured_value.name,
-            measurement.RelativeHumidity.cluster_id,
-            translation_key="quirks_humidity",
-            fallback_name="Quirks humidity",
-        )
-        .add_to_registry()
-    )
-
-    zigpy_device_ = registry.get_device(zigpy_dev)
-    assert isinstance(zigpy_device_, CustomDeviceV2)
-    cluster = zigpy_device_.endpoints[1].humidity
-
-    zha_device = await join_zigpy_device(zha_gateway, zigpy_device_)
-    entity = get_entity(
-        zha_device, platform=Platform.SENSOR, qualifier="measured_value"
-    )
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+    cluster = zha_device.device.endpoints[38].develco_voc_level
+    entity = get_entity(zha_device, platform=Platform.SENSOR, qualifier="voc_level")
 
     # Normal attribute report
-    await send_attributes_report(
-        zha_gateway,
-        cluster,
-        {measurement.RelativeHumidity.AttributeDefs.measured_value.id: 5000},
-    )
-    assert entity.state["state"] == 5000
+    await send_attributes_report(zha_gateway, cluster, {"measured_value": 100})
+    assert entity.state["state"] == 100
 
     # Invalid attribute value (uint16 non_value), should be ignored
-    await send_attributes_report(
-        zha_gateway,
-        cluster,
-        {measurement.RelativeHumidity.AttributeDefs.measured_value.id: 0xFFFF},
-    )
+    await send_attributes_report(zha_gateway, cluster, {"measured_value": 0xFFFF})
     assert entity.state["state"] is None
 
 
