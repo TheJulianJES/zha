@@ -2069,12 +2069,7 @@ async def test_ignore_non_value(zha_gateway: Gateway) -> None:
 
 
 async def test_ignore_non_value_quirks_v2(zha_gateway: Gateway) -> None:
-    """Test quirks v2 sensor entities ignore ZCL datatype non-values.
-
-    Regression for the frient AQSZB-110 VOC sensor (custom develco
-    `develco_voc_level` cluster `0xfc03`), which is a generic
-    `sensor.Sensor` entity created via quirks v2 metadata.
-    """
+    """Test quirks v2 sensor entities also ignore ZCL datatype non-values."""
 
     zigpy_dev = await zigpy_device_from_json(
         zha_gateway.application_controller,
