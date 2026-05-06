@@ -374,9 +374,7 @@ class Sensor(BaseSensor):
 
         if attr_def is None:
             attr_def = self._attr_def
-
-        if attr_def is None:
-            return False
+        assert attr_def is not None
 
         data_type = foundation.DataType.from_type_id(attr_def.zcl_type)
         return value == data_type.non_value
