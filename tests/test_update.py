@@ -506,6 +506,49 @@ async def test_firmware_update_raises(zha_gateway: Gateway) -> None:
         await zha_gateway.async_block_till_done()
 
 
+async def test_firmware_update_empty_exception_message(zha_gateway: Gateway) -> None:
+    """Bare ``TimeoutError()`` from zigpy must still produce an identifiable message."""
+    zigpy_device = zigpy_device_mock(zha_gateway)
+    zha_device, ota_cluster, fw_image, installed_fw_version = await setup_test_data(
+        zha_gateway, zigpy_device
+    )
+
+    entity = get_entity(zha_device, platform=Platform.UPDATE)
+
+    await ota_cluster._handle_query_next_image(
+        foundation.ZCLHeader.cluster(
+            tsn=0x12, command_id=general.Ota.ServerCommandDefs.query_next_image.id
+        ),
+        general.QueryNextImageCommand(
+            field_control=fw_image.firmware.header.field_control,
+            manufacturer_code=zha_device.manufacturer_code,
+            image_type=fw_image.firmware.header.image_type,
+            current_file_version=installed_fw_version,
+            hardware_version=1,
+        ),
+    )
+    await zha_gateway.async_block_till_done()
+
+    raised = TimeoutError()
+    assert str(raised) == ""
+
+    with (
+        patch(
+            "zigpy.device.Device.update_firmware",
+            AsyncMock(side_effect=raised),
+        ),
+        pytest.raises(ZHAException) as exc_info,
+    ):
+        await entity.async_install(
+            version=f"0x{fw_image.firmware.header.file_version:08x}"
+        )
+        await zha_gateway.async_block_till_done()
+
+    assert str(exc_info.value) == "Update was not successful: TimeoutError()"
+    assert exc_info.value.__cause__ is raised
+    assert not entity.state[ATTR_IN_PROGRESS]
+
+
 async def test_firmware_update_downgrade(zha_gateway: Gateway) -> None:
     """Test ZHA update platform - force a firmware downgrade."""
     zigpy_device = zigpy_device_mock(zha_gateway)
