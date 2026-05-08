@@ -262,7 +262,9 @@ class BaseFirmwareUpdateEntity(PlatformEntity, ABC):
         except Exception as ex:
             self._attr_in_progress = False
             self.maybe_emit_state_changed_event()
-            raise ZHAException(f"Update was not successful: {ex}") from ex
+            raise ZHAException(
+                f"Update was not successful: {str(ex) or repr(ex)}"
+            ) from ex
 
         # If the update finished but was not successful, we should also throw an error
         if result != Status.SUCCESS:
