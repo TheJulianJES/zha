@@ -2068,6 +2068,28 @@ async def test_ignore_non_value(zha_gateway: Gateway) -> None:
     assert entity.state["state"] is None
 
 
+async def test_ignore_non_value_quirks_v2(zha_gateway: Gateway) -> None:
+    """Test quirks v2 sensor entities also ignore ZCL datatype non-values."""
+
+    zigpy_dev = await zigpy_device_from_json(
+        zha_gateway.application_controller,
+        "tests/data/devices/frient-a-s-aqszb-110.json",
+    )
+    assert isinstance(zigpy_dev, CustomDeviceV2)
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+    cluster = zha_device.device.endpoints[38].develco_voc_level
+    entity = get_entity(zha_device, platform=Platform.SENSOR, qualifier="voc_level")
+
+    # Normal attribute report
+    await send_attributes_report(zha_gateway, cluster, {"measured_value": 100})
+    assert entity.state["state"] == 100
+
+    # Invalid attribute value (uint16 non_value), should be ignored
+    await send_attributes_report(zha_gateway, cluster, {"measured_value": 0xFFFF})
+    assert entity.state["state"] is None
+
+
 async def test_ignore_nan_value(zha_gateway: Gateway) -> None:
     """Test sensor updates ignoring NaN values (e.g. from CO concentration sensors)."""
 
