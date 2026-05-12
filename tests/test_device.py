@@ -1031,6 +1031,63 @@ async def test_quirks_v2_prevent_default_entities(zha_gateway: Gateway) -> None:
     assert len(zha_device.platform_entities) == 7
 
 
+async def test_quirks_v2_prevent_default_entities_does_not_remove_v2_entities(
+    zha_gateway: Gateway,
+) -> None:
+    """Test prevent_default_entity_creation does not remove quirks v2 entities.
+
+    `prevent_default_entity_creation` is meant to suppress default ZHA entities
+    only; quirks-v2-defined entities (via `.sensor(...)` etc.) must survive even
+    when the predicate would otherwise match them — e.g. when the v2 entity
+    reuses the same `unique_id_suffix` as the default entity in order to
+    preserve the existing HA entity registry entry.
+    """
+    registry = DeviceRegistry()
+
+    (
+        QuirkBuilder("CentraLite", "3405-L", registry=registry)
+        # Broad rule: matches every entity on the PowerConfiguration cluster on
+        # endpoint 1, which includes the default `Battery` sensor *and* the
+        # quirks v2 sensor added below.
+        .prevent_default_entity_creation(
+            endpoint_id=1,
+            cluster_id=PowerConfiguration.cluster_id,
+        )
+        .sensor(
+            attribute_name=PowerConfiguration.AttributeDefs.battery_quantity.name,
+            cluster_id=PowerConfiguration.cluster_id,
+            translation_key="battery_quantity",
+            fallback_name="Battery quantity",
+        )
+        .add_to_registry()
+    )
+
+    zigpy_dev = registry.get_device(
+        await zigpy_device_from_json(
+            zha_gateway.application_controller,
+            "tests/data/devices/centralite-3405-l.json",
+        )
+    )
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    # Default `Battery` sensor was removed by the prevent rule.
+    with pytest.raises(KeyError):
+        zha_device.get_platform_entity(
+            Platform.SENSOR,
+            unique_id="00:0d:6f:00:05:65:83:f2-1-1",
+        )
+
+    # The quirks v2 sensor survived even though the prevent predicate matched
+    # it as well (same endpoint + cluster).
+    v2_entity = get_entity(
+        zha_device, platform=Platform.SENSOR, qualifier="battery_quantity"
+    )
+    assert v2_entity is not None
+    assert v2_entity._from_quirks_v2 is True
+    assert v2_entity.translation_key == "battery_quantity"
+
+
 async def test_quirks_v2_change_entity_metadata(zha_gateway: Gateway) -> None:
     """Test quirks v2 can change entity metadata."""
     registry = DeviceRegistry()
