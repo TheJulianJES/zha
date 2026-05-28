@@ -219,7 +219,7 @@ class BaseLight(BaseEntity, ABC):
         effect: str | None = None,
         flash: FlashMode | None = None,
         color_temp: int | None = None,
-        xy_color: tuple[int, int] | None = None,
+        xy_color: tuple[float, float] | None = None,
     ) -> None:
         """Turn the entity on."""
 
@@ -384,7 +384,7 @@ class BaseSharedLight(BaseLight):
         effect: str | None = None,
         flash: FlashMode | None = None,
         color_temp: int | None = None,
-        xy_color: tuple[int, int] | None = None,
+        xy_color: tuple[float, float] | None = None,
     ) -> None:
         """Turn the entity on."""
         duration = (
@@ -464,7 +464,7 @@ class BaseSharedLight(BaseLight):
         effect: str | None,
         flash: FlashMode | None,
         color_temp: int | None,
-        xy_color: tuple[int, int] | None,
+        xy_color: tuple[float, float] | None,
         duration: float,
         execute_if_off_supported: bool,
         brightness_supported: bool,
@@ -1570,7 +1570,7 @@ class LightGroup(BaseSharedLight, GroupEntity):
         effect: str | None = None,
         flash: FlashMode | None = None,
         color_temp: int | None = None,
-        xy_color: tuple[int, int] | None = None,
+        xy_color: tuple[float, float] | None = None,
     ) -> None:
         """Send an assume event to all members of the group."""
 
