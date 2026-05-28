@@ -2106,12 +2106,65 @@ async def test_enum_sensor(zha_gateway: Gateway) -> None:
 
     assert entity.state["state"] == "AAA"
 
+    # The public `options` property and `info_object` mirror the select platform.
+    expected_options = [e.name for e in PowerConfiguration.BatterySize]
+    assert entity.options == expected_options
+    info = entity.info_object
+    assert isinstance(info, sensor.EnumSensorInfo)
+    assert info.options == expected_options
+    assert info.enum == PowerConfiguration.BatterySize.__name__
+
     zigpy_dev.endpoints[1].power.update_attribute(
         PowerConfiguration.AttributeDefs.battery_size.id,
         0xAB,  # unknown
     )
 
     assert entity.state["state"] == "undefined_0xab"  # TODO: should this be `None`?
+
+
+async def test_plain_sensor_options_from_quirks_metadata(
+    zha_gateway: Gateway,
+) -> None:
+    """A plain Sensor with options metadata exposes them on info_object."""
+    zha_device, _ = await zigpy_device_aqara_sensor_v2_mock(zha_gateway)
+    entity = get_entity(
+        zha_device, platform=Platform.SENSOR, qualifier="last_feeding_size"
+    )
+
+    # Simulate quirks v2 metadata that includes an explicit option list. Once
+    # zigpy adds `options` to ZCLSensorMetadata, the .sensor(..., options=...)
+    # call would set this for us; here we exercise the read-side contract.
+    entity._attr_options = ["zigbee", "keypad", "fingerprint"]
+    # info_object is cached_property, drop the cached value so it is rebuilt.
+    entity.__dict__.pop("info_object", None)
+
+    assert entity.options == ["zigbee", "keypad", "fingerprint"]
+    info = entity.info_object
+    assert isinstance(info, sensor.EnumSensorInfo)
+    assert info.options == ["zigbee", "keypad", "fingerprint"]
+    # Plain (non-EnumSensor) entities have no enum class to surface.
+    assert info.enum is None
+
+
+def test_sensor_init_from_quirks_metadata_picks_up_options() -> None:
+    """Sensor._init_from_quirks_metadata copies `options` onto _attr_options."""
+    fake_metadata = MagicMock(
+        attribute_name="some_attr",
+        attribute_converter=None,
+        divisor=None,
+        multiplier=None,
+        device_class=None,
+        state_class=None,
+        unit=None,
+        options=("a", "b", "c"),
+    )
+    entity = sensor.Sensor.__new__(sensor.Sensor)
+    entity._attr_options = None
+
+    with patch.object(PlatformEntity, "_init_from_quirks_metadata"):
+        sensor.Sensor._init_from_quirks_metadata(entity, fake_metadata)
+
+    assert entity._attr_options == ["a", "b", "c"]
 
 
 async def test_em_poller_runs_independently_of_entity_enabled_state(
