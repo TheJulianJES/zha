@@ -171,6 +171,14 @@ class SensorEntityInfo(BaseEntityInfo):
 
 
 @dataclass(frozen=True, kw_only=True)
+class EnumSensorInfo(SensorEntityInfo):
+    """Enum sensor entity info."""
+
+    enum: str | None = None
+    options: list[str]
+
+
+@dataclass(frozen=True, kw_only=True)
 class DeviceCounterEntityInfo(BaseEntityInfo):
     """Device counter entity info."""
 
@@ -199,6 +207,7 @@ class BaseSensor(PlatformEntity, ABC):
     _attr_native_unit_of_measurement: str | None = None
     _attr_device_class: SensorDeviceClass | None = None
     _attr_state_class: SensorStateClass | None = None
+    _attr_options: list[str] | None = None
 
     @property
     def suggested_display_precision(self) -> int | None:
@@ -210,14 +219,22 @@ class BaseSensor(PlatformEntity, ABC):
         """Return the unit of measurement."""
         return self._attr_native_unit_of_measurement
 
+    @property
+    def options(self) -> list[str] | None:
+        """Return the list of available options, if any."""
+        return self._attr_options
+
     @functools.cached_property
     def info_object(self) -> SensorEntityInfo:
         """Return a representation of the sensor."""
-        return SensorEntityInfo(
+        common_fields = {
             **super().info_object.__dict__,
-            suggested_display_precision=self.suggested_display_precision,
-            unit=self.native_unit_of_measurement,
-        )
+            "suggested_display_precision": self.suggested_display_precision,
+            "unit": self.native_unit_of_measurement,
+        }
+        if self._attr_options is not None:
+            return EnumSensorInfo(**common_fields, options=self._attr_options)
+        return SensorEntityInfo(**common_fields)
 
     @property
     def state(self) -> dict:
@@ -332,6 +349,11 @@ class Sensor(BaseSensor):
             )
         if entity_metadata.unit is not None:
             self._attr_native_unit_of_measurement = entity_metadata.unit
+        # `options` is optional metadata added in a newer zigpy; read defensively
+        # so this works against older zigpy versions that don't yet expose it.
+        options = getattr(entity_metadata, "options", None)
+        if options is not None:
+            self._attr_options = list(options)
 
     @property
     def native_value(self) -> date | datetime | str | int | float | None:
@@ -546,6 +568,16 @@ class EnumSensor(Sensor):
         self._enum = entity_metadata.enum
 
         PlatformEntity._init_from_quirks_metadata(self, entity_metadata)  # pylint: disable=protected-access
+
+    @functools.cached_property
+    def info_object(self) -> EnumSensorInfo:
+        """Return a representation of the sensor."""
+        base_info = super().info_object
+        assert isinstance(base_info, EnumSensorInfo)
+        return EnumSensorInfo(
+            **{k: v for k, v in base_info.__dict__.items() if k != "enum"},
+            enum=self._enum.__name__,
+        )
 
     def formatter(self, value: int) -> str | None:
         """Use name of enum."""
