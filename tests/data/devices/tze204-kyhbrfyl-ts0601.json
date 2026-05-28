@@ -396,7 +396,13 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "TuyaHumanMotionState",
+          "options": [
+            "Off",
+            "Small",
+            "Large"
+          ]
         },
         "state": {
           "class_name": "EnumSensor",

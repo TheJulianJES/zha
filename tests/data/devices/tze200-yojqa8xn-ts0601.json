@@ -424,7 +424,14 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "TuyaSelfTestResult",
+          "options": [
+            "Checking",
+            "Success",
+            "Failure",
+            "Others"
+          ]
         },
         "state": {
           "class_name": "EnumSensor",

@@ -501,7 +501,14 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "TuyaSirenState",
+          "options": [
+            "Sound",
+            "Light",
+            "Sound_and_light",
+            "Normal"
+          ]
         },
         "state": {
           "class_name": "EnumSensor",

@@ -481,7 +481,13 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "SetpointChangeSourceEnum",
+          "options": [
+            "Manual",
+            "Schedule",
+            "External"
+          ]
         },
         "state": {
           "class_name": "SetpointChangeSource",

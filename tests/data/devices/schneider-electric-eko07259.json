@@ -2460,7 +2460,18 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "SEControlStatus",
+          "options": [
+            "NormalOperation",
+            "NoTemperature",
+            "RemoteDemandOverride",
+            "WindowOpen",
+            "LocalForceOn",
+            "Maintenance",
+            "OutputTemporalLimit",
+            "SensorFault"
+          ]
         },
         "state": {
           "class_name": "EnumSensor",

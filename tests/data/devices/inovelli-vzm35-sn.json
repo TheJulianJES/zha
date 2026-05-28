@@ -1689,7 +1689,12 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "InovelliOverheatedState",
+          "options": [
+            "Normal",
+            "Overheated"
+          ]
         },
         "state": {
           "class_name": "InovelliOverheated",

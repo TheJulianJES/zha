@@ -1365,7 +1365,15 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "DanfossOpenWindowDetectionEnum",
+          "options": [
+            "Quarantine",
+            "Closed",
+            "Maybe",
+            "Open",
+            "External"
+          ]
         },
         "state": {
           "class_name": "DanfossOpenWindowDetection",
@@ -1449,7 +1457,13 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "SetpointChangeSourceEnum",
+          "options": [
+            "Manual",
+            "Schedule",
+            "External"
+          ]
         },
         "state": {
           "class_name": "SetpointChangeSource",

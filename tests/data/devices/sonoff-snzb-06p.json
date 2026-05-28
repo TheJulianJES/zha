@@ -370,7 +370,12 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "SonoffIlluminationStates",
+          "options": [
+            "Dark",
+            "Light"
+          ]
         },
         "state": {
           "class_name": "SonoffPresenceSenorIlluminationStatus",

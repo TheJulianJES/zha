@@ -454,7 +454,17 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "PowerSource",
+          "options": [
+            "Unknown",
+            "Mains_single_phase",
+            "Mains_three_phase",
+            "Battery",
+            "DC_Source",
+            "Emergency_Mains_Always_On",
+            "Emergency_Mains_Transfer_Switch"
+          ]
         },
         "state": {
           "class_name": "AqaraCurtainMotorPowerSourceSensor",
@@ -574,7 +584,20 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "WindowCoveringType",
+          "options": [
+            "Rollershade",
+            "Rollershade_two_motors",
+            "Rollershade_exterior",
+            "Rollershade_exterior_two_motors",
+            "Drapery",
+            "Awning",
+            "Shutter",
+            "Tilt_blind_tilt_only",
+            "Tilt_blind_tilt_and_lift",
+            "Projector_screen"
+          ]
         },
         "state": {
           "class_name": "WindowCoveringTypeSensor",
@@ -602,7 +625,14 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "AqaraE1HookState",
+          "options": [
+            "Unlocked",
+            "Locked",
+            "Locking",
+            "Unlocking"
+          ]
         },
         "state": {
           "class_name": "AqaraCurtainHookStateSensor",

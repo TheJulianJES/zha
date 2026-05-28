@@ -461,7 +461,16 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "TuyaSelfCheckResult",
+          "options": [
+            "Checking",
+            "CheckSuccess",
+            "CheckFailure",
+            "Others",
+            "CommFault",
+            "RadarFault"
+          ]
         },
         "state": {
           "class_name": "EnumSensor",

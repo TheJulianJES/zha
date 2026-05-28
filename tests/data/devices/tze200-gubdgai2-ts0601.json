@@ -267,7 +267,20 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "WindowCoveringType",
+          "options": [
+            "Rollershade",
+            "Rollershade_two_motors",
+            "Rollershade_exterior",
+            "Rollershade_exterior_two_motors",
+            "Drapery",
+            "Awning",
+            "Shutter",
+            "Tilt_blind_tilt_only",
+            "Tilt_blind_tilt_and_lift",
+            "Projector_screen"
+          ]
         },
         "state": {
           "class_name": "WindowCoveringTypeSensor",

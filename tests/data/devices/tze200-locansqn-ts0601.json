@@ -738,7 +738,13 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "TuyaNousTempHumiAlarm",
+          "options": [
+            "LowerAlarm",
+            "UpperAlarm",
+            "Canceled"
+          ]
         },
         "state": {
           "class_name": "EnumSensor",
@@ -766,7 +772,13 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "TuyaNousTempHumiAlarm",
+          "options": [
+            "LowerAlarm",
+            "UpperAlarm",
+            "Canceled"
+          ]
         },
         "state": {
           "class_name": "EnumSensor",

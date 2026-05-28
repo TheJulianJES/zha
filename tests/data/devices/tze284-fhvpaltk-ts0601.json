@@ -395,7 +395,13 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "GiexIrrigationStatus",
+          "options": [
+            "Manual",
+            "Auto",
+            "Idle"
+          ]
         },
         "state": {
           "class_name": "EnumSensor",
@@ -423,7 +429,13 @@
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
-          "unit": null
+          "unit": null,
+          "enum": "GiexIrrigationStatus",
+          "options": [
+            "Manual",
+            "Auto",
+            "Idle"
+          ]
         },
         "state": {
           "class_name": "EnumSensor",
