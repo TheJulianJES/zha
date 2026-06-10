@@ -178,6 +178,15 @@ async def configure_cluster_configs(
         for attr_name, attr_config in agg.attributes.items():
             if attr_config.reporting is None:
                 continue
+            if attr_name not in agg.cluster.attributes_by_name:
+                _LOGGER.debug(
+                    "[%s] Attribute %s has no definition on cluster %s,"
+                    " skipping reporting configuration",
+                    agg.cluster.endpoint.device.ieee,
+                    attr_name,
+                    agg.cluster.ep_attribute,
+                )
+                continue
             attr_def = agg.cluster.find_attribute(attr_name)
             reporting_attrs[attr_def] = attr_config.reporting
 
