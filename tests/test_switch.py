@@ -904,3 +904,49 @@ async def test_binary_output_cluster(zha_gateway: Gateway) -> None:
             manufacturer=UNDEFINED,
         )
     ]
+
+
+class MissingOnOffAttributeQuirk(CustomDevice):
+    """Quirk with an OnOff cluster missing standard attribute definitions.
+
+    Mimics broken custom v1 quirks that fully replace the `attributes` dict of
+    a standard cluster, e.g. with `attributes = LocalDataCluster.attributes.copy()`.
+    """
+
+    class BrokenOnOffCluster(CustomCluster, general.OnOff):
+        """OnOff cluster without the standard attribute definitions."""
+
+        attributes = {
+            0x6000: ("window_detection_temperature", t.int16s),
+            0x6001: ("window_detection_timeout_minutes", t.uint8_t),
+        }
+
+    replacement = {
+        ENDPOINTS: {
+            1: {
+                PROFILE_ID: zha.PROFILE_ID,
+                DEVICE_TYPE: zha.DeviceType.ON_OFF_SWITCH,
+                INPUT_CLUSTERS: [general.Basic.cluster_id, BrokenOnOffCluster],
+                OUTPUT_CLUSTERS: [],
+            },
+        }
+    }
+
+
+async def test_switch_missing_standard_attribute_definitions(
+    zha_gateway: Gateway,
+) -> None:
+    """Test quirk-replaced OnOff cluster without standard attribute definitions.
+
+    Device initialization must not fail and no switch entity is created.
+    """
+    zigpy_device = create_mock_zigpy_device(
+        zha_gateway,
+        ZIGPY_DEVICE,
+        manufacturer="_TZE200_ckud7u2l",
+        quirk=MissingOnOffAttributeQuirk,
+    )
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+
+    with pytest.raises(KeyError):
+        get_entity(zha_device, platform=Platform.SWITCH)
