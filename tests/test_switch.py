@@ -14,6 +14,7 @@ from zhaquirks.const import (
     OUTPUT_CLUSTERS,
     PROFILE_ID,
 )
+from zhaquirks.device import CustomZigpyDevice
 from zhaquirks.legacy import CustomDevice
 from zigpy.exceptions import ZigbeeException
 from zigpy.profiles import zha
@@ -906,30 +907,16 @@ async def test_binary_output_cluster(zha_gateway: Gateway) -> None:
     ]
 
 
-class MissingOnOffAttributeQuirk(CustomDevice):
-    """Quirk with an OnOff cluster missing standard attribute definitions.
+class MissingOnOffAttributesCluster(CustomCluster, general.OnOff):
+    """OnOff cluster without the standard attribute definitions.
 
-    Mimics broken custom v1 quirks that fully replace the `attributes` dict of
+    Mimics broken custom quirks that fully replace the `attributes` dict of
     a standard cluster, e.g. with `attributes = LocalDataCluster.attributes.copy()`.
     """
 
-    class BrokenOnOffCluster(CustomCluster, general.OnOff):
-        """OnOff cluster without the standard attribute definitions."""
-
-        attributes = {
-            0x6000: ("window_detection_temperature", t.int16s),
-            0x6001: ("window_detection_timeout_minutes", t.uint8_t),
-        }
-
-    replacement = {
-        ENDPOINTS: {
-            1: {
-                PROFILE_ID: zha.PROFILE_ID,
-                DEVICE_TYPE: zha.DeviceType.ON_OFF_SWITCH,
-                INPUT_CLUSTERS: [general.Basic.cluster_id, BrokenOnOffCluster],
-                OUTPUT_CLUSTERS: [],
-            },
-        }
+    attributes = {
+        0x6000: ("window_detection_temperature", t.int16s),
+        0x6001: ("window_detection_timeout_minutes", t.uint8_t),
     }
 
 
@@ -940,13 +927,25 @@ async def test_switch_missing_standard_attribute_definitions(
 
     Device initialization must not fail and no switch entity is created.
     """
+    registry = DeviceRegistry()
     zigpy_device = create_mock_zigpy_device(
         zha_gateway,
         ZIGPY_DEVICE,
         manufacturer="_TZE200_ckud7u2l",
-        quirk=MissingOnOffAttributeQuirk,
+        model="TS0601",
     )
-    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+
+    (
+        QuirkBuilder(zigpy_device.manufacturer, zigpy_device.model)
+        .replaces(MissingOnOffAttributesCluster)
+        .add_to_registry(registry)
+    )
+
+    zigpy_device_ = registry.resolve(zigpy_device)
+    assert isinstance(zigpy_device_, CustomZigpyDevice)
+    assert isinstance(zigpy_device_.endpoints[1].on_off, MissingOnOffAttributesCluster)
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device_)
 
     with pytest.raises(KeyError):
         get_entity(zha_device, platform=Platform.SWITCH)
