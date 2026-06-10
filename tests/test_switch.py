@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from typing import Final
 from unittest.mock import call, patch
 
 import pytest
@@ -910,14 +911,20 @@ async def test_binary_output_cluster(zha_gateway: Gateway) -> None:
 class MissingOnOffAttributesCluster(CustomCluster, general.OnOff):
     """OnOff cluster without the standard attribute definitions.
 
-    Mimics broken custom quirks that fully replace the `attributes` dict of
-    a standard cluster, e.g. with `attributes = LocalDataCluster.attributes.copy()`.
+    Mimics broken custom quirks that fully replace the attribute definitions of
+    a standard cluster, e.g. with `attributes = LocalDataCluster.attributes.copy()`
+    or an `AttributeDefs` class not inheriting the standard cluster's definitions.
     """
 
-    attributes = {
-        0x6000: ("window_detection_temperature", t.int16s),
-        0x6001: ("window_detection_timeout_minutes", t.uint8_t),
-    }
+    class AttributeDefs(zcl_f.BaseAttributeDefs):
+        """Attribute definitions not inheriting from `OnOff.AttributeDefs`."""
+
+        window_detection_temperature: Final = zcl_f.ZCLAttributeDef(
+            id=0x6000, type=t.int16s, is_manufacturer_specific=True
+        )
+        window_detection_timeout_minutes: Final = zcl_f.ZCLAttributeDef(
+            id=0x6001, type=t.uint8_t, is_manufacturer_specific=True
+        )
 
 
 async def test_switch_missing_standard_attribute_definitions(
