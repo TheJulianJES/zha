@@ -67,6 +67,14 @@ default-groups = ["testing"]
 
 [tool.setuptools-git-versioning]
 enabled = true
+# Fallback version used when no git tag is reachable, e.g. in a tagless
+# checkout. `zha-quirks` depends on `zha` (this project), so `zha[testing]`
+# forms a cycle: zha -> zha-quirks -> zha>=2.0.0. Locally and in CI the dynamic
+# version computes from the git tag and satisfies that constraint, but a
+# from-scratch resolve without tags (e.g. Dependabot) computes 0.0.1, which
+# fails `zha>=2.0.0` and makes the lock unsatisfiable. Pinning the fallback to
+# the current major keeps the cycle satisfiable everywhere. Bump on each major.
+starting_version = "2.0.0"
 
 [tool.codespell]
 skip = ["tests/data/devices/*"]
