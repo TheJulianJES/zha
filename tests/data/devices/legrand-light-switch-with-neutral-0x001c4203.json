@@ -1,7 +1,7 @@
 {
   "version": 2,
   "ieee": "ab:cd:ef:12:39:bc:b5:2d",
-  "nwk": "0x6CCF",
+  "nwk": "0x8540",
   "manufacturer": " Legrand",
   "model": " Light switch with neutral",
   "friendly_manufacturer": " Legrand",
@@ -12,9 +12,9 @@
   "exposes_features": [],
   "manufacturer_code": 4129,
   "power_source": "Mains",
-  "lqi": 212,
-  "rssi": -58,
-  "last_seen": "2025-09-11T19:28:42.125323+00:00",
+  "lqi": 220,
+  "rssi": -67,
+  "last_seen": "2025-09-10T13:44:21.223921+00:00",
   "available": true,
   "device_type": "Router",
   "active_coordinator": false,
@@ -56,12 +56,6 @@
               "name": "model",
               "zcl_type": "string",
               "value": " Light switch with neutral"
-            },
-            {
-              "id": "0x4000",
-              "name": "sw_build_id",
-              "zcl_type": "string",
-              "value": "001c"
             }
           ]
         },
@@ -119,34 +113,14 @@
         {
           "cluster_id": "0xfc01",
           "endpoint_attribute": "legrand_cluster",
-          "attributes": [
-            {
-              "id": "0x0000",
-              "name": "device_mode",
-              "zcl_type": "data16",
-              "unsupported": true
-            },
-            {
-              "id": "0x0001",
-              "name": "led_dark",
-              "zcl_type": "bool",
-              "value": 0
-            }
-          ]
+          "attributes": []
         }
       ],
       "out_clusters": [
         {
           "cluster_id": "0x0000",
           "endpoint_attribute": "basic",
-          "attributes": [
-            {
-              "id": "0x4000",
-              "name": "sw_build_id",
-              "zcl_type": "string",
-              "unsupported": true
-            }
-          ]
+          "attributes": []
         },
         {
           "cluster_id": "0x0005",
@@ -166,52 +140,7 @@
               "id": "0x0002",
               "name": "current_file_version",
               "zcl_type": "uint32",
-              "unsupported": true
-            },
-            {
-              "id": "0x0003",
-              "name": "current_zigbee_stack_version",
-              "zcl_type": "uint16",
-              "unsupported": true
-            },
-            {
-              "id": "0x000a",
-              "name": "image_stamp",
-              "zcl_type": "uint32",
-              "unsupported": true
-            },
-            {
-              "id": "0x0008",
-              "name": "image_type_id",
-              "zcl_type": "uint16",
-              "unsupported": true
-            },
-            {
-              "id": "0xfffe",
-              "name": "reporting_status",
-              "zcl_type": "enum8",
-              "unsupported": true
-            },
-            {
-              "id": "0x000b",
-              "name": "upgrade_activation_policy",
-              "zcl_type": "enum8",
-              "value": 0
-            },
-            {
-              "id": "0x0000",
-              "name": "upgrade_server_id",
-              "zcl_type": "EUI64",
-              "value": [
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0
-              ]
+              "value": 1851907
             }
           ]
         },
@@ -476,7 +405,7 @@
         "state": {
           "class_name": "LQISensor",
           "available": true,
-          "state": 212
+          "state": 220
         }
       },
       {
@@ -504,7 +433,7 @@
         "state": {
           "class_name": "RSSISensor",
           "available": true,
-          "state": -58
+          "state": -67
         }
       }
     ],
@@ -599,7 +528,7 @@
         "state": {
           "class_name": "FirmwareUpdateEntity",
           "available": true,
-          "installed_version": null,
+          "installed_version": "0x001c4203",
           "in_progress": false,
           "update_percentage": null,
           "latest_version": null,

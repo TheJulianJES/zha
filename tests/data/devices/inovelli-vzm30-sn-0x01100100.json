@@ -1,20 +1,20 @@
 {
   "version": 2,
-  "ieee": "ab:cd:ef:12:e9:c7:8a:67",
-  "nwk": "0x8AF1",
-  "manufacturer": "LUMI",
-  "model": "lumi.switch.n0agl1",
-  "friendly_manufacturer": "LUMI",
-  "friendly_model": "lumi.switch.n0agl1",
-  "name": "LUMI lumi.switch.n0agl1",
+  "ieee": "ab:cd:ef:12:9a:d6:cb:e7",
+  "nwk": "0x3F4D",
+  "manufacturer": "Inovelli",
+  "model": "VZM30-SN",
+  "friendly_manufacturer": "Inovelli",
+  "friendly_model": "VZM30-SN",
+  "name": "Inovelli VZM30-SN",
   "quirk_applied": true,
-  "quirk_class": "zhaquirks.xiaomi.aqara.switch_t1:SwitchT1Alt3",
+  "quirk_class": "zhaquirks.inovelli.VZM30SN:(Inovelli / VZM30-SN)",
   "exposes_features": [],
-  "manufacturer_code": 4447,
+  "manufacturer_code": 4655,
   "power_source": "Mains",
-  "lqi": 255,
-  "rssi": -64,
-  "last_seen": "2025-05-12T10:38:28.889996+00:00",
+  "lqi": 192,
+  "rssi": -52,
+  "last_seen": "2025-07-31T03:56:46.670783+00:00",
   "available": true,
   "device_type": "Router",
   "active_coordinator": false,
@@ -26,19 +26,19 @@
     "aps_flags": 0,
     "frequency_band": 8,
     "mac_capability_flags": 142,
-    "manufacturer_code": 4447,
+    "manufacturer_code": 4655,
     "maximum_buffer_size": 82,
-    "maximum_incoming_transfer_size": 82,
+    "maximum_incoming_transfer_size": 500,
     "server_mask": 11264,
-    "maximum_outgoing_transfer_size": 82,
+    "maximum_outgoing_transfer_size": 500,
     "descriptor_capability_field": 0
   },
   "endpoints": {
     "1": {
       "profile_id": 260,
       "device_type": {
-        "name": "ON_OFF_SWITCH",
-        "id": 0
+        "name": "DIMMABLE_LIGHT",
+        "id": 257
       },
       "in_clusters": [
         {
@@ -49,67 +49,13 @@
               "id": "0x0004",
               "name": "manufacturer",
               "zcl_type": "string",
-              "value": "LUMI"
+              "value": "Inovelli"
             },
             {
               "id": "0x0005",
               "name": "model",
               "zcl_type": "string",
-              "value": "lumi.switch.n0agl1"
-            },
-            {
-              "id": "0x4000",
-              "name": "sw_build_id",
-              "zcl_type": "string",
-              "value": ""
-            }
-          ]
-        },
-        {
-          "cluster_id": "0x0002",
-          "endpoint_attribute": "device_temperature",
-          "attributes": [
-            {
-              "id": "0x0000",
-              "name": "current_temperature",
-              "zcl_type": "int16",
-              "value": 18
-            },
-            {
-              "id": "0x0010",
-              "name": "dev_temp_alarm_mask",
-              "zcl_type": "map8",
-              "value": 1
-            },
-            {
-              "id": "0x0012",
-              "name": "high_temp_thres",
-              "zcl_type": "int16",
-              "value": 70
-            },
-            {
-              "id": "0x0011",
-              "name": "low_temp_thres",
-              "zcl_type": "int16",
-              "value": 0
-            },
-            {
-              "id": "0x0002",
-              "name": "max_temp_experienced",
-              "zcl_type": "int16",
-              "value": 0
-            },
-            {
-              "id": "0x0001",
-              "name": "min_temp_experienced",
-              "zcl_type": "int16",
-              "value": 0
-            },
-            {
-              "id": "0x0003",
-              "name": "over_temp_total_dwell",
-              "zcl_type": "uint16",
-              "value": 0
+              "value": "VZM30-SN"
             }
           ]
         },
@@ -147,30 +93,62 @@
           ]
         },
         {
-          "cluster_id": "0x0009",
-          "endpoint_attribute": "alarms",
-          "attributes": []
-        },
-        {
-          "cluster_id": "0x000a",
-          "endpoint_attribute": "time",
-          "attributes": []
+          "cluster_id": "0x0008",
+          "endpoint_attribute": "level",
+          "attributes": [
+            {
+              "id": "0x0000",
+              "name": "current_level",
+              "zcl_type": "uint8",
+              "value": 254
+            },
+            {
+              "id": "0x0014",
+              "name": "default_move_rate",
+              "zcl_type": "uint8",
+              "value": 0
+            },
+            {
+              "id": "0x0013",
+              "name": "off_transition_time",
+              "zcl_type": "uint16",
+              "unsupported": true
+            },
+            {
+              "id": "0x0011",
+              "name": "on_level",
+              "zcl_type": "uint8",
+              "value": 255
+            },
+            {
+              "id": "0x0010",
+              "name": "on_off_transition_time",
+              "zcl_type": "uint16",
+              "value": 0
+            },
+            {
+              "id": "0x0012",
+              "name": "on_transition_time",
+              "zcl_type": "uint16",
+              "unsupported": true
+            },
+            {
+              "id": "0x4000",
+              "name": "start_up_current_level",
+              "zcl_type": "uint8",
+              "value": 255
+            }
+          ]
         },
         {
           "cluster_id": "0x0702",
           "endpoint_attribute": "smartenergy_metering",
           "attributes": [
             {
-              "id": "0x0019",
-              "name": "control_temperature",
-              "zcl_type": "int24",
-              "unsupported": true
-            },
-            {
               "id": "0x0000",
               "name": "current_summ_delivered",
               "zcl_type": "uint48",
-              "value": 41150
+              "value": 7061
             },
             {
               "id": "0x0001",
@@ -224,13 +202,7 @@
               "id": "0x0302",
               "name": "divisor",
               "zcl_type": "uint24",
-              "value": 1000
-            },
-            {
-              "id": "0x0017",
-              "name": "inlet_temperature",
-              "zcl_type": "int24",
-              "unsupported": true
+              "value": 100
             },
             {
               "id": "0x0400",
@@ -251,12 +223,6 @@
               "value": 1
             },
             {
-              "id": "0x0018",
-              "name": "outlet_temperature",
-              "zcl_type": "int24",
-              "unsupported": true
-            },
-            {
               "id": "0x0200",
               "name": "status",
               "zcl_type": "map8",
@@ -266,31 +232,13 @@
               "id": "0x0303",
               "name": "summation_formatting",
               "zcl_type": "map8",
-              "value": 35
-            },
-            {
-              "id": "0x030d",
-              "name": "temperature_formatting",
-              "zcl_type": "map8",
-              "unsupported": true
-            },
-            {
-              "id": "0x030c",
-              "name": "temperature_unit_of_measure",
-              "zcl_type": "enum8",
-              "unsupported": true
+              "value": 66
             },
             {
               "id": "0x0300",
               "name": "unit_of_measure",
               "zcl_type": "enum8",
               "value": 0
-            },
-            {
-              "id": "0x0803",
-              "name": "water_specific_alarm_mask",
-              "zcl_type": "map16",
-              "unsupported": true
             }
           ]
         },
@@ -302,13 +250,13 @@
               "id": "0x0603",
               "name": "ac_current_divisor",
               "zcl_type": "uint16",
-              "unsupported": true
+              "value": 99
             },
             {
               "id": "0x0602",
               "name": "ac_current_multiplier",
               "zcl_type": "uint16",
-              "unsupported": true
+              "value": 1
             },
             {
               "id": "0x0300",
@@ -350,13 +298,13 @@
               "id": "0x0601",
               "name": "ac_voltage_divisor",
               "zcl_type": "uint16",
-              "unsupported": true
+              "value": 10
             },
             {
               "id": "0x0600",
               "name": "ac_voltage_multiplier",
               "zcl_type": "uint16",
-              "unsupported": true
+              "value": 1
             },
             {
               "id": "0x050b",
@@ -404,13 +352,13 @@
               "id": "0x0000",
               "name": "measurement_type",
               "zcl_type": "map32",
-              "value": 8
+              "unsupported": true
             },
             {
               "id": "0x0403",
               "name": "power_divisor",
               "zcl_type": "uint32",
-              "value": 1
+              "unsupported": true
             },
             {
               "id": "0x0510",
@@ -434,13 +382,13 @@
               "id": "0x0402",
               "name": "power_multiplier",
               "zcl_type": "uint32",
-              "value": 1
+              "unsupported": true
             },
             {
               "id": "0x0508",
               "name": "rms_current",
               "zcl_type": "uint16",
-              "unsupported": true
+              "value": 0
             },
             {
               "id": "0x050a",
@@ -476,7 +424,7 @@
               "id": "0x0505",
               "name": "rms_voltage",
               "zcl_type": "uint16",
-              "value": 229
+              "value": 1244
             },
             {
               "id": "0x0507",
@@ -507,27 +455,39 @@
               "name": "rms_voltage_ph_c",
               "zcl_type": "uint16",
               "unsupported": true
-            },
-            {
-              "id": "0x0304",
-              "name": "total_active_power",
-              "zcl_type": "int32",
-              "value": 42380
             }
           ]
         },
         {
-          "cluster_id": "0xfcc0",
-          "endpoint_attribute": "opple_cluster",
+          "cluster_id": "0x0b05",
+          "endpoint_attribute": "diagnostic",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0xfc31",
+          "endpoint_attribute": "inovelli_vzm31sn_cluster",
+          "attributes": [
+            {
+              "id": "0x0020",
+              "name": "internal_temp_monitor",
+              "zcl_type": "int8",
+              "value": 31
+            },
+            {
+              "id": "0x0021",
+              "name": "overheated",
+              "zcl_type": "bool",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "cluster_id": "0xfc57",
+          "endpoint_attribute": "works_with_all_hubs",
           "attributes": []
         }
       ],
       "out_clusters": [
-        {
-          "cluster_id": "0x000a",
-          "endpoint_attribute": "time",
-          "attributes": []
-        },
         {
           "cluster_id": "0x0019",
           "endpoint_attribute": "ota",
@@ -536,63 +496,163 @@
               "id": "0x0002",
               "name": "current_file_version",
               "zcl_type": "uint32",
-              "unsupported": true
+              "value": 17826048
             }
           ]
         }
       ]
     },
-    "21": {
+    "2": {
       "profile_id": 260,
       "device_type": {
-        "name": "ON_OFF_SWITCH",
-        "id": 0
+        "name": "DIMMER_SWITCH",
+        "id": 260
       },
       "in_clusters": [
         {
-          "cluster_id": "0x000c",
-          "endpoint_attribute": "analog_input",
+          "cluster_id": "0x0000",
+          "endpoint_attribute": "basic",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0003",
+          "endpoint_attribute": "identify",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0004",
+          "endpoint_attribute": "groups",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0005",
+          "endpoint_attribute": "scenes",
+          "attributes": []
+        }
+      ],
+      "out_clusters": [
+        {
+          "cluster_id": "0x0003",
+          "endpoint_attribute": "identify",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0006",
+          "endpoint_attribute": "on_off",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0008",
+          "endpoint_attribute": "level",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0xfc31",
+          "endpoint_attribute": "inovelli_vzm31sn_cluster",
+          "attributes": []
+        }
+      ]
+    },
+    "3": {
+      "profile_id": 260,
+      "device_type": {
+        "name": "DIMMER_SWITCH",
+        "id": 260
+      },
+      "in_clusters": [
+        {
+          "cluster_id": "0x0000",
+          "endpoint_attribute": "basic",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0003",
+          "endpoint_attribute": "identify",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0004",
+          "endpoint_attribute": "groups",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0005",
+          "endpoint_attribute": "scenes",
+          "attributes": []
+        }
+      ],
+      "out_clusters": [
+        {
+          "cluster_id": "0x0003",
+          "endpoint_attribute": "identify",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0006",
+          "endpoint_attribute": "on_off",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0008",
+          "endpoint_attribute": "level",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0xfc31",
+          "endpoint_attribute": "inovelli_vzm31sn_cluster",
+          "attributes": []
+        }
+      ]
+    },
+    "4": {
+      "profile_id": 260,
+      "device_type": {
+        "name": "TEMPERATURE_SENSOR",
+        "id": 770
+      },
+      "in_clusters": [
+        {
+          "cluster_id": "0x0000",
+          "endpoint_attribute": "basic",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0003",
+          "endpoint_attribute": "identify",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0402",
+          "endpoint_attribute": "temperature",
           "attributes": [
             {
-              "id": "0x0055",
-              "name": "present_value",
-              "zcl_type": "single",
-              "value": 0.0
+              "id": "0x0000",
+              "name": "measured_value",
+              "zcl_type": "int16",
+              "value": 2224
+            }
+          ]
+        },
+        {
+          "cluster_id": "0x0405",
+          "endpoint_attribute": "humidity",
+          "attributes": [
+            {
+              "id": "0x0000",
+              "name": "measured_value",
+              "zcl_type": "uint16",
+              "value": 5051
             }
           ]
         }
       ],
-      "out_clusters": []
-    },
-    "31": {
-      "profile_id": 260,
-      "device_type": {
-        "name": "ON_OFF_SWITCH",
-        "id": 0
-      },
-      "in_clusters": [
+      "out_clusters": [
         {
-          "cluster_id": "0x000c",
-          "endpoint_attribute": "analog_input",
+          "cluster_id": "0x0003",
+          "endpoint_attribute": "identify",
           "attributes": []
         }
-      ],
-      "out_clusters": []
-    },
-    "41": {
-      "profile_id": 260,
-      "device_type": {
-        "name": "ON_OFF_SWITCH",
-        "id": 0
-      },
-      "in_clusters": [
-        {
-          "cluster_id": "0x0012",
-          "endpoint_attribute": "multistate_input",
-          "attributes": []
-        }
-      ],
-      "out_clusters": []
+      ]
     },
     "242": {
       "profile_id": 41440,
@@ -611,8 +671,8 @@
     }
   },
   "original_signature": {
-    "manufacturer": "LUMI",
-    "model": "lumi.switch.n0agl1",
+    "manufacturer": "Inovelli",
+    "model": "VZM30-SN",
     "node_desc": {
       "logical_type": 1,
       "complex_descriptor_available": 0,
@@ -621,57 +681,78 @@
       "aps_flags": 0,
       "frequency_band": 8,
       "mac_capability_flags": 142,
-      "manufacturer_code": 4447,
+      "manufacturer_code": 4655,
       "maximum_buffer_size": 82,
-      "maximum_incoming_transfer_size": 82,
+      "maximum_incoming_transfer_size": 500,
       "server_mask": 11264,
-      "maximum_outgoing_transfer_size": 82,
+      "maximum_outgoing_transfer_size": 500,
       "descriptor_capability_field": 0
     },
     "endpoints": {
       "1": {
         "profile_id": "0x0104",
-        "device_type": "0x0100",
+        "device_type": "0x0101",
         "input_clusters": [
           "0x0000",
-          "0x0002",
           "0x0003",
           "0x0004",
           "0x0005",
           "0x0006",
-          "0x0009",
-          "0x000a",
+          "0x0008",
           "0x0702",
           "0x0b04",
-          "0xfcc0"
+          "0x0b05",
+          "0xfc31",
+          "0xfc57"
         ],
         "output_clusters": [
           "0x0019"
         ]
       },
-      "21": {
+      "2": {
         "profile_id": "0x0104",
-        "device_type": "0x0100",
+        "device_type": "0x0104",
         "input_clusters": [
-          "0x000c"
+          "0x0000",
+          "0x0003",
+          "0x0004",
+          "0x0005"
         ],
-        "output_clusters": []
+        "output_clusters": [
+          "0x0003",
+          "0x0006",
+          "0x0008",
+          "0xfc31"
+        ]
       },
-      "31": {
+      "3": {
         "profile_id": "0x0104",
-        "device_type": "0x0100",
+        "device_type": "0x0104",
         "input_clusters": [
-          "0x000c"
+          "0x0000",
+          "0x0003",
+          "0x0004",
+          "0x0005"
         ],
-        "output_clusters": []
+        "output_clusters": [
+          "0x0003",
+          "0x0006",
+          "0x0008",
+          "0xfc31"
+        ]
       },
-      "41": {
+      "4": {
         "profile_id": "0x0104",
-        "device_type": "0x0100",
+        "device_type": "0x0302",
         "input_clusters": [
-          "0x0012"
+          "0x0000",
+          "0x0003",
+          "0x0402",
+          "0x0405"
         ],
-        "output_clusters": []
+        "output_clusters": [
+          "0x0003"
+        ]
       },
       "242": {
         "profile_id": "0xa1e0",
@@ -688,7 +769,7 @@
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "ab:cd:ef:12:e9:c7:8a:67-1-3",
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-3",
           "migrate_unique_ids": [],
           "platform": "button",
           "class_name": "IdentifyButton",
@@ -700,7 +781,7 @@
           "entity_registry_enabled_default": true,
           "enabled": true,
           "primary": false,
-          "device_ieee": "ab:cd:ef:12:e9:c7:8a:67",
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
           "endpoint_id": 1,
           "available": true,
           "group_id": null,
@@ -716,11 +797,190 @@
         }
       }
     ],
+    "light": [
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1",
+          "migrate_unique_ids": [],
+          "platform": "light",
+          "class_name": "Light",
+          "translation_key": "light",
+          "translation_placeholders": null,
+          "device_class": null,
+          "state_class": null,
+          "entity_category": null,
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": true,
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
+          "endpoint_id": 1,
+          "available": true,
+          "group_id": null,
+          "effect_list": [
+            "off"
+          ],
+          "supported_features": 40,
+          "min_mireds": 153,
+          "max_mireds": 500
+        },
+        "state": {
+          "class_name": "Light",
+          "available": true,
+          "on": false,
+          "brightness": 254,
+          "xy_color": null,
+          "color_temp": null,
+          "effect_list": [
+            "off"
+          ],
+          "effect": "off",
+          "supported_features": 40,
+          "color_mode": "brightness",
+          "supported_color_modes": [
+            "brightness",
+            "onoff"
+          ],
+          "off_with_transition": false,
+          "off_brightness": null
+        },
+        "extra_state_attributes": [
+          "off_brightness",
+          "off_with_transition"
+        ]
+      }
+    ],
+    "number": [
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-8-default_move_rate",
+          "migrate_unique_ids": [],
+          "platform": "number",
+          "class_name": "DefaultMoveRateConfigurationEntity",
+          "translation_key": "default_move_rate",
+          "translation_placeholders": null,
+          "device_class": null,
+          "state_class": null,
+          "entity_category": "config",
+          "entity_registry_enabled_default": false,
+          "enabled": true,
+          "primary": false,
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
+          "endpoint_id": 1,
+          "available": true,
+          "group_id": null,
+          "mode": "auto",
+          "native_max_value": 254,
+          "native_min_value": 0,
+          "native_step": 1.0,
+          "native_unit_of_measurement": null
+        },
+        "state": {
+          "class_name": "DefaultMoveRateConfigurationEntity",
+          "available": true,
+          "state": 0
+        }
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-8-on_level",
+          "migrate_unique_ids": [],
+          "platform": "number",
+          "class_name": "OnLevelConfigurationEntity",
+          "translation_key": "on_level",
+          "translation_placeholders": null,
+          "device_class": null,
+          "state_class": null,
+          "entity_category": "config",
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
+          "endpoint_id": 1,
+          "available": true,
+          "group_id": null,
+          "mode": "auto",
+          "native_max_value": 255,
+          "native_min_value": 0,
+          "native_step": 1.0,
+          "native_unit_of_measurement": null
+        },
+        "state": {
+          "class_name": "OnLevelConfigurationEntity",
+          "available": true,
+          "state": 255
+        }
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-8-on_off_transition_time",
+          "migrate_unique_ids": [],
+          "platform": "number",
+          "class_name": "OnOffTransitionTimeConfigurationEntity",
+          "translation_key": "on_off_transition_time",
+          "translation_placeholders": null,
+          "device_class": null,
+          "state_class": null,
+          "entity_category": "config",
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
+          "endpoint_id": 1,
+          "available": true,
+          "group_id": null,
+          "mode": "auto",
+          "native_max_value": 65535,
+          "native_min_value": 0,
+          "native_step": 1.0,
+          "native_unit_of_measurement": null
+        },
+        "state": {
+          "class_name": "OnOffTransitionTimeConfigurationEntity",
+          "available": true,
+          "state": 0
+        }
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-8-start_up_current_level",
+          "migrate_unique_ids": [],
+          "platform": "number",
+          "class_name": "StartUpCurrentLevelConfigurationEntity",
+          "translation_key": "start_up_current_level",
+          "translation_placeholders": null,
+          "device_class": null,
+          "state_class": null,
+          "entity_category": "config",
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
+          "endpoint_id": 1,
+          "available": true,
+          "group_id": null,
+          "mode": "auto",
+          "native_max_value": 255,
+          "native_min_value": 0,
+          "native_step": 1.0,
+          "native_unit_of_measurement": null
+        },
+        "state": {
+          "class_name": "StartUpCurrentLevelConfigurationEntity",
+          "available": true,
+          "state": 255
+        }
+      }
+    ],
     "select": [
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "ab:cd:ef:12:e9:c7:8a:67-1-6-StartUpOnOff",
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-6-StartUpOnOff",
           "migrate_unique_ids": [],
           "platform": "select",
           "class_name": "StartupOnOffSelectEntity",
@@ -732,7 +992,7 @@
           "entity_registry_enabled_default": true,
           "enabled": true,
           "primary": false,
-          "device_ieee": "ab:cd:ef:12:e9:c7:8a:67",
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
           "endpoint_id": 1,
           "available": true,
           "group_id": null,
@@ -755,7 +1015,7 @@
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "ab:cd:ef:12:e9:c7:8a:67-1-0-lqi",
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-0-lqi",
           "migrate_unique_ids": [],
           "platform": "sensor",
           "class_name": "LQISensor",
@@ -767,7 +1027,7 @@
           "entity_registry_enabled_default": false,
           "enabled": true,
           "primary": false,
-          "device_ieee": "ab:cd:ef:12:e9:c7:8a:67",
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
           "endpoint_id": 1,
           "available": true,
           "group_id": null,
@@ -777,13 +1037,13 @@
         "state": {
           "class_name": "LQISensor",
           "available": true,
-          "state": 255
+          "state": 192
         }
       },
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "ab:cd:ef:12:e9:c7:8a:67-1-0-rssi",
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-0-rssi",
           "migrate_unique_ids": [],
           "platform": "sensor",
           "class_name": "RSSISensor",
@@ -795,7 +1055,7 @@
           "entity_registry_enabled_default": false,
           "enabled": true,
           "primary": false,
-          "device_ieee": "ab:cd:ef:12:e9:c7:8a:67",
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
           "endpoint_id": 1,
           "available": true,
           "group_id": null,
@@ -805,13 +1065,13 @@
         "state": {
           "class_name": "RSSISensor",
           "available": true,
-          "state": -64
+          "state": -52
         }
       },
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "ab:cd:ef:12:e9:c7:8a:67-1-1794-summation_delivered",
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-1794-summation_delivered",
           "migrate_unique_ids": [],
           "platform": "sensor",
           "class_name": "SmartEnergySummation",
@@ -823,7 +1083,7 @@
           "entity_registry_enabled_default": true,
           "enabled": true,
           "primary": false,
-          "device_ieee": "ab:cd:ef:12:e9:c7:8a:67",
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
           "endpoint_id": 1,
           "available": true,
           "group_id": null,
@@ -833,7 +1093,7 @@
         "state": {
           "class_name": "SmartEnergySummation",
           "available": true,
-          "state": 41.15,
+          "state": 70.61,
           "device_type": "Electric Metering",
           "status": "NO_ALARMS",
           "zcl_unit_of_measurement": 0
@@ -847,35 +1107,7 @@
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "ab:cd:ef:12:e9:c7:8a:67-1-2",
-          "migrate_unique_ids": [],
-          "platform": "sensor",
-          "class_name": "DeviceTemperature",
-          "translation_key": "device_temperature",
-          "translation_placeholders": null,
-          "device_class": "temperature",
-          "state_class": "measurement",
-          "entity_category": "diagnostic",
-          "entity_registry_enabled_default": true,
-          "enabled": true,
-          "primary": false,
-          "device_ieee": "ab:cd:ef:12:e9:c7:8a:67",
-          "endpoint_id": 1,
-          "available": true,
-          "group_id": null,
-          "suggested_display_precision": null,
-          "unit": "\u00b0C"
-        },
-        "state": {
-          "class_name": "DeviceTemperature",
-          "available": true,
-          "state": 0.18
-        }
-      },
-      {
-        "info_object": {
-          "fallback_name": null,
-          "unique_id": "ab:cd:ef:12:e9:c7:8a:67-1-2820",
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-2820",
           "migrate_unique_ids": [],
           "platform": "sensor",
           "class_name": "ElectricalMeasurementActivePower",
@@ -887,7 +1119,7 @@
           "entity_registry_enabled_default": true,
           "enabled": true,
           "primary": false,
-          "device_ieee": "ab:cd:ef:12:e9:c7:8a:67",
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
           "endpoint_id": 1,
           "available": true,
           "group_id": null,
@@ -897,8 +1129,7 @@
         "state": {
           "class_name": "ElectricalMeasurementActivePower",
           "available": true,
-          "state": 0.0,
-          "measurement_type": "PHASE_A_MEASUREMENT"
+          "state": 0.0
         },
         "extra_state_attributes": [
           "active_power_max",
@@ -908,7 +1139,39 @@
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "ab:cd:ef:12:e9:c7:8a:67-1-2820-rms_voltage",
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-2820-rms_current",
+          "migrate_unique_ids": [],
+          "platform": "sensor",
+          "class_name": "ElectricalMeasurementRMSCurrent",
+          "translation_key": null,
+          "translation_placeholders": null,
+          "device_class": "current",
+          "state_class": "measurement",
+          "entity_category": null,
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
+          "endpoint_id": 1,
+          "available": true,
+          "group_id": null,
+          "suggested_display_precision": 2,
+          "unit": "A"
+        },
+        "state": {
+          "class_name": "ElectricalMeasurementRMSCurrent",
+          "available": true,
+          "state": 0.0
+        },
+        "extra_state_attributes": [
+          "measurement_type",
+          "rms_current_max"
+        ]
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-2820-rms_voltage",
           "migrate_unique_ids": [],
           "platform": "sensor",
           "class_name": "ElectricalMeasurementRMSVoltage",
@@ -920,7 +1183,7 @@
           "entity_registry_enabled_default": true,
           "enabled": true,
           "primary": false,
-          "device_ieee": "ab:cd:ef:12:e9:c7:8a:67",
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
           "endpoint_id": 1,
           "available": true,
           "group_id": null,
@@ -930,8 +1193,7 @@
         "state": {
           "class_name": "ElectricalMeasurementRMSVoltage",
           "available": true,
-          "state": 229.0,
-          "measurement_type": "PHASE_A_MEASUREMENT"
+          "state": 124.4
         },
         "extra_state_attributes": [
           "measurement_type",
@@ -941,62 +1203,113 @@
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "ab:cd:ef:12:e9:c7:8a:67-1-2820-total_active_power",
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561",
           "migrate_unique_ids": [],
           "platform": "sensor",
-          "class_name": "ElectricalMeasurementTotalActivePower",
-          "translation_key": "total_active_power",
+          "class_name": "InovelliInternalTemperature",
+          "translation_key": "internal_temp_monitor",
           "translation_placeholders": null,
-          "device_class": "power",
+          "device_class": "temperature",
+          "state_class": "measurement",
+          "entity_category": "diagnostic",
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
+          "endpoint_id": 1,
+          "available": true,
+          "group_id": null,
+          "suggested_display_precision": null,
+          "unit": "\u00b0C"
+        },
+        "state": {
+          "class_name": "InovelliInternalTemperature",
+          "available": true,
+          "state": 31
+        }
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-overheated",
+          "migrate_unique_ids": [],
+          "platform": "sensor",
+          "class_name": "InovelliOverheated",
+          "translation_key": "overheated",
+          "translation_placeholders": null,
+          "device_class": "enum",
+          "state_class": null,
+          "entity_category": "diagnostic",
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
+          "endpoint_id": 1,
+          "available": true,
+          "group_id": null,
+          "suggested_display_precision": null,
+          "unit": null
+        },
+        "state": {
+          "class_name": "InovelliOverheated",
+          "available": true,
+          "state": "Normal"
+        }
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-4-1026",
+          "migrate_unique_ids": [],
+          "platform": "sensor",
+          "class_name": "Temperature",
+          "translation_key": null,
+          "translation_placeholders": null,
+          "device_class": "temperature",
           "state_class": "measurement",
           "entity_category": null,
           "entity_registry_enabled_default": true,
           "enabled": true,
           "primary": false,
-          "device_ieee": "ab:cd:ef:12:e9:c7:8a:67",
-          "endpoint_id": 1,
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
+          "endpoint_id": 4,
           "available": true,
           "group_id": null,
-          "suggested_display_precision": 1,
-          "unit": "W"
+          "suggested_display_precision": null,
+          "unit": "\u00b0C"
         },
         "state": {
-          "class_name": "ElectricalMeasurementTotalActivePower",
+          "class_name": "Temperature",
           "available": true,
-          "state": 4238.0,
-          "measurement_type": "PHASE_A_MEASUREMENT"
-        },
-        "extra_state_attributes": [
-          "active_power_max",
-          "measurement_type"
-        ]
-      }
-    ],
-    "switch": [
+          "state": 22.24
+        }
+      },
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "ab:cd:ef:12:e9:c7:8a:67-1-6",
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-4-1029",
           "migrate_unique_ids": [],
-          "platform": "switch",
-          "class_name": "Switch",
-          "translation_key": "switch",
+          "platform": "sensor",
+          "class_name": "Humidity",
+          "translation_key": null,
           "translation_placeholders": null,
-          "device_class": null,
-          "state_class": null,
+          "device_class": "humidity",
+          "state_class": "measurement",
           "entity_category": null,
           "entity_registry_enabled_default": true,
           "enabled": true,
-          "primary": true,
-          "device_ieee": "ab:cd:ef:12:e9:c7:8a:67",
-          "endpoint_id": 1,
+          "primary": false,
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
+          "endpoint_id": 4,
           "available": true,
-          "group_id": null
+          "group_id": null,
+          "suggested_display_precision": null,
+          "unit": "%"
         },
         "state": {
-          "class_name": "Switch",
-          "state": 0,
-          "available": true
+          "class_name": "Humidity",
+          "available": true,
+          "state": 50.51
         }
       }
     ],
@@ -1004,7 +1317,7 @@
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "ab:cd:ef:12:e9:c7:8a:67-1-25-firmware_update",
+          "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-25-firmware_update",
           "migrate_unique_ids": [],
           "platform": "update",
           "class_name": "FirmwareUpdateEntity",
@@ -1016,7 +1329,7 @@
           "entity_registry_enabled_default": true,
           "enabled": true,
           "primary": false,
-          "device_ieee": "ab:cd:ef:12:e9:c7:8a:67",
+          "device_ieee": "ab:cd:ef:12:9a:d6:cb:e7",
           "endpoint_id": 1,
           "available": true,
           "group_id": null,
@@ -1025,7 +1338,7 @@
         "state": {
           "class_name": "FirmwareUpdateEntity",
           "available": true,
-          "installed_version": null,
+          "installed_version": "0x01100100",
           "in_progress": false,
           "update_percentage": null,
           "latest_version": null,

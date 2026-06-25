@@ -1,20 +1,20 @@
 {
   "version": 2,
-  "ieee": "54:ef:44:10:00:49:74:c7",
-  "nwk": "0x69C1",
-  "manufacturer": "LUMI",
-  "model": "lumi.motion.ac02",
-  "friendly_manufacturer": "LUMI",
-  "friendly_model": "lumi.motion.ac02",
-  "name": "LUMI lumi.motion.ac02",
+  "ieee": "ab:cd:ef:12:1f:7f:df:14",
+  "nwk": "0x8B0B",
+  "manufacturer": "Philips",
+  "model": "SML001",
+  "friendly_manufacturer": "Philips",
+  "friendly_model": "SML001",
+  "name": "Philips SML001",
   "quirk_applied": true,
-  "quirk_class": "zhaquirks.xiaomi.aqara.motion_ac02:LumiMotionAC02",
+  "quirk_class": "zhaquirks.philips.motion:PhilipsMotion",
   "exposes_features": [],
-  "manufacturer_code": 4447,
+  "manufacturer_code": 4107,
   "power_source": "Battery or Unknown",
   "lqi": null,
   "rssi": null,
-  "last_seen": "2025-04-24T17:34:07.692473+00:00",
+  "last_seen": "2026-02-13T08:47:48.420219+00:00",
   "available": true,
   "device_type": "EndDevice",
   "active_coordinator": false,
@@ -26,15 +26,73 @@
     "aps_flags": 0,
     "frequency_band": 8,
     "mac_capability_flags": 128,
-    "manufacturer_code": 4447,
-    "maximum_buffer_size": 127,
-    "maximum_incoming_transfer_size": 100,
-    "server_mask": 11264,
-    "maximum_outgoing_transfer_size": 100,
+    "manufacturer_code": 4107,
+    "maximum_buffer_size": 89,
+    "maximum_incoming_transfer_size": 63,
+    "server_mask": 0,
+    "maximum_outgoing_transfer_size": 63,
     "descriptor_capability_field": 0
   },
   "endpoints": {
     "1": {
+      "profile_id": 49246,
+      "device_type": {
+        "name": "ON_OFF_SENSOR",
+        "id": 2128
+      },
+      "in_clusters": [
+        {
+          "cluster_id": "0x0000",
+          "endpoint_attribute": "basic",
+          "attributes": []
+        }
+      ],
+      "out_clusters": [
+        {
+          "cluster_id": "0x0000",
+          "endpoint_attribute": "basic",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0003",
+          "endpoint_attribute": "identify",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0004",
+          "endpoint_attribute": "groups",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0005",
+          "endpoint_attribute": "scenes",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0006",
+          "endpoint_attribute": "on_off",
+          "attributes": [
+            {
+              "id": "0x0000",
+              "name": "on_off",
+              "zcl_type": "bool",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "cluster_id": "0x0008",
+          "endpoint_attribute": "level",
+          "attributes": []
+        },
+        {
+          "cluster_id": "0x0300",
+          "endpoint_attribute": "light_color",
+          "attributes": []
+        }
+      ]
+    },
+    "2": {
       "profile_id": 260,
       "device_type": {
         "name": "OCCUPANCY_SENSOR",
@@ -46,22 +104,22 @@
           "endpoint_attribute": "basic",
           "attributes": [
             {
-              "id": "0x0001",
-              "name": "app_version",
-              "zcl_type": "uint8",
-              "value": 5
-            },
-            {
               "id": "0x0004",
               "name": "manufacturer",
               "zcl_type": "string",
-              "value": "LUMI"
+              "value": "Philips"
             },
             {
               "id": "0x0005",
               "name": "model",
               "zcl_type": "string",
-              "value": "lumi.motion.ac02"
+              "value": "SML001"
+            },
+            {
+              "id": "0x0033",
+              "name": "trigger_indicator",
+              "zcl_type": "bool",
+              "value": 1
             }
           ]
         },
@@ -73,25 +131,25 @@
               "id": "0x0021",
               "name": "battery_percentage_remaining",
               "zcl_type": "uint8",
-              "value": 151
+              "value": 200
             },
             {
               "id": "0x0033",
               "name": "battery_quantity",
               "zcl_type": "uint8",
-              "value": 1
+              "unsupported": true
             },
             {
               "id": "0x0031",
               "name": "battery_size",
               "zcl_type": "enum8",
-              "value": 11
+              "unsupported": true
             },
             {
               "id": "0x0020",
               "name": "battery_voltage",
               "zcl_type": "uint8",
-              "value": 30.3
+              "value": 29
             }
           ]
         },
@@ -108,7 +166,19 @@
               "id": "0x0000",
               "name": "measured_value",
               "zcl_type": "uint16",
-              "value": 13803.112417116059
+              "value": 10992
+            }
+          ]
+        },
+        {
+          "cluster_id": "0x0402",
+          "endpoint_attribute": "temperature",
+          "attributes": [
+            {
+              "id": "0x0000",
+              "name": "measured_value",
+              "zcl_type": "int16",
+              "value": 2475
             }
           ]
         },
@@ -120,81 +190,36 @@
               "id": "0x0000",
               "name": "occupancy",
               "zcl_type": "map8",
-              "value": 0
-            }
-          ]
-        },
-        {
-          "cluster_id": "0x0500",
-          "endpoint_attribute": "ias_zone",
-          "attributes": [
-            {
-              "id": "0x0000",
-              "name": "zone_state",
-              "zcl_type": "enum8",
-              "value": 0
-            },
-            {
-              "id": "0x0002",
-              "name": "zone_status",
-              "zcl_type": "map16",
-              "value": 0
-            },
-            {
-              "id": "0x0001",
-              "name": "zone_type",
-              "zcl_type": "enum16",
-              "value": 13
-            }
-          ]
-        },
-        {
-          "cluster_id": "0xfcc0",
-          "endpoint_attribute": "opple_cluster",
-          "attributes": [
-            {
-              "id": "0x0102",
-              "name": "detection_interval",
-              "zcl_type": "uint8",
-              "value": 30
-            },
-            {
-              "id": "0x010c",
-              "name": "motion_sensitivity",
-              "zcl_type": "uint8",
-              "value": 3
-            },
-            {
-              "id": "0x0152",
-              "name": "trigger_indicator",
-              "zcl_type": "uint8",
               "value": 1
+            },
+            {
+              "id": "0x0030",
+              "name": "sensitivity",
+              "zcl_type": "uint8",
+              "value": 0
             }
           ]
         }
       ],
       "out_clusters": [
         {
-          "cluster_id": "0x0003",
-          "endpoint_attribute": "identify",
-          "attributes": []
-        },
-        {
           "cluster_id": "0x0019",
           "endpoint_attribute": "ota",
-          "attributes": []
-        },
-        {
-          "cluster_id": "0xfcc0",
-          "endpoint_attribute": "opple_cluster",
-          "attributes": []
+          "attributes": [
+            {
+              "id": "0x0002",
+              "name": "current_file_version",
+              "zcl_type": "uint32",
+              "value": 1124102917
+            }
+          ]
         }
       ]
     }
   },
   "original_signature": {
-    "manufacturer": "LUMI",
-    "model": "lumi.motion.ac02",
+    "manufacturer": "Philips",
+    "model": "SML001",
     "node_desc": {
       "logical_type": 2,
       "complex_descriptor_available": 0,
@@ -203,27 +228,43 @@
       "aps_flags": 0,
       "frequency_band": 8,
       "mac_capability_flags": 128,
-      "manufacturer_code": 4447,
-      "maximum_buffer_size": 127,
-      "maximum_incoming_transfer_size": 100,
-      "server_mask": 11264,
-      "maximum_outgoing_transfer_size": 100,
+      "manufacturer_code": 4107,
+      "maximum_buffer_size": 89,
+      "maximum_incoming_transfer_size": 63,
+      "server_mask": 0,
+      "maximum_outgoing_transfer_size": 63,
       "descriptor_capability_field": 0
     },
     "endpoints": {
-      "1": {
+      "2": {
         "profile_id": "0x0104",
         "device_type": "0x0107",
         "input_clusters": [
           "0x0000",
           "0x0001",
           "0x0003",
-          "0xfcc0"
+          "0x0406",
+          "0x0400",
+          "0x0402"
         ],
         "output_clusters": [
+          "0x0019"
+        ]
+      },
+      "1": {
+        "profile_id": "0xc05e",
+        "device_type": "0x0850",
+        "input_clusters": [
+          "0x0000"
+        ],
+        "output_clusters": [
+          "0x0000",
           "0x0003",
-          "0x0019",
-          "0xfcc0"
+          "0x0004",
+          "0x0006",
+          "0x0008",
+          "0x0300",
+          "0x0005"
         ]
       }
     }
@@ -233,7 +274,34 @@
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "54:ef:44:10:00:49:74:c7-1-1030",
+          "unique_id": "ab:cd:ef:12:1f:7f:df:14-1-6",
+          "migrate_unique_ids": [],
+          "platform": "binary_sensor",
+          "class_name": "PhilipsMotion",
+          "translation_key": null,
+          "translation_placeholders": null,
+          "device_class": "motion",
+          "state_class": null,
+          "entity_category": null,
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "device_ieee": "ab:cd:ef:12:1f:7f:df:14",
+          "endpoint_id": 1,
+          "available": true,
+          "group_id": null,
+          "attribute_name": "on_off"
+        },
+        "state": {
+          "class_name": "PhilipsMotion",
+          "available": true,
+          "state": false
+        }
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:1f:7f:df:14-2-1030",
           "migrate_unique_ids": [],
           "platform": "binary_sensor",
           "class_name": "Occupancy",
@@ -244,9 +312,9 @@
           "entity_category": null,
           "entity_registry_enabled_default": true,
           "enabled": true,
-          "primary": false,
-          "device_ieee": "54:ef:44:10:00:49:74:c7",
-          "endpoint_id": 1,
+          "primary": true,
+          "device_ieee": "ab:cd:ef:12:1f:7f:df:14",
+          "endpoint_id": 2,
           "available": true,
           "group_id": null,
           "attribute_name": "occupancy"
@@ -254,34 +322,7 @@
         "state": {
           "class_name": "Occupancy",
           "available": true,
-          "state": false
-        }
-      },
-      {
-        "info_object": {
-          "fallback_name": null,
-          "unique_id": "54:ef:44:10:00:49:74:c7-1-1280",
-          "migrate_unique_ids": [],
-          "platform": "binary_sensor",
-          "class_name": "IASZone",
-          "translation_key": null,
-          "translation_placeholders": null,
-          "device_class": "motion",
-          "state_class": null,
-          "entity_category": null,
-          "entity_registry_enabled_default": true,
-          "enabled": true,
-          "primary": true,
-          "device_ieee": "54:ef:44:10:00:49:74:c7",
-          "endpoint_id": 1,
-          "available": true,
-          "group_id": null,
-          "attribute_name": "zone_status"
-        },
-        "state": {
-          "class_name": "IASZone",
-          "available": true,
-          "state": false
+          "state": true
         }
       }
     ],
@@ -289,7 +330,7 @@
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "54:ef:44:10:00:49:74:c7-1-3",
+          "unique_id": "ab:cd:ef:12:1f:7f:df:14-2-3",
           "migrate_unique_ids": [],
           "platform": "button",
           "class_name": "IdentifyButton",
@@ -301,8 +342,8 @@
           "entity_registry_enabled_default": true,
           "enabled": true,
           "primary": false,
-          "device_ieee": "54:ef:44:10:00:49:74:c7",
-          "endpoint_id": 1,
+          "device_ieee": "ab:cd:ef:12:1f:7f:df:14",
+          "endpoint_id": 2,
           "available": true,
           "group_id": null,
           "command": "identify",
@@ -317,47 +358,14 @@
         }
       }
     ],
-    "number": [
-      {
-        "info_object": {
-          "fallback_name": null,
-          "unique_id": "54:ef:44:10:00:49:74:c7-1-64704-detection_interval",
-          "migrate_unique_ids": [],
-          "platform": "number",
-          "class_name": "AqaraMotionDetectionInterval",
-          "translation_key": "detection_interval",
-          "translation_placeholders": null,
-          "device_class": null,
-          "state_class": null,
-          "entity_category": "config",
-          "entity_registry_enabled_default": true,
-          "enabled": true,
-          "primary": false,
-          "device_ieee": "54:ef:44:10:00:49:74:c7",
-          "endpoint_id": 1,
-          "available": true,
-          "group_id": null,
-          "mode": "auto",
-          "native_max_value": 65535,
-          "native_min_value": 2,
-          "native_step": 1.0,
-          "native_unit_of_measurement": null
-        },
-        "state": {
-          "class_name": "AqaraMotionDetectionInterval",
-          "available": true,
-          "state": 30
-        }
-      }
-    ],
     "select": [
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "54:ef:44:10:00:49:74:c7-1-64704-motion_sensitivity",
+          "unique_id": "ab:cd:ef:12:1f:7f:df:14-2-1030-motion_sensitivity",
           "migrate_unique_ids": [],
           "platform": "select",
-          "class_name": "AqaraMotionSensitivity",
+          "class_name": "HueV1MotionSensitivity",
           "translation_key": "motion_sensitivity",
           "translation_placeholders": null,
           "device_class": null,
@@ -366,11 +374,11 @@
           "entity_registry_enabled_default": true,
           "enabled": true,
           "primary": false,
-          "device_ieee": "54:ef:44:10:00:49:74:c7",
-          "endpoint_id": 1,
+          "device_ieee": "ab:cd:ef:12:1f:7f:df:14",
+          "endpoint_id": 2,
           "available": true,
           "group_id": null,
-          "enum": "AqaraMotionSensitivities",
+          "enum": "HueV1MotionSensitivities",
           "options": [
             "Low",
             "Medium",
@@ -378,9 +386,9 @@
           ]
         },
         "state": {
-          "class_name": "AqaraMotionSensitivity",
+          "class_name": "HueV1MotionSensitivity",
           "available": true,
-          "state": "High"
+          "state": "Low"
         }
       }
     ],
@@ -388,7 +396,7 @@
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "54:ef:44:10:00:49:74:c7-1-0-lqi",
+          "unique_id": "ab:cd:ef:12:1f:7f:df:14-1-0-lqi",
           "migrate_unique_ids": [],
           "platform": "sensor",
           "class_name": "LQISensor",
@@ -400,7 +408,7 @@
           "entity_registry_enabled_default": false,
           "enabled": true,
           "primary": false,
-          "device_ieee": "54:ef:44:10:00:49:74:c7",
+          "device_ieee": "ab:cd:ef:12:1f:7f:df:14",
           "endpoint_id": 1,
           "available": true,
           "group_id": null,
@@ -416,7 +424,7 @@
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "54:ef:44:10:00:49:74:c7-1-0-rssi",
+          "unique_id": "ab:cd:ef:12:1f:7f:df:14-1-0-rssi",
           "migrate_unique_ids": [],
           "platform": "sensor",
           "class_name": "RSSISensor",
@@ -428,7 +436,7 @@
           "entity_registry_enabled_default": false,
           "enabled": true,
           "primary": false,
-          "device_ieee": "54:ef:44:10:00:49:74:c7",
+          "device_ieee": "ab:cd:ef:12:1f:7f:df:14",
           "endpoint_id": 1,
           "available": true,
           "group_id": null,
@@ -444,7 +452,7 @@
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "54:ef:44:10:00:49:74:c7-1-1",
+          "unique_id": "ab:cd:ef:12:1f:7f:df:14-2-1",
           "migrate_unique_ids": [],
           "platform": "sensor",
           "class_name": "Battery",
@@ -456,8 +464,8 @@
           "entity_registry_enabled_default": true,
           "enabled": true,
           "primary": false,
-          "device_ieee": "54:ef:44:10:00:49:74:c7",
-          "endpoint_id": 1,
+          "device_ieee": "ab:cd:ef:12:1f:7f:df:14",
+          "endpoint_id": 2,
           "available": true,
           "group_id": null,
           "suggested_display_precision": 0,
@@ -466,10 +474,8 @@
         "state": {
           "class_name": "Battery",
           "available": true,
-          "state": 75.5,
-          "battery_size": "CR1632",
-          "battery_quantity": 1,
-          "battery_voltage": 3.03
+          "state": 100.0,
+          "battery_voltage": 2.9
         },
         "extra_state_attributes": [
           "battery_quantity",
@@ -480,7 +486,7 @@
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "54:ef:44:10:00:49:74:c7-1-1024",
+          "unique_id": "ab:cd:ef:12:1f:7f:df:14-2-1024",
           "migrate_unique_ids": [],
           "platform": "sensor",
           "class_name": "Illuminance",
@@ -492,8 +498,8 @@
           "entity_registry_enabled_default": true,
           "enabled": true,
           "primary": false,
-          "device_ieee": "54:ef:44:10:00:49:74:c7",
-          "endpoint_id": 1,
+          "device_ieee": "ab:cd:ef:12:1f:7f:df:14",
+          "endpoint_id": 2,
           "available": true,
           "group_id": null,
           "suggested_display_precision": null,
@@ -502,7 +508,35 @@
         "state": {
           "class_name": "Illuminance",
           "available": true,
-          "state": 24
+          "state": 13
+        }
+      },
+      {
+        "info_object": {
+          "fallback_name": null,
+          "unique_id": "ab:cd:ef:12:1f:7f:df:14-2-1026",
+          "migrate_unique_ids": [],
+          "platform": "sensor",
+          "class_name": "Temperature",
+          "translation_key": null,
+          "translation_placeholders": null,
+          "device_class": "temperature",
+          "state_class": "measurement",
+          "entity_category": null,
+          "entity_registry_enabled_default": true,
+          "enabled": true,
+          "primary": false,
+          "device_ieee": "ab:cd:ef:12:1f:7f:df:14",
+          "endpoint_id": 2,
+          "available": true,
+          "group_id": null,
+          "suggested_display_precision": null,
+          "unit": "\u00b0C"
+        },
+        "state": {
+          "class_name": "Temperature",
+          "available": true,
+          "state": 24.75
         }
       }
     ],
@@ -510,10 +544,10 @@
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "54:ef:44:10:00:49:74:c7-1-64704-trigger_indicator",
+          "unique_id": "ab:cd:ef:12:1f:7f:df:14-2-0-trigger_indicator",
           "migrate_unique_ids": [],
           "platform": "switch",
-          "class_name": "P1MotionTriggerIndicatorSwitch",
+          "class_name": "HueMotionTriggerIndicatorSwitch",
           "translation_key": "trigger_indicator",
           "translation_placeholders": null,
           "device_class": null,
@@ -522,8 +556,8 @@
           "entity_registry_enabled_default": true,
           "enabled": true,
           "primary": false,
-          "device_ieee": "54:ef:44:10:00:49:74:c7",
-          "endpoint_id": 1,
+          "device_ieee": "ab:cd:ef:12:1f:7f:df:14",
+          "endpoint_id": 2,
           "available": true,
           "group_id": null,
           "attribute_name": "trigger_indicator",
@@ -533,7 +567,7 @@
           "on_value": 1
         },
         "state": {
-          "class_name": "P1MotionTriggerIndicatorSwitch",
+          "class_name": "HueMotionTriggerIndicatorSwitch",
           "available": true,
           "state": true,
           "inverted": false
@@ -544,7 +578,7 @@
       {
         "info_object": {
           "fallback_name": null,
-          "unique_id": "54:ef:44:10:00:49:74:c7-1-25-firmware_update",
+          "unique_id": "ab:cd:ef:12:1f:7f:df:14-2-25-firmware_update",
           "migrate_unique_ids": [],
           "platform": "update",
           "class_name": "FirmwareUpdateEntity",
@@ -556,8 +590,8 @@
           "entity_registry_enabled_default": true,
           "enabled": true,
           "primary": false,
-          "device_ieee": "54:ef:44:10:00:49:74:c7",
-          "endpoint_id": 1,
+          "device_ieee": "ab:cd:ef:12:1f:7f:df:14",
+          "endpoint_id": 2,
           "available": true,
           "group_id": null,
           "supported_features": 7
@@ -565,7 +599,7 @@
         "state": {
           "class_name": "FirmwareUpdateEntity",
           "available": true,
-          "installed_version": null,
+          "installed_version": "0x43007305",
           "in_progress": false,
           "update_percentage": null,
           "latest_version": null,

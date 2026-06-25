@@ -536,7 +536,7 @@
               "id": "0x0002",
               "name": "current_file_version",
               "zcl_type": "uint32",
-              "unsupported": true
+              "value": 30
             }
           ]
         }
@@ -1025,7 +1025,7 @@
         "state": {
           "class_name": "FirmwareUpdateEntity",
           "available": true,
-          "installed_version": null,
+          "installed_version": "0x0000001e",
           "in_progress": false,
           "update_percentage": null,
           "latest_version": null,

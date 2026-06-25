@@ -1,7 +1,7 @@
 {
   "version": 2,
   "ieee": "ab:cd:ef:12:9f:cb:25:01",
-  "nwk": "0x963E",
+  "nwk": "0x85FF",
   "manufacturer": "_TZE204_rtrmfadk",
   "model": "TS0601",
   "friendly_manufacturer": "_TZE204_rtrmfadk",
@@ -14,7 +14,7 @@
   "power_source": "Battery or Unknown",
   "lqi": null,
   "rssi": null,
-  "last_seen": "2026-04-05T10:27:05.841550+00:00",
+  "last_seen": "2025-10-28T18:05:41.066015+00:00",
   "available": true,
   "device_type": "EndDevice",
   "active_coordinator": false,
@@ -52,6 +52,24 @@
               "value": 73
             },
             {
+              "id": "0x0012",
+              "name": "device_enabled",
+              "zcl_type": "bool",
+              "unsupported": true
+            },
+            {
+              "id": "0x0008",
+              "name": "generic_device_class",
+              "zcl_type": "enum8",
+              "unsupported": true
+            },
+            {
+              "id": "0x0009",
+              "name": "generic_device_type",
+              "zcl_type": "enum8",
+              "unsupported": true
+            },
+            {
               "id": "0x0004",
               "name": "manufacturer",
               "zcl_type": "string",
@@ -62,6 +80,24 @@
               "name": "model",
               "zcl_type": "string",
               "value": "TS0601"
+            },
+            {
+              "id": "0x0011",
+              "name": "physical_env",
+              "zcl_type": "enum8",
+              "unsupported": true
+            },
+            {
+              "id": "0x0007",
+              "name": "power_source",
+              "zcl_type": "enum8",
+              "value": 3
+            },
+            {
+              "id": "0x000d",
+              "name": "serial_number",
+              "zcl_type": "string",
+              "unsupported": true
             }
           ]
         },
@@ -69,12 +105,6 @@
           "cluster_id": "0x0001",
           "endpoint_attribute": "power",
           "attributes": [
-            {
-              "id": "0x0021",
-              "name": "battery_percentage_remaining",
-              "zcl_type": "uint8",
-              "value": 194
-            },
             {
               "id": "0x0033",
               "name": "battery_quantity",
@@ -128,12 +158,6 @@
               "value": 2
             },
             {
-              "id": "0x0000",
-              "name": "local_temperature",
-              "zcl_type": "int16",
-              "value": 1680
-            },
-            {
               "id": "0x0010",
               "name": "local_temperature_calibration",
               "zcl_type": "int8",
@@ -152,22 +176,10 @@
               "unsupported": true
             },
             {
-              "id": "0x0012",
-              "name": "occupied_heating_setpoint",
-              "zcl_type": "int16",
-              "value": 1200
-            },
-            {
               "id": "0x0008",
               "name": "pi_heating_demand",
               "zcl_type": "uint8",
               "unsupported": true
-            },
-            {
-              "id": "0x0029",
-              "name": "running_state",
-              "zcl_type": "map16",
-              "value": 0
             },
             {
               "id": "0x0030",
@@ -180,74 +192,13 @@
               "name": "setpoint_change_source_timestamp",
               "zcl_type": "UTC",
               "unsupported": true
-            },
-            {
-              "id": "0x001c",
-              "name": "system_mode",
-              "zcl_type": "enum8",
-              "value": 4
             }
           ]
         },
         {
           "cluster_id": "0xef00",
           "endpoint_attribute": "tuya_manufacturer",
-          "attributes": [
-            {
-              "id": "0xef0c",
-              "name": "child_lock",
-              "zcl_type": "bool",
-              "value": 0
-            },
-            {
-              "id": "0xef72",
-              "name": "eco_mode",
-              "zcl_type": "enum8",
-              "value": 1
-            },
-            {
-              "id": "0xef0e",
-              "name": "error_or_battery_low",
-              "zcl_type": "bool",
-              "value": 0
-            },
-            {
-              "id": "0xef65",
-              "name": "local_temperature_calibration",
-              "zcl_type": "int32",
-              "value": -10
-            },
-            {
-              "id": "0xef10",
-              "name": "max_temperature",
-              "zcl_type": "uint16",
-              "value": 300
-            },
-            {
-              "id": "0xef00",
-              "name": "mcu_version",
-              "zcl_type": "uint48",
-              "value": "1.0.3"
-            },
-            {
-              "id": "0xef0f",
-              "name": "min_temperature",
-              "zcl_type": "uint16",
-              "value": 50
-            },
-            {
-              "id": "0xef08",
-              "name": "window_detection",
-              "zcl_type": "bool",
-              "value": 0
-            },
-            {
-              "id": "0xef07",
-              "name": "window_open",
-              "zcl_type": "bool",
-              "value": 0
-            }
-          ]
+          "attributes": []
         }
       ],
       "out_clusters": [
@@ -259,7 +210,14 @@
         {
           "cluster_id": "0x0019",
           "endpoint_attribute": "ota",
-          "attributes": []
+          "attributes": [
+            {
+              "id": "0x0002",
+              "name": "current_file_version",
+              "zcl_type": "uint32",
+              "value": 73
+            }
+          ]
         }
       ]
     }
@@ -391,19 +349,19 @@
         "state": {
           "class_name": "Thermostat",
           "available": true,
-          "current_temperature": 16.8,
+          "current_temperature": null,
           "outdoor_temperature": null,
-          "target_temperature": 12.0,
+          "target_temperature": null,
           "target_temperature_high": null,
           "target_temperature_low": null,
-          "hvac_action": "idle",
-          "hvac_mode": "heat",
+          "hvac_action": null,
+          "hvac_mode": null,
           "preset_mode": "none",
           "fan_mode": "auto",
-          "system_mode": "[4]/heat",
+          "system_mode": null,
           "occupancy": null,
           "occupied_cooling_setpoint": null,
-          "occupied_heating_setpoint": 1200,
+          "occupied_heating_setpoint": null,
           "pi_heating_demand": null,
           "pi_cooling_demand": null,
           "unoccupied_cooling_setpoint": null,
@@ -450,7 +408,7 @@
         "state": {
           "class_name": "NumberConfigurationEntity",
           "available": true,
-          "state": -10
+          "state": null
         }
       },
       {
@@ -481,7 +439,7 @@
         "state": {
           "class_name": "NumberConfigurationEntity",
           "available": true,
-          "state": 30.0
+          "state": null
         }
       },
       {
@@ -512,7 +470,7 @@
         "state": {
           "class_name": "NumberConfigurationEntity",
           "available": true,
-          "state": 5.0
+          "state": null
         }
       }
     ],
@@ -545,7 +503,7 @@
         "state": {
           "class_name": "ZCLEnumSelectEntity",
           "available": true,
-          "state": "Eco"
+          "state": null
         }
       }
     ],
@@ -631,7 +589,7 @@
         "state": {
           "class_name": "Battery",
           "available": true,
-          "state": 97.0,
+          "state": null,
           "battery_size": "AA",
           "battery_quantity": 2
         },
@@ -666,7 +624,7 @@
         "state": {
           "class_name": "ThermostatHVACAction",
           "available": true,
-          "state": "idle"
+          "state": null
         }
       }
     ],
@@ -761,7 +719,7 @@
         "state": {
           "class_name": "FirmwareUpdateEntity",
           "available": true,
-          "installed_version": null,
+          "installed_version": "0x00000049",
           "in_progress": false,
           "update_percentage": null,
           "latest_version": null,
