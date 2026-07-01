@@ -413,6 +413,8 @@ async def test_firmware_update_success(zha_gateway: Gateway) -> None:
         == f"0x{fw_image.firmware.header.file_version:08x}"
     )
     assert not entity.state[ATTR_IN_PROGRESS]
+    # The progress percentage is cleared once the update finishes
+    assert entity.state[ATTR_UPDATE_PERCENTAGE] is None
     assert entity.state[ATTR_LATEST_VERSION] == entity.state[ATTR_INSTALLED_VERSION]
 
     # If we send a progress notification incorrectly, it won't be handled
@@ -504,6 +506,10 @@ async def test_firmware_update_raises(zha_gateway: Gateway) -> None:
             version=f"0x{fw_image.firmware.header.file_version:08x}"
         )
         await zha_gateway.async_block_till_done()
+
+    # The progress state is cleared even when the update fails
+    assert not entity.state[ATTR_IN_PROGRESS]
+    assert entity.state[ATTR_UPDATE_PERCENTAGE] is None
 
 
 async def test_firmware_update_empty_exception_message(zha_gateway: Gateway) -> None:
