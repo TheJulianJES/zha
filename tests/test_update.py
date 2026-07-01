@@ -1,5 +1,6 @@
 """Test ZHA firmware updates."""
 
+import asyncio
 from unittest.mock import ANY, AsyncMock, call, patch
 
 import pytest
@@ -553,6 +554,47 @@ async def test_firmware_update_empty_exception_message(zha_gateway: Gateway) -> 
     assert str(exc_info.value) == "Update was not successful: TimeoutError()"
     assert exc_info.value.__cause__ is raised
     assert not entity.state[ATTR_IN_PROGRESS]
+
+
+async def test_firmware_update_cancelled(zha_gateway: Gateway) -> None:
+    """A cancelled install must propagate and still clear the progress state."""
+    zigpy_device = zigpy_device_mock(zha_gateway)
+    zha_device, ota_cluster, fw_image, installed_fw_version = await setup_test_data(
+        zha_gateway, zigpy_device
+    )
+
+    entity = get_entity(zha_device, platform=Platform.UPDATE)
+
+    await ota_cluster._handle_query_next_image(
+        foundation.ZCLHeader.cluster(
+            tsn=0x12, command_id=general.Ota.ServerCommandDefs.query_next_image.id
+        ),
+        general.QueryNextImageCommand(
+            field_control=fw_image.firmware.header.field_control,
+            manufacturer_code=zha_device.manufacturer_code,
+            image_type=fw_image.firmware.header.image_type,
+            current_file_version=installed_fw_version,
+            hardware_version=1,
+        ),
+    )
+    await zha_gateway.async_block_till_done()
+
+    # `CancelledError` is a `BaseException`, so it must propagate untouched
+    # rather than being wrapped in a `ZHAException`.
+    with (
+        patch(
+            "zigpy.device.Device.update_firmware",
+            AsyncMock(side_effect=asyncio.CancelledError),
+        ),
+        pytest.raises(asyncio.CancelledError),
+    ):
+        await entity.async_install(
+            version=f"0x{fw_image.firmware.header.file_version:08x}"
+        )
+
+    # The progress state is still cleared when the install is cancelled
+    assert not entity.state[ATTR_IN_PROGRESS]
+    assert entity.state[ATTR_UPDATE_PERCENTAGE] is None
 
 
 async def test_firmware_update_downgrade(zha_gateway: Gateway) -> None:
