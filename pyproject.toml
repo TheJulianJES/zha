@@ -33,7 +33,11 @@ testing = [
     "pytest",
     "coloredlogs",
     "python-slugify",
-    "homeassistant",
+    # Gated to Python 3.14.2+ so the latest Home Assistant is used for the
+    # device snapshot tests. Older HA (2025.1.0-2026.2.x) pins an exact, older
+    # `uv` that conflicts with our `uv>=0.11.16`, and HA >=2026.3.0 requires
+    # Python >=3.14.2 anyway, so HA can only track latest on that Python.
+    "homeassistant>=2026.6.4; python_full_version >= '3.14.2'",
 ]
 
 [dependency-groups]
