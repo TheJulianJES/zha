@@ -33,7 +33,7 @@ testing = [
     "pytest",
     "coloredlogs",
     "python-slugify",
-    # HA >=2026.3.0 requires Python >=3.14.2
+    # Mainly used for device class synchronization, HA requires Python 3.14.2
     "homeassistant>=2026.7.0; python_full_version >= '3.14.2'",
 ]
 
