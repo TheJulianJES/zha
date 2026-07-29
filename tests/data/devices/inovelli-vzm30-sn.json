@@ -984,11 +984,11 @@
     ],
     "number": [
       {
-        "fallback_name": null,
+        "fallback_name": "Automatic switch shutoff timer",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-auto_off_timer",
         "migrate_unique_ids": [],
         "platform": "number",
-        "class_name": "InovelliAutoShutoffTimer",
+        "class_name": "NumberConfigurationEntity",
         "translation_key": "auto_off_timer",
         "translation_placeholders": null,
         "device_class": null,
@@ -1036,11 +1036,11 @@
         "native_unit_of_measurement": null
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Local default dimming level",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-default_level_local",
         "migrate_unique_ids": [],
         "platform": "number",
-        "class_name": "InovelliLocalDefaultLevel",
+        "class_name": "NumberConfigurationEntity",
         "translation_key": "default_level_local",
         "translation_placeholders": null,
         "device_class": null,
@@ -1062,11 +1062,11 @@
         "native_unit_of_measurement": null
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Remote default dimming level",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-default_level_remote",
         "migrate_unique_ids": [],
         "platform": "number",
-        "class_name": "InovelliRemoteDefaultLevel",
+        "class_name": "NumberConfigurationEntity",
         "translation_key": "default_level_remote",
         "translation_placeholders": null,
         "device_class": null,
@@ -1088,11 +1088,11 @@
         "native_unit_of_measurement": null
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Local dimming down speed",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-dimming_speed_down_local",
         "migrate_unique_ids": [],
         "platform": "number",
-        "class_name": "InovelliLocalDimmingDownSpeed",
+        "class_name": "NumberConfigurationEntity",
         "translation_key": "dimming_speed_down_local",
         "translation_placeholders": null,
         "device_class": null,
@@ -1114,11 +1114,11 @@
         "native_unit_of_measurement": null
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Remote dimming down speed",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-dimming_speed_down_remote",
         "migrate_unique_ids": [],
         "platform": "number",
-        "class_name": "InovelliRemoteDimmingDownSpeed",
+        "class_name": "NumberConfigurationEntity",
         "translation_key": "dimming_speed_down_remote",
         "translation_placeholders": null,
         "device_class": null,
@@ -1140,11 +1140,11 @@
         "native_unit_of_measurement": null
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Local dimming up speed",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-dimming_speed_up_local",
         "migrate_unique_ids": [],
         "platform": "number",
-        "class_name": "InovelliLocalDimmingUpSpeed",
+        "class_name": "NumberConfigurationEntity",
         "translation_key": "dimming_speed_up_local",
         "translation_placeholders": null,
         "device_class": null,
@@ -1166,11 +1166,11 @@
         "native_unit_of_measurement": null
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Remote dimming up speed",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-dimming_speed_up_remote",
         "migrate_unique_ids": [],
         "platform": "number",
-        "class_name": "InovelliRemoteDimmingUpSpeed",
+        "class_name": "NumberConfigurationEntity",
         "translation_key": "dimming_speed_up_remote",
         "translation_placeholders": null,
         "device_class": null,
@@ -1348,11 +1348,11 @@
         "native_unit_of_measurement": null
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Load level indicator timeout",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-load_level_indicator_timeout",
         "migrate_unique_ids": [],
         "platform": "number",
-        "class_name": "InovelliLoadLevelIndicatorTimeout",
+        "class_name": "NumberConfigurationEntity",
         "translation_key": "load_level_indicator_timeout",
         "translation_placeholders": null,
         "device_class": null,
@@ -1426,11 +1426,11 @@
         "native_unit_of_measurement": null
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Local ramp rate off to on",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-ramp_rate_off_to_on_local",
         "migrate_unique_ids": [],
         "platform": "number",
-        "class_name": "InovelliLocalRampRateOffToOn",
+        "class_name": "NumberConfigurationEntity",
         "translation_key": "ramp_rate_off_to_on_local",
         "translation_placeholders": null,
         "device_class": null,
@@ -1452,11 +1452,11 @@
         "native_unit_of_measurement": null
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Remote ramp rate off to on",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-ramp_rate_off_to_on_remote",
         "migrate_unique_ids": [],
         "platform": "number",
-        "class_name": "InovelliRemoteDimmingSpeedOffToOn",
+        "class_name": "NumberConfigurationEntity",
         "translation_key": "ramp_rate_off_to_on_remote",
         "translation_placeholders": null,
         "device_class": null,
@@ -1478,11 +1478,11 @@
         "native_unit_of_measurement": null
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Local ramp rate on to off",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-ramp_rate_on_to_off_local",
         "migrate_unique_ids": [],
         "platform": "number",
-        "class_name": "InovelliLocalRampRateOnToOff",
+        "class_name": "NumberConfigurationEntity",
         "translation_key": "ramp_rate_on_to_off_local",
         "translation_placeholders": null,
         "device_class": null,
@@ -1504,11 +1504,11 @@
         "native_unit_of_measurement": null
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Remote ramp rate on to off",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-ramp_rate_on_to_off_remote",
         "migrate_unique_ids": [],
         "platform": "number",
-        "class_name": "InovelliRemoteDimmingSpeedOnToOff",
+        "class_name": "NumberConfigurationEntity",
         "translation_key": "ramp_rate_on_to_off_remote",
         "translation_placeholders": null,
         "device_class": null,
@@ -1530,11 +1530,11 @@
         "native_unit_of_measurement": null
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Start-up default dimming level",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-state_after_power_restored",
         "migrate_unique_ids": [],
         "platform": "number",
-        "class_name": "InovelliStartupDefaultLevel",
+        "class_name": "NumberConfigurationEntity",
         "translation_key": "state_after_power_restored",
         "translation_placeholders": null,
         "device_class": null,
@@ -1933,11 +1933,11 @@
         "max_attribute_name": "rms_voltage_max"
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Internal temperature",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561",
         "migrate_unique_ids": [],
         "platform": "sensor",
-        "class_name": "InovelliInternalTemperature",
+        "class_name": "Sensor",
         "translation_key": "internal_temp_monitor",
         "translation_placeholders": null,
         "device_class": "temperature",
@@ -1956,11 +1956,11 @@
         "unit": "\u00b0C"
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Overheat protection",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-overheated",
         "migrate_unique_ids": [],
         "platform": "sensor",
-        "class_name": "InovelliOverheated",
+        "class_name": "EnumSensor",
         "translation_key": "overheated",
         "translation_placeholders": null,
         "device_class": "enum",
@@ -2193,11 +2193,11 @@
         "on_value": 1
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Invert switch",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-invert_switch",
         "migrate_unique_ids": [],
         "platform": "switch",
-        "class_name": "InovelliInvertSwitch",
+        "class_name": "ConfigurableAttributeSwitch",
         "translation_key": "invert_switch",
         "translation_placeholders": null,
         "device_class": null,

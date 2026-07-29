@@ -1783,11 +1783,11 @@
         "max_attribute_name": "rms_voltage_max"
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Internal temperature",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561",
         "migrate_unique_ids": [],
         "platform": "sensor",
-        "class_name": "InovelliInternalTemperature",
+        "class_name": "Sensor",
         "translation_key": "internal_temp_monitor",
         "translation_placeholders": null,
         "device_class": "temperature",
@@ -1806,11 +1806,11 @@
         "unit": "\u00b0C"
       },
       {
-        "fallback_name": null,
+        "fallback_name": "Overheat protection",
         "unique_id": "ab:cd:ef:12:9a:d6:cb:e7-1-64561-overheated",
         "migrate_unique_ids": [],
         "platform": "sensor",
-        "class_name": "InovelliOverheated",
+        "class_name": "EnumSensor",
         "translation_key": "overheated",
         "translation_placeholders": null,
         "device_class": "enum",
