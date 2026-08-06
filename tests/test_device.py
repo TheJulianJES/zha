@@ -964,14 +964,18 @@ async def test_primary_entity_reelection(zha_gateway: Gateway) -> None:
     assert light.primary
     assert not motion.primary
 
-    # If the winner is removed, a re-election elects the runner-up instead of
-    # permanently leaving the device without a primary entity
-    remaining = [e for e in zha_device.platform_entities.values() if e is not light]
-    zha_device._compute_primary_entity(remaining)
+    # When the light becomes unsupported and is removed, a re-election elects the
+    # runner-up instead of permanently leaving the device without a primary entity
+    with mock.patch.object(Light, "_is_supported", return_value=False):
+        await zha_device.recompute_entities()
+
+    assert (Platform.LIGHT, light.unique_id) not in zha_device.platform_entities
     assert motion.primary
 
-    # If the previous winner participates again, it wins back the election
-    zha_device._compute_primary_entity(list(zha_device.platform_entities.values()))
+    # When the light is rediscovered, it wins back the election
+    await zha_device.recompute_entities()
+
+    light = get_entity(zha_device, Platform.LIGHT, entity_type=Light)
     assert light.primary
     assert not motion.primary
 
@@ -992,10 +996,11 @@ async def test_primary_entity_election_explicit_primary_takes_over(
     motion = get_entity(zha_device, Platform.BINARY_SENSOR, entity_type=IASZone)
     assert light.primary
 
-    # Mark the motion sensor as explicitly primary, like a quirk would
+    # Mark the motion sensor as explicitly primary, like a quirk would.
+    # Recomputing the entities re-runs the primary entity election.
     motion._attr_primary = True
+    await zha_device.recompute_entities()
 
-    zha_device._compute_primary_entity(list(zha_device.platform_entities.values()))
     assert motion.primary
     assert not light.primary
 
