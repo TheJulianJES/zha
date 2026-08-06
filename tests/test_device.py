@@ -948,6 +948,58 @@ async def test_primary_entity_computation(
         ]
 
 
+async def test_primary_entity_reelection(zha_gateway: Gateway) -> None:
+    """Test election losers are not permanently excluded from later elections."""
+
+    # Night light with a bulb and a motion sensor
+    zigpy_dev = await zigpy_device_from_json(
+        zha_gateway.application_controller,
+        "tests/data/devices/third-reality-inc-3rsnl02043z-0x0000003c.json",
+    )
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    light = get_entity(zha_device, Platform.LIGHT, entity_type=Light)
+    motion = get_entity(zha_device, Platform.BINARY_SENSOR, entity_type=IASZone)
+
+    assert light.primary
+    assert not motion.primary
+
+    # If the winner is removed, a re-election elects the runner-up instead of
+    # permanently leaving the device without a primary entity
+    remaining = [e for e in zha_device.platform_entities.values() if e is not light]
+    zha_device._compute_primary_entity(remaining)
+    assert motion.primary
+
+    # If the previous winner participates again, it wins back the election
+    zha_device._compute_primary_entity(list(zha_device.platform_entities.values()))
+    assert light.primary
+    assert not motion.primary
+
+
+async def test_primary_entity_election_explicit_primary_takes_over(
+    zha_gateway: Gateway,
+) -> None:
+    """Test an explicitly primary entity replaces a previously computed winner."""
+
+    # Night light with a bulb and a motion sensor
+    zigpy_dev = await zigpy_device_from_json(
+        zha_gateway.application_controller,
+        "tests/data/devices/third-reality-inc-3rsnl02043z-0x0000003c.json",
+    )
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    light = get_entity(zha_device, Platform.LIGHT, entity_type=Light)
+    motion = get_entity(zha_device, Platform.BINARY_SENSOR, entity_type=IASZone)
+    assert light.primary
+
+    # Mark the motion sensor as explicitly primary, like a quirk would
+    motion._attr_primary = True
+
+    zha_device._compute_primary_entity(list(zha_device.platform_entities.values()))
+    assert motion.primary
+    assert not light.primary
+
+
 async def test_quirks_v2_primary_entity(zha_gateway: Gateway) -> None:
     """Test quirks v2 primary entity."""
     registry = DeviceRegistry()
