@@ -1638,11 +1638,12 @@ class Device(LogMixin, EventBase):
         assert not explicitly_primary
 
         # For weight matching, only consider entities with a non-zero primary weight
-        # which are not explicitly marked as not primary
+        # which are not explicitly marked as not primary. Entities disabled at runtime
+        # (via the entity registry in HA) deliberately stay candidates: the primary
+        # entity describes the main feature of the device, which does not change when
+        # its entity is disabled.
         candidates = [
-            e
-            for e in entities
-            if e.enabled and e._attr_primary is not False and e.primary_weight > 0
+            e for e in entities if e._attr_primary is not False and e.primary_weight > 0
         ]
         candidates.sort(reverse=True, key=lambda e: e.primary_weight)
 
