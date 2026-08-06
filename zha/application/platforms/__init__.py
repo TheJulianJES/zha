@@ -279,6 +279,10 @@ class BaseEntity(LogMixin, EventBase):
     _attr_enabled: bool = True
     _attr_extra_state_attribute_names: set[str] | None = None
     _attr_always_supported: bool = False
+
+    # Explicitly marks the entity as (not) primary, set by entity classes and quirks.
+    # It takes precedence over (and is never overwritten by) the weight-based primary
+    # entity election, whose result is stored separately.
     _attr_primary: bool | None = None
 
     # When two entities both want to be primary, the one with the higher weight will be
@@ -291,6 +295,7 @@ class BaseEntity(LogMixin, EventBase):
 
         self._unique_id: str = unique_id
         self._migrate_unique_ids: list[str] = []
+        self.__computed_primary: bool = False
 
         self.__previous_state: Any = None
         self._tracked_tasks: list[asyncio.Task] = []
@@ -329,15 +334,19 @@ class BaseEntity(LogMixin, EventBase):
     @property
     def primary(self) -> bool:
         """Return if the entity is the primary device control."""
-        if self._attr_primary is None:
-            return False
+        if self._attr_primary is not None:
+            return self._attr_primary
 
-        return self._attr_primary
+        return self.__computed_primary
 
     @primary.setter
-    def primary(self, value: bool | None) -> None:
-        """Set the entity as the primary device control."""
-        self._attr_primary = value
+    def primary(self, value: bool) -> None:
+        """Set the computed primary state from the primary entity election.
+
+        An explicit `_attr_primary` always takes precedence and is never
+        overwritten by the election.
+        """
+        self.__computed_primary = value
 
     @property
     def primary_weight(self) -> int:

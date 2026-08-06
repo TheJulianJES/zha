@@ -1613,13 +1613,19 @@ class Device(LogMixin, EventBase):
         """Compute the primary entity from a given set of entities."""
 
         # First, check if any entity is explicitly primary
-        explicitly_primary = [entity for entity in entities if entity.primary]
+        explicitly_primary = [entity for entity in entities if entity._attr_primary]
 
         if len(explicitly_primary) == 1:
             self.debug(
                 "Device has a single explicitly primary entity,"
                 " not performing weight matching"
             )
+
+            # Clear any previously computed primary state, so the winner of an
+            # earlier election cannot coexist with the explicitly primary entity
+            for entity in entities:
+                entity.primary = False
+
             return
 
         # It should not be possible for there to be more than one
