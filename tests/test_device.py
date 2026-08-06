@@ -997,6 +997,48 @@ async def test_primary_entity_reelection(zha_gateway: Gateway) -> None:
     assert not ias_zone.primary
 
 
+async def test_primary_entity_election_disabled_winner(zha_gateway: Gateway) -> None:
+    """Test a disabled previous winner does not keep stale computed primary state."""
+
+    # A smart plug with an IAS zone
+    zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [
+                    general.OnOff.cluster_id,
+                    security.IasZone.cluster_id,
+                ],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.SMART_PLUG,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+    )
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_dev)
+
+    switch = get_entity(zha_device, Platform.SWITCH, entity_type=Switch)
+    ias_zone = get_entity(zha_device, Platform.BINARY_SENSOR, entity_type=IASZone)
+
+    assert switch.primary
+    assert not ias_zone.primary
+
+    # When the switch is disabled, it is no longer an election candidate and must
+    # not keep its computed primary state, so only the runner-up is primary
+    switch.disable()
+    await zha_device.recompute_entities()
+
+    assert not switch.primary
+    assert ias_zone.primary
+
+    # When the switch is re-enabled, it wins back the election
+    switch.enable()
+    await zha_device.recompute_entities()
+
+    assert switch.primary
+    assert not ias_zone.primary
+
+
 async def test_primary_entity_election_explicit_primary_takes_over(
     zha_gateway: Gateway,
 ) -> None:

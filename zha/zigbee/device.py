@@ -1612,6 +1612,12 @@ class Device(LogMixin, EventBase):
     def _compute_primary_entity(self, entities: Sequence[PlatformEntity]) -> None:
         """Compute the primary entity from a given set of entities."""
 
+        # Clear all previously computed primary state up front, so a stale winner
+        # cannot survive a re-election on any code path below (e.g. after it was
+        # disabled and thus is no longer a candidate)
+        for entity in entities:
+            entity.primary = False
+
         # First, check if any entity is explicitly primary
         explicitly_primary = [entity for entity in entities if entity._attr_primary]
 
@@ -1620,12 +1626,6 @@ class Device(LogMixin, EventBase):
                 "Device has a single explicitly primary entity,"
                 " not performing weight matching"
             )
-
-            # Clear any previously computed primary state, so the winner of an
-            # earlier election cannot coexist with the explicitly primary entity
-            for entity in entities:
-                entity.primary = False
-
             return
 
         # It should not be possible for there to be more than one
@@ -1645,18 +1645,11 @@ class Device(LogMixin, EventBase):
         # We have a clear winner
         if not others or winner.primary_weight > others[0].primary_weight:
             winner.primary = True
-
-            for entity in others:
-                entity.primary = False
-
             return
 
         self.debug(
             "Primary entity tie between %s and %s, no primary entity", winner, others[0]
         )
-
-        for entity in candidates:
-            entity.primary = False
 
     def get_diagnostics_json(self):
         """Get ZHA device information."""
