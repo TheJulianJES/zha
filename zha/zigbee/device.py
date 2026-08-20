@@ -1620,11 +1620,7 @@ class Device(LogMixin, EventBase):
         _LOGGER.log(level, msg, *args, **kwargs)
 
     def _compute_primary_entity(self, entities: Sequence[PlatformEntity]) -> None:
-        """Compute the primary entity from a given set of entities.
-
-        The election recomputes `self._primary_entity` from scratch, so no stale
-        previous winner can survive a re-election.
-        """
+        """Compute the primary entity from a given set of entities."""
         self._primary_entity = None
 
         # First, check if any entity is explicitly primary
