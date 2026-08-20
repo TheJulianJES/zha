@@ -371,6 +371,7 @@ class Device(LogMixin, EventBase):
 
         self._platform_entities: dict[tuple[Platform, str], PlatformEntity] = {}
         self._pending_entities: list[PlatformEntity] = []
+        self._primary_entity: PlatformEntity | None = None
         # All entities discovered for this device, including ones removed by a quirk.
         # Used for aggregating cluster configs so binding/reporting matches the
         # legacy claim-during-discovery flow (which configured handlers even when
@@ -740,6 +741,11 @@ class Device(LogMixin, EventBase):
     def platform_entities(self) -> dict[tuple[Platform, str], PlatformEntity]:
         """Return the platform entities for this device."""
         return self._platform_entities
+
+    @property
+    def primary_entity(self) -> PlatformEntity | None:
+        """Return the primary entity of the device, if any."""
+        return self._primary_entity
 
     def get_platform_entity(self, platform: Platform, unique_id: str) -> PlatformEntity:
         """Get a platform entity by unique id."""
@@ -1141,6 +1147,8 @@ class Device(LogMixin, EventBase):
             # rediscovers the same unique_id would skip the replacement and
             # leave the stale entity shadowing it indefinitely.
             del self._platform_entities[key]
+            if entity is self._primary_entity:
+                self._primary_entity = None
             if emit_event:
                 self.emit(
                     DeviceEntityRemovedEvent.event_type,
@@ -1610,13 +1618,12 @@ class Device(LogMixin, EventBase):
         _LOGGER.log(level, msg, *args, **kwargs)
 
     def _compute_primary_entity(self, entities: Sequence[PlatformEntity]) -> None:
-        """Compute the primary entity from a given set of entities."""
+        """Compute the primary entity from a given set of entities.
 
-        # Clear all previously computed primary state up front, so a stale winner
-        # cannot survive a re-election on any code path below (e.g. after it was
-        # disabled and thus is no longer a candidate)
-        for entity in entities:
-            entity.primary = False
+        The election recomputes `self._primary_entity` from scratch, so no stale
+        previous winner can survive a re-election.
+        """
+        self._primary_entity = None
 
         # First, check if any entity is explicitly primary
         explicitly_primary = [entity for entity in entities if entity._attr_primary]
@@ -1626,6 +1633,7 @@ class Device(LogMixin, EventBase):
                 "Device has a single explicitly primary entity,"
                 " not performing weight matching"
             )
+            self._primary_entity = explicitly_primary[0]
             return
 
         # It should not be possible for there to be more than one
@@ -1648,7 +1656,7 @@ class Device(LogMixin, EventBase):
 
         # We have a clear winner
         if not others or winner.primary_weight > others[0].primary_weight:
-            winner.primary = True
+            self._primary_entity = winner
             return
 
         self.debug(
