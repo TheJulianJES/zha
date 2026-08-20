@@ -1148,6 +1148,8 @@ class Device(LogMixin, EventBase):
             # leave the stale entity shadowing it indefinitely.
             del self._platform_entities[key]
             if entity is self._primary_entity:
+                # No re-election here: every live-removal caller runs the
+                # election right after via `_add_pending_entities`
                 self._primary_entity = None
             if emit_event:
                 self.emit(
