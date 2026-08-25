@@ -1066,6 +1066,16 @@ async def test_primary_entity_election_ignores_enabled(zha_gateway: Gateway) -> 
     assert switch.primary
     assert not ias_zone.primary
 
+    # An explicitly primary entity also keeps its spot when disabled
+    ias_zone._attr_primary = True
+    await zha_device.recompute_entities()
+
+    ias_zone.disable()
+    await zha_device.recompute_entities()
+
+    assert ias_zone.primary
+    assert not switch.primary
+
 
 async def test_primary_entity_election_explicit_primary_takes_over(
     zha_gateway: Gateway,
