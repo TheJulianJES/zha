@@ -1000,3 +1000,81 @@ async def test_quirk_switch_attribute_missing_from_cluster(
         if getattr(entity, "_attribute_name", None) == "attribute_that_does_not_exist"
     ]
     assert "which cluster 0x0006 does not have" in caplog.text
+
+
+async def test_quirk_switch_inverter_attribute_missing_from_cluster(
+    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A quirk switch whose *inverter* attribute is missing is skipped, not fatal.
+
+    `inverted` reads the inverter attribute on every state computation, so a
+    missing definition there is just as fatal as a missing primary attribute.
+    """
+
+    zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        ZIGPY_DEVICE,
+        manufacturer="manufacturer_inv",
+        model="model_inv",
+    )
+
+    registry = DeviceRegistry()
+    (
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
+        .switch(
+            general.OnOff.AttributeDefs.start_up_on_off.name,
+            general.OnOff.cluster_id,
+            invert_attribute_name="inverter_that_does_not_exist",
+            translation_key="inverted",
+            fallback_name="Inverted",
+        )
+        .add_to_registry(registry)
+    )
+
+    zha_device = await join_zigpy_device(zha_gateway, registry.resolve(zigpy_dev))
+
+    assert not [
+        entity
+        for entity in zha_device.platform_entities.values()
+        if getattr(entity, "_inverter_attribute_name", None)
+        == "inverter_that_does_not_exist"
+    ]
+    assert "which cluster 0x0006 does not have" in caplog.text
+
+
+async def test_undefined_attribute_does_not_poison_initial_read(
+    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    """One undefined attribute must not stop its valid siblings from being read.
+
+    `read_attributes()` resolves every name up front, so leaving an undefined
+    attribute in the batch used to fail the read for all of them.
+    """
+
+    zigpy_dev = create_mock_zigpy_device(
+        zha_gateway,
+        ZIGPY_DEVICE,
+        manufacturer="manufacturer_read",
+        model="model_read",
+    )
+
+    registry = DeviceRegistry()
+    (
+        QuirkBuilder(zigpy_dev.manufacturer, zigpy_dev.model)
+        .switch(
+            "attribute_that_does_not_exist",
+            general.OnOff.cluster_id,
+            translation_key="nonexistent",
+            fallback_name="Nonexistent",
+        )
+        .add_to_registry(registry)
+    )
+
+    zha_device = await join_zigpy_device(zha_gateway, registry.resolve(zigpy_dev))
+
+    assert "Failed to read attributes" not in caplog.text
+    assert "skipping their initial read" in caplog.text
+
+    # the standard on/off switch, whose attribute shares the read batch, still works
+    switch_entity = get_entity(zha_device, platform=Platform.SWITCH)
+    assert switch_entity._attribute_name == general.OnOff.AttributeDefs.on_off.name

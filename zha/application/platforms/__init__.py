@@ -588,26 +588,32 @@ class PlatformEntity(BaseEntity):
         self._from_quirk: bool = from_quirk
 
     def _is_valid(self) -> bool:
-        """Return False if the backing attribute is absent from the cluster.
+        """Return False if a backing attribute is absent from the cluster.
 
         Reading an attribute the cluster does not define raises `KeyError`, so
         such an entity can never work. Default discovery hits this routinely
         (optional attributes a quirk removed), but a quirk naming a missing
         attribute is an authoring error, so that case is logged loudly.
         """
-        attribute_name: str | int | None = getattr(self, "_attribute_name", None)
+        for attribute_name in (
+            getattr(self, "_attribute_name", None),
+            # An inverter attribute is read on every state computation too
+            getattr(self, "_inverter_attribute_name", None),
+        ):
+            if attribute_name is None:
+                continue
 
-        if attribute_name is None:
-            return super()._is_valid()
+            try:
+                # Resolves both attribute names and IDs, as quirks may use either
+                self._cluster.find_attribute(attribute_name)
+            except KeyError:
+                self._log_missing_attribute(attribute_name)
+                return False
 
-        try:
-            # Resolves both attribute names and IDs, as quirks may use either
-            self._cluster.find_attribute(attribute_name)
-        except KeyError:
-            pass
-        else:
-            return super()._is_valid()
+        return super()._is_valid()
 
+    def _log_missing_attribute(self, attribute_name: str | int) -> None:
+        """Log that the cluster has no definition for an attribute we need."""
         if self._from_quirk:
             _LOGGER.warning(
                 "Quirk for %s defines a %s entity for attribute %r, which cluster"
@@ -623,8 +629,6 @@ class PlatformEntity(BaseEntity):
                 attribute_name,
                 self.__class__.__name__,
             )
-
-        return False
 
     def _apply_quirk_entity_config(
         self,
