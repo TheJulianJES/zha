@@ -2494,3 +2494,35 @@ async def test_broken_entity_state_does_not_break_device_init(
         await zha_device.async_initialize(from_cache=True)
 
     assert "Failed to emit state changed event" in caplog.text
+
+
+async def test_recompute_keeps_entity_that_cannot_answer(
+    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    """An existing entity is kept when its capability check raises.
+
+    Removing it is destructive - consumers delete its registry entry, losing
+    the user's customizations - so a broken check must not be treated as
+    "unsupported" for an entity that already exists.
+    """
+    zigpy_device = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [general.Basic.cluster_id, general.OnOff.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.ON_OFF_SWITCH,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+    )
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+    entity = get_entity(zha_device, platform=Platform.SWITCH)
+
+    with patch.object(
+        type(entity), "recompute_capabilities", side_effect=KeyError("on_off")
+    ):
+        await zha_device.recompute_entities()
+
+    assert "treating it as supported" in caplog.text
+    assert get_entity(zha_device, platform=Platform.SWITCH) is entity

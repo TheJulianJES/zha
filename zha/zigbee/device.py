@@ -1162,7 +1162,11 @@ class Device(LogMixin, EventBase):
                 )
 
     def _entity_supported(
-        self, entity: PlatformEntity, others: Iterable[PlatformEntity]
+        self,
+        entity: PlatformEntity,
+        others: Iterable[PlatformEntity],
+        *,
+        on_error: bool,
     ) -> bool:
         """Recompute an entity's capabilities and return whether it is supported.
 
@@ -1170,17 +1174,28 @@ class Device(LogMixin, EventBase):
         reads attributes off the cluster. A quirk can leave a cluster without the
         definitions that code assumes, and zigpy raises `KeyError` for those, so a
         single broken entity would otherwise abort device initialization and, via
-        `load_devices`, fail the whole ZHA setup. An entity that cannot even be
-        asked whether it is supported certainly is not.
+        `load_devices`, fail the whole ZHA setup.
+
+        `on_error` is what an entity that cannot answer the question counts as.
+        A prospective entity is dropped (it could never produce a state anyway),
+        but an entity that already exists is kept: removing it is destructive,
+        as consumers delete its registry entry along with the user's
+        customizations, and its state reads are contained on the paths that
+        run them here.
         """
         try:
             entity.recompute_capabilities()
             return entity.is_supported() and entity.is_supported_in_list(others)
         except Exception:  # pylint: disable=broad-except
-            _LOGGER.exception(
-                "Failed to determine whether %s is supported - skipping it", entity
+            self.error(
+                "Failed to determine whether %s entity %s is supported,"
+                " treating it as %s",
+                entity.PLATFORM,
+                entity.unique_id,
+                "supported" if on_error else "unsupported",
+                exc_info=True,
             )
-            return False
+            return on_error
 
     async def _add_pending_entities(self, *, emit_event: bool = True) -> None:
         """Add pending entities to the device."""
@@ -1190,7 +1205,9 @@ class Device(LogMixin, EventBase):
         for entity in self._pending_entities:
             # Ignore unsupported entities - and entities that cannot even answer the
             # question, which a quirk-gutted cluster produces (see `_entity_supported`)
-            if not self._entity_supported(entity, all_entities.values()):
+            if not self._entity_supported(
+                entity, all_entities.values(), on_error=False
+            ):
                 await entity.on_remove()
                 continue
 
@@ -1237,7 +1254,12 @@ class Device(LogMixin, EventBase):
         try:
             entity.maybe_emit_state_changed_event()
         except Exception:  # pylint: disable=broad-except
-            _LOGGER.exception("Failed to emit state changed event for %s", entity)
+            self.error(
+                "Failed to emit state changed event for %s entity %s",
+                entity.PLATFORM,
+                entity.unique_id,
+                exc_info=True,
+            )
 
     async def recompute_entities(self) -> None:
         """Recompute all entities for this device."""
@@ -1247,7 +1269,7 @@ class Device(LogMixin, EventBase):
 
         # Remove all entities that are no longer supported
         for entity in entities[:]:
-            if not self._entity_supported(entity, entities):
+            if not self._entity_supported(entity, entities, on_error=True):
                 self.debug("Removing unsupported entity %s", entity)
                 await self._remove_entity(entity, remove=True)
                 entities.remove(entity)
