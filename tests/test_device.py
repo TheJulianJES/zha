@@ -2460,3 +2460,37 @@ async def test_async_reinterview_device_active_coordinator(
 
     assert "Skipping reinterview for active coordinator" in caplog.text
     mock_reinterview.assert_not_called()
+
+
+async def test_broken_entity_state_does_not_break_device_init(
+    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A single entity raising while computing its state must not fail setup.
+
+    Computing a state runs entity (and, for quirk entities, quirk-supplied)
+    code; letting it propagate would abort device initialization and, via
+    `load_devices`, take every other device down with it.
+    """
+    zigpy_device = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [general.Basic.cluster_id, general.OnOff.cluster_id],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.ON_OFF_SWITCH,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+    )
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+    entity = get_entity(zha_device, platform=Platform.SWITCH)
+
+    with patch.object(
+        type(entity),
+        "state",
+        new=property(lambda self: (_ for _ in ()).throw(KeyError("on_off"))),
+    ):
+        # must not raise
+        await zha_device.async_initialize(from_cache=True)
+
+    assert "Failed to emit state changed event" in caplog.text

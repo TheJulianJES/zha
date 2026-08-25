@@ -1161,18 +1161,36 @@ class Device(LogMixin, EventBase):
                     ),
                 )
 
+    def _entity_supported(
+        self, entity: PlatformEntity, others: Iterable[PlatformEntity]
+    ) -> bool:
+        """Recompute an entity's capabilities and return whether it is supported.
+
+        Both steps run entity (and, for quirk entities, quirk-supplied) code that
+        reads attributes off the cluster. A quirk can leave a cluster without the
+        definitions that code assumes, and zigpy raises `KeyError` for those, so a
+        single broken entity would otherwise abort device initialization and, via
+        `load_devices`, fail the whole ZHA setup. An entity that cannot even be
+        asked whether it is supported certainly is not.
+        """
+        try:
+            entity.recompute_capabilities()
+            return entity.is_supported() and entity.is_supported_in_list(others)
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.exception(
+                "Failed to determine whether %s is supported - skipping it", entity
+            )
+            return False
+
     async def _add_pending_entities(self, *, emit_event: bool = True) -> None:
         """Add pending entities to the device."""
         all_entities = dict(self._platform_entities)
         new_entities: dict[tuple[Platform, str], PlatformEntity] = {}
 
         for entity in self._pending_entities:
-            entity.recompute_capabilities()
-
-            # Ignore unsupported entities
-            if not entity.is_supported() or not entity.is_supported_in_list(
-                all_entities.values()
-            ):
+            # Ignore unsupported entities - and entities that cannot even answer the
+            # question, which a quirk-gutted cluster produces (see `_entity_supported`)
+            if not self._entity_supported(entity, all_entities.values()):
                 await entity.on_remove()
                 continue
 
@@ -1229,9 +1247,7 @@ class Device(LogMixin, EventBase):
 
         # Remove all entities that are no longer supported
         for entity in entities[:]:
-            entity.recompute_capabilities()
-
-            if not entity.is_supported() or not entity.is_supported_in_list(entities):
+            if not self._entity_supported(entity, entities):
                 self.debug("Removing unsupported entity %s", entity)
                 await self._remove_entity(entity, remove=True)
                 entities.remove(entity)

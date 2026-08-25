@@ -209,10 +209,8 @@ class Switch(PlatformEntity, BaseSwitch):  # type: ignore[misc]
             )
 
     def _is_supported(self) -> bool:
-        if (
-            self._attribute_name not in self._cluster.attributes_by_name
-            or self._cluster.is_attribute_unsupported(self._attribute_name)
-        ):
+        # `_is_valid` has already established that the attribute exists
+        if self._cluster.is_attribute_unsupported(self._attribute_name):
             _LOGGER.debug(
                 "%s is not supported - skipping %s entity creation",
                 self._attribute_name,

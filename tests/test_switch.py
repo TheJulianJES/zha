@@ -954,8 +954,11 @@ async def test_switch_missing_standard_attribute_definitions(
 
     zha_device = await join_zigpy_device(zha_gateway, zigpy_device_)
 
-    with pytest.raises(KeyError):
-        get_entity(zha_device, platform=Platform.SWITCH)
+    assert not [
+        entity
+        for entity in zha_device.platform_entities.values()
+        if entity.PLATFORM == Platform.SWITCH
+    ]
 
 
 async def test_quirk_switch_attribute_missing_from_cluster(
