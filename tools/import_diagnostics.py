@@ -10,6 +10,7 @@ import ast
 import asyncio
 import contextlib
 from contextlib import suppress
+from datetime import UTC, datetime
 import hashlib
 import json
 import logging
@@ -328,6 +329,10 @@ def zigpy_device_from_diagnostics(
                 manufacturer=zha_data["manufacturer"], model=zha_data["model"]
             )
         )
+
+    # `last_seen` is sometimes hand-redacted as well, fake a timestamp instead
+    if "REDACTED" in zha_data["last_seen"]:
+        zha_data["last_seen"] = datetime.now(UTC).isoformat()
 
     # Neighbors contain EUI64 addresses and EPIDs
     zha_data["neighbors"] = []
