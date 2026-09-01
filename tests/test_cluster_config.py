@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+import pytest
 import zigpy.profiles.zha
 from zigpy.zcl import ReportingConfig
 from zigpy.zcl.clusters import general, homeautomation
@@ -18,7 +19,15 @@ from zha.application.gateway import Gateway
 from zha.application.platforms import AttrConfig, ClusterConfig, sensor
 from zha.zigbee.cluster_config import AggregatedAttrConfig
 
-DEFAULT = ReportingConfig(min_interval=5, max_interval=900, reportable_change=1)
+# ZHA's built-in reporting config for EM attributes, e.g. `rms_voltage`
+DEFAULT = (
+    sensor.ElectricalMeasurementRMSVoltage._server_cluster_config[
+        homeautomation.ElectricalMeasurement.cluster_id
+    ]
+    .attributes[homeautomation.ElectricalMeasurement.AttributeDefs.rms_voltage]
+    .reporting
+)
+assert DEFAULT is not None
 RELAXED = ReportingConfig(min_interval=30, max_interval=3600, reportable_change=100)
 RELAXED_TIGHTER = ReportingConfig(
     min_interval=10, max_interval=1800, reportable_change=50
@@ -73,13 +82,10 @@ def test_merge_multiple_overrides_take_tightest() -> None:
     assert agg.reporting == RELAXED_TIGHTER
 
 
-def test_merge_override_without_reporting_is_noop() -> None:
-    """An overriding attr config without reporting does not override anything."""
-    agg = AggregatedAttrConfig()
-    agg.merge(AttrConfig(read_on_startup=False, reporting=DEFAULT))
-    agg.merge(AttrConfig(read_on_startup=True, reporting_override=True))
-    assert agg.reporting_override is False
-    assert agg.reporting == DEFAULT
+def test_override_without_reporting_is_rejected() -> None:
+    """An overriding attr config must carry a reporting config."""
+    with pytest.raises(ValueError, match="requires a reporting config"):
+        AttrConfig(read_on_startup=True, reporting_override=True)
 
 
 async def test_reporting_override_configures_relaxed_reporting(
@@ -105,12 +111,14 @@ async def test_reporting_override_configures_relaxed_reporting(
 
     # Simulate a device-specific (e.g. quirk-provided) entity declaring a relaxed
     # reporting config for `rms_voltage`, alongside the built-in voltage entity
-    # declaring the default one for the same attribute.
+    # declaring the default one for the same attribute. Quirks key attributes by
+    # name (str) while built-in entities use the ZCLAttributeDef, so both spellings
+    # must aggregate to the same attribute.
     override_config = {
         homeautomation.ElectricalMeasurement.cluster_id: ClusterConfig(
             bind=True,
             attributes={
-                em_attrs.rms_voltage: AttrConfig(
+                em_attrs.rms_voltage.name: AttrConfig(
                     read_on_startup=False,
                     reporting=RELAXED,
                     reporting_override=True,
