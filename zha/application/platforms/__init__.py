@@ -90,9 +90,11 @@ class ScaledReportingConfig:
     minimum interval.
 
     The raw ZCL reportable change is resolved when reporting is configured, as
-    `reportable_change * divisor / multiplier`, using the first available value of
-    `divisor_attributes` / `multiplier_attributes` (read from the device when not
-    cached). Missing, unsupported, or zero values fall back to 1.
+    `reportable_change * divisor / multiplier`, using the value of the first defined
+    attribute in `divisor_attributes` / `multiplier_attributes` (read from the device
+    when not cached). Missing, unsupported, or zero values fall back to 1, matching
+    how entities scale the attribute's value. The result is clamped to the range of
+    the attribute's ZCL type.
     """
 
     min_interval: int
@@ -106,11 +108,20 @@ class ScaledReportingConfig:
         """Attributes whose values are needed to resolve the raw reportable change."""
         return self.divisor_attributes + self.multiplier_attributes
 
-    def resolve(self, cluster: zigpy.zcl.Cluster) -> ReportingConfig:
+    def resolve(
+        self, cluster: zigpy.zcl.Cluster, attr_def: ZCLAttributeDef | None = None
+    ) -> ReportingConfig:
         """Resolve to a raw `ReportingConfig` using the cluster's cached scale values."""
         divisor = _first_scale_value(cluster, self.divisor_attributes)
         multiplier = _first_scale_value(cluster, self.multiplier_attributes)
         raw_change = max(1, round(self.reportable_change * divisor / multiplier))
+
+        # An out-of-range reportable change fails serialization of the whole
+        # configure reporting request, so clamp it to the attribute's type.
+        max_value = getattr(attr_def.type, "max_value", None) if attr_def else None
+        if max_value is not None:
+            raw_change = min(raw_change, max_value)
+
         return ReportingConfig(
             min_interval=self.min_interval,
             max_interval=self.max_interval,
@@ -121,17 +132,19 @@ class ScaledReportingConfig:
 def _first_scale_value(
     cluster: zigpy.zcl.Cluster, attributes: tuple[str, ...]
 ) -> int | float:
-    """Return the first cached, non-zero value of `attributes`, or 1.
+    """Return the cached value of the first defined attribute, or 1 if missing/zero.
 
     Attributes the cluster does not define (e.g. removed by a quirk) are skipped,
-    as `Cluster.get` raises for unknown attribute names.
+    as `Cluster.get` raises for unknown attribute names. Like the entities' own
+    divisor/multiplier lookup, a defined attribute with a cached value of zero does
+    not fall through to the next attribute.
     """
     for attr_name in attributes:
         if attr_name not in cluster.attributes_by_name:
             continue
         value = cluster.get(attr_name)
-        if value:
-            return value
+        if value is not None:
+            return value or 1
     return 1
 
 

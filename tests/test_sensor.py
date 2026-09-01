@@ -34,9 +34,11 @@ from tests.common import (
     join_zigpy_device,
     patch_cluster_for_testing,
     send_attributes_report,
+    update_attribute_cache,
     zigpy_device_from_json,
 )
 from zha.application import EntityPlatform, EntityType, Platform
+from zha.application.const import ZHA_CLUSTER_CONFIGURE_REPORTING_EVENT
 from zha.application.gateway import Gateway
 from zha.application.platforms import PlatformEntity, sensor
 from zha.application.platforms.sensor import (
@@ -2294,3 +2296,84 @@ async def test_electrical_measurement_scaled_reporting(
     assert configured_by_name["ac_voltage_divisor"] == ReportingConfig(
         min_interval=0, max_interval=900, reportable_change=1
     )
+
+
+async def test_electrical_measurement_scaled_reporting_all_entities(
+    zha_gateway: Gateway,
+) -> None:
+    """Phase B/C, total and DC attributes are scaled too, incl. fallback divisors."""
+    zigpy_device = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [
+                    general.Basic.cluster_id,
+                    homeautomation.ElectricalMeasurement.cluster_id,
+                ],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.SMART_PLUG,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+    )
+    cluster = zigpy_device.endpoints[1].electrical_measurement
+    cluster.PLUGGED_ATTR_READS = {
+        # no ac_power_divisor / dc_power_divisor: the power_divisor fallback is used
+        "power_divisor": 10,
+        "power_multiplier": 1,
+        "ac_voltage_divisor": 100,
+        "ac_current_divisor": 1000,
+        "dc_voltage_divisor": 100,
+        "dc_current_divisor": 1000,
+        # phase B/C, total and DC entities are only created with a cached value
+        "active_power_ph_b": 1,
+        "active_power_ph_c": 1,
+        "rms_voltage_ph_b": 1,
+        "rms_voltage_ph_c": 1,
+        "rms_current_ph_b": 1,
+        "rms_current_ph_c": 1,
+        "total_active_power": 1,
+        "dc_voltage": 1,
+        "dc_current": 1,
+        "dc_power": 1,
+    }
+    update_attribute_cache(cluster)
+
+    zha_device = await join_zigpy_device(zha_gateway, zigpy_device)
+
+    reporting_events = []
+    zha_device.on_event(ZHA_CLUSTER_CONFIGURE_REPORTING_EVENT, reporting_events.append)
+    # reconfigure: the scale attributes are already cached from the join
+    cluster.configure_reporting_multiple.reset_mock()
+    await zha_device.async_configure()
+
+    assert len(cluster.configure_reporting_multiple.mock_calls) == 1
+    configured = cluster.configure_reporting_multiple.mock_calls[0].args[0]
+    configured_by_name = {attr_def.name: cfg for attr_def, cfg in configured.items()}
+    expected_changes = {
+        "active_power": 10,  # 1 W, power_divisor fallback
+        "active_power_ph_b": 10,
+        "active_power_ph_c": 10,
+        "total_active_power": 10,
+        "apparent_power": 10,
+        "rms_voltage": 100,  # 1 V
+        "rms_voltage_ph_b": 100,
+        "rms_voltage_ph_c": 100,
+        "rms_current": 50,  # 0.05 A
+        "rms_current_ph_b": 50,
+        "rms_current_ph_c": 50,
+        "dc_voltage": 10,  # 0.1 V
+        "dc_current": 100,  # 0.1 A
+        "dc_power": 1,  # 0.1 W, power_divisor fallback
+    }
+    for attr_name, expected_change in expected_changes.items():
+        assert configured_by_name[attr_name].reportable_change == expected_change, (
+            attr_name
+        )
+
+    # the configure reporting event carries the resolved raw change
+    assert len(reporting_events) == 1
+    event_attrs = reporting_events[0].attributes
+    assert event_attrs["rms_voltage"]["change"] == 100
+    assert event_attrs["rms_voltage"]["status"] == "SUCCESS"
+    assert event_attrs["dc_power"]["change"] == 1

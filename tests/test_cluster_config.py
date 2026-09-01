@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from zigpy.zcl import ReportingConfig
+from zigpy.zcl.clusters.homeautomation import ElectricalMeasurement
 
 from zha.application.platforms import AttrConfig, ScaledReportingConfig
 from zha.zigbee.cluster_config import AggregatedAttrConfig
@@ -72,6 +73,9 @@ def _cluster(
         ({"power_divisor": 10}, 1, POWER_SCALE, 10),
         # primary divisor wins over fallback
         ({"ac_power_divisor": 100, "power_divisor": 10}, 1, POWER_SCALE, 100),
+        # a defined but zero primary divisor does not fall through to the fallback,
+        # matching how the entity scales the attribute's value
+        ({"ac_power_divisor": 0, "power_divisor": 10}, 1, POWER_SCALE, 1),
     ],
 )
 def test_scaled_reporting_config_resolve(
@@ -87,6 +91,21 @@ def test_scaled_reporting_config_resolve(
     assert config.resolve(_cluster(**cached)) == ReportingConfig(
         min_interval=5, max_interval=900, reportable_change=expected
     )
+
+
+def test_scaled_reporting_config_resolve_clamps_to_attribute_type() -> None:
+    """The resolved raw change is clamped to the attribute's ZCL type range."""
+    config = ScaledReportingConfig(
+        min_interval=5, max_interval=900, reportable_change=1, **POWER_SCALE
+    )
+    cluster = _cluster(power_divisor=1_000_000)  # uint32 fallback divisor
+
+    # active_power is int16s: 1_000_000 does not fit and would fail serialization
+    active_power = ElectricalMeasurement.AttributeDefs.active_power
+    assert config.resolve(cluster, active_power).reportable_change == 32767
+
+    # without an attribute definition, nothing is clamped
+    assert config.resolve(cluster).reportable_change == 1_000_000
 
 
 def test_scaled_reporting_config_resolve_skips_undefined_attributes() -> None:
@@ -122,6 +141,7 @@ def test_aggregated_attr_config_merges_raw_reporting() -> None:
         )
     )
     assert agg.read_on_startup is True
+    assert agg.has_reporting is True
     assert agg.scaled_reporting is None
     assert agg.scale_attributes == ()
     assert agg.resolve_reporting(_cluster()) == ReportingConfig(
@@ -196,4 +216,5 @@ def test_aggregated_attr_config_no_reporting() -> None:
     """Attribute configs without reporting resolve to no reporting."""
     agg = AggregatedAttrConfig()
     agg.merge(AttrConfig(read_on_startup=True))
+    assert agg.has_reporting is False
     assert agg.resolve_reporting(_cluster()) is None
