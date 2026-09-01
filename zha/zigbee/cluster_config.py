@@ -80,7 +80,7 @@ class AggregatedAttrConfig:
         return self.reporting is not None or self.scaled_reporting is not None
 
     def resolve_reporting(
-        self, cluster: zigpy.zcl.Cluster, attr_def: ZCLAttributeDef | None = None
+        self, cluster: zigpy.zcl.Cluster, attr_def: ZCLAttributeDef
     ) -> ReportingConfig | None:
         """Return the raw reporting config, resolving scaled configs via `cluster`."""
         if self.scaled_reporting is None:
@@ -248,8 +248,8 @@ async def configure_cluster_configs(
                 continue
             attr_def = agg.cluster.find_attribute(attr_name)
             reporting = attr_config.resolve_reporting(agg.cluster, attr_def)
-            if reporting is not None:
-                reporting_attrs[attr_def] = reporting
+            assert reporting is not None  # guaranteed by `has_reporting`
+            reporting_attrs[attr_def] = reporting
 
         if reporting_attrs:
             event_data = {

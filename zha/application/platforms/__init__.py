@@ -109,7 +109,7 @@ class ScaledReportingConfig:
         return self.divisor_attributes + self.multiplier_attributes
 
     def resolve(
-        self, cluster: zigpy.zcl.Cluster, attr_def: ZCLAttributeDef | None = None
+        self, cluster: zigpy.zcl.Cluster, attr_def: ZCLAttributeDef
     ) -> ReportingConfig:
         """Resolve to a raw `ReportingConfig` using the cluster's cached scale values."""
         divisor = _first_scale_value(cluster, self.divisor_attributes)
@@ -118,9 +118,16 @@ class ScaledReportingConfig:
 
         # An out-of-range reportable change fails serialization of the whole
         # configure reporting request, so clamp it to the attribute's type.
-        max_value = getattr(attr_def.type, "max_value", None) if attr_def else None
-        if max_value is not None:
-            raw_change = min(raw_change, max_value)
+        max_value = getattr(attr_def.type, "max_value", None)
+        if max_value is not None and raw_change > max_value:
+            _LOGGER.debug(
+                "Clamping reportable change for %s on cluster %s: %s -> %s",
+                attr_def.name,
+                cluster.ep_attribute,
+                raw_change,
+                max_value,
+            )
+            raw_change = max_value
 
         return ReportingConfig(
             min_interval=self.min_interval,
@@ -135,7 +142,7 @@ def _first_scale_value(
     """Return the cached value of the first defined attribute, or 1 if missing/zero.
 
     Attributes the cluster does not define (e.g. removed by a quirk) are skipped,
-    as `Cluster.get` raises for unknown attribute names. Like the entities' own
+    as `Cluster.get` raises for unknown attribute names. Matching the entities' own
     divisor/multiplier lookup, a defined attribute with a cached value of zero does
     not fall through to the next attribute.
     """

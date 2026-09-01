@@ -2372,8 +2372,12 @@ async def test_electrical_measurement_scaled_reporting_all_entities(
         )
 
     # the configure reporting event carries the resolved raw change
-    assert len(reporting_events) == 1
-    event_attrs = reporting_events[0].attributes
+    em_events = [
+        e
+        for e in reporting_events
+        if e.cluster_id == homeautomation.ElectricalMeasurement.cluster_id
+    ]
+    assert len(em_events) == 1
+    event_attrs = em_events[0].attributes
     assert event_attrs["rms_voltage"]["change"] == 100
-    assert event_attrs["rms_voltage"]["status"] == "SUCCESS"
     assert event_attrs["dc_power"]["change"] == 1

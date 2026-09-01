@@ -9,6 +9,9 @@ from zigpy.zcl.clusters.homeautomation import ElectricalMeasurement
 from zha.application.platforms import AttrConfig, ScaledReportingConfig
 from zha.zigbee.cluster_config import AggregatedAttrConfig
 
+RMS_VOLTAGE = ElectricalMeasurement.AttributeDefs.rms_voltage  # uint16
+ACTIVE_POWER = ElectricalMeasurement.AttributeDefs.active_power  # int16s
+
 VOLTAGE_SCALE = {
     "divisor_attributes": ("ac_voltage_divisor",),
     "multiplier_attributes": ("ac_voltage_multiplier",),
@@ -88,7 +91,7 @@ def test_scaled_reporting_config_resolve(
     assert config.scale_attributes == (
         scale["divisor_attributes"] + scale["multiplier_attributes"]
     )
-    assert config.resolve(_cluster(**cached)) == ReportingConfig(
+    assert config.resolve(_cluster(**cached), RMS_VOLTAGE) == ReportingConfig(
         min_interval=5, max_interval=900, reportable_change=expected
     )
 
@@ -101,11 +104,7 @@ def test_scaled_reporting_config_resolve_clamps_to_attribute_type() -> None:
     cluster = _cluster(power_divisor=1_000_000)  # uint32 fallback divisor
 
     # active_power is int16s: 1_000_000 does not fit and would fail serialization
-    active_power = ElectricalMeasurement.AttributeDefs.active_power
-    assert config.resolve(cluster, active_power).reportable_change == 32767
-
-    # without an attribute definition, nothing is clamped
-    assert config.resolve(cluster).reportable_change == 1_000_000
+    assert config.resolve(cluster, ACTIVE_POWER).reportable_change == 32767
 
 
 def test_scaled_reporting_config_resolve_skips_undefined_attributes() -> None:
@@ -115,10 +114,10 @@ def test_scaled_reporting_config_resolve_skips_undefined_attributes() -> None:
     )
     # primary divisor undefined, fallback divisor known
     cluster = _cluster(known=("power_divisor", "power_multiplier"), power_divisor=10)
-    assert config.resolve(cluster).reportable_change == 10
+    assert config.resolve(cluster, ACTIVE_POWER).reportable_change == 10
 
     # no scale attribute defined at all
-    assert config.resolve(_cluster(known=())).reportable_change == 1
+    assert config.resolve(_cluster(known=()), ACTIVE_POWER).reportable_change == 1
 
 
 def test_aggregated_attr_config_merges_raw_reporting() -> None:
@@ -144,7 +143,7 @@ def test_aggregated_attr_config_merges_raw_reporting() -> None:
     assert agg.has_reporting is True
     assert agg.scaled_reporting is None
     assert agg.scale_attributes == ()
-    assert agg.resolve_reporting(_cluster()) == ReportingConfig(
+    assert agg.resolve_reporting(_cluster(), RMS_VOLTAGE) == ReportingConfig(
         min_interval=30, max_interval=300, reportable_change=10
     )
 
@@ -176,9 +175,9 @@ def test_aggregated_attr_config_merges_scaled_reporting() -> None:
         min_interval=5, max_interval=600, reportable_change=0.5, **VOLTAGE_SCALE
     )
     assert agg.scale_attributes == ("ac_voltage_divisor", "ac_voltage_multiplier")
-    assert agg.resolve_reporting(_cluster(ac_voltage_divisor=100)) == ReportingConfig(
-        min_interval=5, max_interval=600, reportable_change=50
-    )
+    assert agg.resolve_reporting(
+        _cluster(ac_voltage_divisor=100), RMS_VOLTAGE
+    ) == ReportingConfig(min_interval=5, max_interval=600, reportable_change=50)
 
 
 def test_aggregated_attr_config_merges_scaled_with_raw_reporting() -> None:
@@ -202,14 +201,14 @@ def test_aggregated_attr_config_merges_scaled_with_raw_reporting() -> None:
     )
 
     # scaled change (1 V * 100 = 100) is looser than the raw change (20)
-    assert agg.resolve_reporting(_cluster(ac_voltage_divisor=100)) == ReportingConfig(
-        min_interval=5, max_interval=300, reportable_change=20
-    )
+    assert agg.resolve_reporting(
+        _cluster(ac_voltage_divisor=100), RMS_VOLTAGE
+    ) == ReportingConfig(min_interval=5, max_interval=300, reportable_change=20)
 
     # scaled change (1 V * 10 = 10) is tighter than the raw change (20)
-    assert agg.resolve_reporting(_cluster(ac_voltage_divisor=10)) == ReportingConfig(
-        min_interval=5, max_interval=300, reportable_change=10
-    )
+    assert agg.resolve_reporting(
+        _cluster(ac_voltage_divisor=10), RMS_VOLTAGE
+    ) == ReportingConfig(min_interval=5, max_interval=300, reportable_change=10)
 
 
 def test_aggregated_attr_config_no_reporting() -> None:
@@ -217,4 +216,4 @@ def test_aggregated_attr_config_no_reporting() -> None:
     agg = AggregatedAttrConfig()
     agg.merge(AttrConfig(read_on_startup=True))
     assert agg.has_reporting is False
-    assert agg.resolve_reporting(_cluster()) is None
+    assert agg.resolve_reporting(_cluster(), RMS_VOLTAGE) is None
