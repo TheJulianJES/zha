@@ -86,6 +86,14 @@ class AttrConfig:
     read_on_startup: bool
     reporting: ReportingConfig | None = None
 
+    # Whether `reporting` replaces, rather than merges with, the reporting configs
+    # other entities declare for the same attribute. By default the tightest config
+    # wins, which means a config can only ever make reporting more frequent. Device
+    # specific configs (e.g. from quirks) set this to relax ZHA's built-in defaults,
+    # such as for devices reporting with a high divisor. Multiple overriding configs
+    # are still merged with each other.
+    reporting_override: bool = False
+
 
 @dataclass(frozen=True)
 class ClusterConfig:
