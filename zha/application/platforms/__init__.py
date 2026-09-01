@@ -118,9 +118,17 @@ class ScaledReportingConfig:
         )
 
 
-def _first_scale_value(cluster: zigpy.zcl.Cluster, attributes: tuple[str, ...]) -> int:
-    """Return the first cached, non-zero value of `attributes`, or 1."""
+def _first_scale_value(
+    cluster: zigpy.zcl.Cluster, attributes: tuple[str, ...]
+) -> int | float:
+    """Return the first cached, non-zero value of `attributes`, or 1.
+
+    Attributes the cluster does not define (e.g. removed by a quirk) are skipped,
+    as `Cluster.get` raises for unknown attribute names.
+    """
     for attr_name in attributes:
+        if attr_name not in cluster.attributes_by_name:
+            continue
         value = cluster.get(attr_name)
         if value:
             return value

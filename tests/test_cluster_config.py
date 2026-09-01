@@ -18,9 +18,28 @@ POWER_SCALE = {
 }
 
 
-def _cluster(**cached: int | None) -> MagicMock:
+ALL_SCALE_ATTRS = (
+    *VOLTAGE_SCALE["divisor_attributes"],
+    *VOLTAGE_SCALE["multiplier_attributes"],
+    *POWER_SCALE["divisor_attributes"],
+    *POWER_SCALE["multiplier_attributes"],
+)
+
+
+def _cluster(
+    known: tuple[str, ...] = ALL_SCALE_ATTRS, **cached: int | None
+) -> MagicMock:
+    """Mock a cluster defining `known` attributes with `cached` values."""
     cluster = MagicMock()
-    cluster.get.side_effect = cached.get
+    cluster.attributes_by_name = dict.fromkeys(known)
+
+    def _get(name: str) -> int | None:
+        if name not in known:
+            # zigpy's Cluster.get raises for attribute names it does not define
+            raise KeyError(name)
+        return cached.get(name)
+
+    cluster.get.side_effect = _get
     return cluster
 
 
@@ -68,6 +87,19 @@ def test_scaled_reporting_config_resolve(
     assert config.resolve(_cluster(**cached)) == ReportingConfig(
         min_interval=5, max_interval=900, reportable_change=expected
     )
+
+
+def test_scaled_reporting_config_resolve_skips_undefined_attributes() -> None:
+    """Scale attributes a (quirk-replaced) cluster does not define are skipped."""
+    config = ScaledReportingConfig(
+        min_interval=5, max_interval=900, reportable_change=1, **POWER_SCALE
+    )
+    # primary divisor undefined, fallback divisor known
+    cluster = _cluster(known=("power_divisor", "power_multiplier"), power_divisor=10)
+    assert config.resolve(cluster).reportable_change == 10
+
+    # no scale attribute defined at all
+    assert config.resolve(_cluster(known=())).reportable_change == 1
 
 
 def test_aggregated_attr_config_merges_raw_reporting() -> None:
