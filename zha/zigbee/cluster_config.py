@@ -16,7 +16,7 @@ from zha.application.const import (
     ZHA_CLUSTER_BIND_EVENT,
     ZHA_CLUSTER_CONFIGURE_REPORTING_EVENT,
 )
-from zha.application.platforms import AttrConfig, PlatformEntity
+from zha.application.platforms import AttrConfig, PlatformEntity, ScaledReportingConfig
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -33,27 +33,65 @@ class AggregatedAttrConfig:
 
     read_on_startup: bool = False
     reporting: ReportingConfig | None = None
+    scaled_reporting: ScaledReportingConfig | None = None
 
     def merge(self, config: AttrConfig) -> None:
         """Merge another attribute config (fresh read and tightest reporting win)."""
         self.read_on_startup = self.read_on_startup or config.read_on_startup
 
-        if config.reporting is not None:
+        if isinstance(config.reporting, ScaledReportingConfig):
+            if self.scaled_reporting is None:
+                self.scaled_reporting = config.reporting
+            else:
+                # Entities sharing an attribute are expected to share its scale
+                # attributes, so only the intervals and change are merged.
+                self.scaled_reporting = ScaledReportingConfig(
+                    min_interval=min(
+                        self.scaled_reporting.min_interval,
+                        config.reporting.min_interval,
+                    ),
+                    max_interval=min(
+                        self.scaled_reporting.max_interval,
+                        config.reporting.max_interval,
+                    ),
+                    reportable_change=min(
+                        self.scaled_reporting.reportable_change,
+                        config.reporting.reportable_change,
+                    ),
+                    divisor_attributes=self.scaled_reporting.divisor_attributes,
+                    multiplier_attributes=self.scaled_reporting.multiplier_attributes,
+                )
+        elif config.reporting is not None:
             if self.reporting is None:
                 self.reporting = config.reporting
             else:
-                self.reporting = ReportingConfig(
-                    min_interval=min(
-                        self.reporting.min_interval, config.reporting.min_interval
-                    ),
-                    max_interval=min(
-                        self.reporting.max_interval, config.reporting.max_interval
-                    ),
-                    reportable_change=min(
-                        self.reporting.reportable_change,
-                        config.reporting.reportable_change,
-                    ),
-                )
+                self.reporting = _tightest_reporting(self.reporting, config.reporting)
+
+    @property
+    def scale_attributes(self) -> tuple[str, ...]:
+        """Attributes that must be known to resolve the reporting config."""
+        if self.scaled_reporting is None:
+            return ()
+        return self.scaled_reporting.scale_attributes
+
+    def resolve_reporting(self, cluster: zigpy.zcl.Cluster) -> ReportingConfig | None:
+        """Return the raw reporting config, resolving scaled configs via `cluster`."""
+        if self.scaled_reporting is None:
+            return self.reporting
+
+        resolved = self.scaled_reporting.resolve(cluster)
+        if self.reporting is None:
+            return resolved
+        return _tightest_reporting(self.reporting, resolved)
+
+
+def _tightest_reporting(a: ReportingConfig, b: ReportingConfig) -> ReportingConfig:
+    """Merge two raw reporting configs, keeping the tightest of each field."""
+    return ReportingConfig(
+        min_interval=min(a.min_interval, b.min_interval),
+        max_interval=min(a.max_interval, b.max_interval),
+        reportable_change=min(a.reportable_change, b.reportable_change),
+    )
 
 
 @dataclass
@@ -174,12 +212,36 @@ async def configure_cluster_configs(
                 ),
             )
 
+        # Scaled reporting configs need the cluster's divisor/multiplier values to
+        # resolve their raw reportable change. Cached values are reused, so this
+        # only hits the device when they have never been read (e.g. on join).
+        scale_attrs = sorted(
+            {
+                attr_name
+                for attr_config in agg.attributes.values()
+                for attr_name in attr_config.scale_attributes
+                if attr_name in agg.cluster.attributes_by_name
+            }
+        )
+        if scale_attrs:
+            try:
+                await agg.cluster.read_attributes(scale_attrs, allow_cache=True)
+            except Exception as ex:  # pylint: disable=broad-except
+                _LOGGER.debug(
+                    "[%s] Failed to read scale attributes %s from cluster %s: %s",
+                    agg.cluster.endpoint.device.ieee,
+                    scale_attrs,
+                    agg.cluster.ep_attribute,
+                    ex,
+                )
+
         reporting_attrs = {}
         for attr_name, attr_config in agg.attributes.items():
-            if attr_config.reporting is None:
+            reporting = attr_config.resolve_reporting(agg.cluster)
+            if reporting is None:
                 continue
             attr_def = agg.cluster.find_attribute(attr_name)
-            reporting_attrs[attr_def] = attr_config.reporting
+            reporting_attrs[attr_def] = reporting
 
         if reporting_attrs:
             event_data = {

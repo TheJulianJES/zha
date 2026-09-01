@@ -80,11 +80,59 @@ class PlatformFeatureGroup(StrEnum):
 
 
 @dataclass(frozen=True)
+class ScaledReportingConfig:
+    """Reporting configuration with the reportable change in physical units.
+
+    Many measurement attributes are scaled by divisor/multiplier attributes on the
+    same cluster (e.g. `rms_voltage` by `ac_voltage_divisor`). A fixed *raw*
+    reportable change therefore means something different on every device: with a
+    divisor of 100, a raw change of 1 is 0.01 V and the device reports at every
+    minimum interval.
+
+    The raw ZCL reportable change is resolved when reporting is configured, as
+    `reportable_change * divisor / multiplier`, using the first available value of
+    `divisor_attributes` / `multiplier_attributes` (read from the device when not
+    cached). Missing, unsupported, or zero values fall back to 1.
+    """
+
+    min_interval: int
+    max_interval: int
+    reportable_change: float
+    divisor_attributes: tuple[str, ...] = ()
+    multiplier_attributes: tuple[str, ...] = ()
+
+    @property
+    def scale_attributes(self) -> tuple[str, ...]:
+        """Attributes whose values are needed to resolve the raw reportable change."""
+        return self.divisor_attributes + self.multiplier_attributes
+
+    def resolve(self, cluster: zigpy.zcl.Cluster) -> ReportingConfig:
+        """Resolve to a raw `ReportingConfig` using the cluster's cached scale values."""
+        divisor = _first_scale_value(cluster, self.divisor_attributes)
+        multiplier = _first_scale_value(cluster, self.multiplier_attributes)
+        raw_change = max(1, round(self.reportable_change * divisor / multiplier))
+        return ReportingConfig(
+            min_interval=self.min_interval,
+            max_interval=self.max_interval,
+            reportable_change=raw_change,
+        )
+
+
+def _first_scale_value(cluster: zigpy.zcl.Cluster, attributes: tuple[str, ...]) -> int:
+    """Return the first cached, non-zero value of `attributes`, or 1."""
+    for attr_name in attributes:
+        value = cluster.get(attr_name)
+        if value:
+            return value
+    return 1
+
+
+@dataclass(frozen=True)
 class AttrConfig:
     """Per-attribute configuration for cluster setup."""
 
     read_on_startup: bool
-    reporting: ReportingConfig | None = None
+    reporting: ReportingConfig | ScaledReportingConfig | None = None
 
 
 @dataclass(frozen=True)
