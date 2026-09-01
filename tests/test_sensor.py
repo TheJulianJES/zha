@@ -2190,3 +2190,107 @@ async def test_em_poller_runs_independently_of_entity_enabled_state(
     active_power.enable()
     assert active_power.enabled is True
     assert not poll_task.done()
+
+
+@pytest.mark.parametrize(
+    ("plugged_scale_attrs", "expected_changes"),
+    [
+        (
+            # SONOFF S60ZBTPF-style plug: two decimal places for voltage/current
+            {
+                "ac_voltage_divisor": 100,
+                "ac_voltage_multiplier": 1,
+                "ac_current_divisor": 100,
+                "ac_current_multiplier": 1,
+                "ac_power_divisor": 1,
+                "ac_power_multiplier": 1,
+                "ac_frequency_divisor": 100,
+                "ac_frequency_multiplier": 1,
+            },
+            {
+                "rms_voltage": 100,  # 1 V
+                "rms_current": 5,  # 0.05 A
+                "active_power": 1,  # 1 W
+                "apparent_power": 1,  # 1 VA
+                "ac_frequency": 10,  # 0.1 Hz
+            },
+        ),
+        (
+            # Common plug: three decimal places for current, one for voltage
+            {
+                "ac_voltage_divisor": 10,
+                "ac_voltage_multiplier": 1,
+                "ac_current_divisor": 1000,
+                "ac_current_multiplier": 1,
+                "ac_power_divisor": 10,
+                "ac_power_multiplier": 1,
+            },
+            {
+                "rms_voltage": 10,
+                "rms_current": 50,
+                "active_power": 10,
+                "apparent_power": 10,
+                "ac_frequency": 1,  # no divisor: raw change of at least 1
+            },
+        ),
+        (
+            # Device that fails to answer the scale attribute reads
+            {},
+            {
+                "rms_voltage": 1,
+                "rms_current": 1,
+                "active_power": 1,
+                "apparent_power": 1,
+                "ac_frequency": 1,
+            },
+        ),
+    ],
+)
+async def test_electrical_measurement_scaled_reporting(
+    zha_gateway: Gateway,
+    plugged_scale_attrs: dict[str, int],
+    expected_changes: dict[str, int],
+) -> None:
+    """Reportable changes for EM attributes are scaled by the device's divisors."""
+    zigpy_device = create_mock_zigpy_device(
+        zha_gateway,
+        {
+            1: {
+                SIG_EP_INPUT: [
+                    general.Basic.cluster_id,
+                    homeautomation.ElectricalMeasurement.cluster_id,
+                ],
+                SIG_EP_OUTPUT: [],
+                SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.SMART_PLUG,
+                SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
+            }
+        },
+    )
+    cluster = zigpy_device.endpoints[1].electrical_measurement
+    cluster.PLUGGED_ATTR_READS = plugged_scale_attrs
+
+    await join_zigpy_device(zha_gateway, zigpy_device)
+
+    # The scale attributes are read (from cache when possible) before configuring
+    # reporting, so the raw reportable change can be derived from them.
+    scale_reads = [
+        c
+        for c in cluster.read_attributes.mock_calls
+        if c.kwargs.get("allow_cache") is True
+        and "ac_voltage_divisor" in c.args[0]
+        and "ac_voltage_multiplier" in c.args[0]
+    ]
+    assert scale_reads, cluster.read_attributes.mock_calls
+    assert len(cluster.configure_reporting_multiple.mock_calls) == 1
+    configured: dict = cluster.configure_reporting_multiple.mock_calls[0].args[0]
+    configured_by_name = {attr_def.name: cfg for attr_def, cfg in configured.items()}
+
+    for attr_name, expected_change in expected_changes.items():
+        assert configured_by_name[attr_name] == ReportingConfig(
+            min_interval=5, max_interval=900, reportable_change=expected_change
+        ), attr_name
+
+    # The scale attributes themselves keep their fixed raw reporting config
+    assert configured_by_name["ac_voltage_divisor"] == ReportingConfig(
+        min_interval=0, max_interval=900, reportable_change=1
+    )

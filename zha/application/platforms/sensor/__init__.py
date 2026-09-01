@@ -12,7 +12,7 @@ import logging
 import math
 import numbers
 import typing
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from zigpy import types
 from zigpy.state import Counter, State
@@ -67,6 +67,7 @@ from zha.application.platforms import (
     EntityCategory,
     PlatformEntity,
     PlatformFeatureGroup,
+    ScaledReportingConfig,
     register_entity,
 )
 from zha.application.platforms.climate.const import HVACAction
@@ -846,6 +847,48 @@ class ElectricalMeasurementState(SensorState):
         return attributes
 
 
+# Reportable changes for electrical measurement attributes are expressed in physical
+# units and scaled by the cluster's divisor/multiplier attributes when reporting is
+# configured (see `ScaledReportingConfig`).
+_AC_POWER_SCALE: Final = {
+    "divisor_attributes": ("ac_power_divisor", "power_divisor"),
+    "multiplier_attributes": ("ac_power_multiplier", "power_multiplier"),
+}
+_AC_CURRENT_SCALE: Final = {
+    "divisor_attributes": ("ac_current_divisor",),
+    "multiplier_attributes": ("ac_current_multiplier",),
+}
+_AC_VOLTAGE_SCALE: Final = {
+    "divisor_attributes": ("ac_voltage_divisor",),
+    "multiplier_attributes": ("ac_voltage_multiplier",),
+}
+_AC_FREQUENCY_SCALE: Final = {
+    "divisor_attributes": ("ac_frequency_divisor",),
+    "multiplier_attributes": ("ac_frequency_multiplier",),
+}
+_DC_POWER_SCALE: Final = {
+    "divisor_attributes": ("dc_power_divisor", "power_divisor"),
+    "multiplier_attributes": ("dc_power_multiplier", "power_multiplier"),
+}
+_DC_CURRENT_SCALE: Final = {
+    "divisor_attributes": ("dc_current_divisor",),
+    "multiplier_attributes": ("dc_current_multiplier",),
+}
+_DC_VOLTAGE_SCALE: Final = {
+    "divisor_attributes": ("dc_voltage_divisor",),
+    "multiplier_attributes": ("dc_voltage_multiplier",),
+}
+
+# 1 W / 1 VA
+_EM_POWER_CHANGE: Final = 1
+# 0.05 A
+_EM_CURRENT_CHANGE: Final = 0.05
+# 1 V
+_EM_VOLTAGE_CHANGE: Final = 1
+# 0.1 Hz
+_EM_FREQUENCY_CHANGE: Final = 0.1
+
+
 class BaseElectricalMeasurement(Sensor):
     """Base class for electrical measurement."""
 
@@ -1073,8 +1116,11 @@ class ElectricalMeasurementActivePower(BaseElectricalMeasurement):
                 ),
                 ElectricalMeasurement.AttributeDefs.active_power: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_POWER_CHANGE,
+                        **_AC_POWER_SCALE,
                     ),
                 ),
                 ElectricalMeasurement.AttributeDefs.active_power_max: AttrConfig(
@@ -1141,8 +1187,11 @@ class ElectricalMeasurementActivePowerPhB(BaseElectricalMeasurement):
                 ),
                 ElectricalMeasurement.AttributeDefs.active_power_ph_b: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_POWER_CHANGE,
+                        **_AC_POWER_SCALE,
                     ),
                 ),
                 ElectricalMeasurement.AttributeDefs.active_power_max_ph_b: AttrConfig(
@@ -1209,8 +1258,11 @@ class ElectricalMeasurementActivePowerPhC(BaseElectricalMeasurement):
                 ),
                 ElectricalMeasurement.AttributeDefs.active_power_ph_c: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_POWER_CHANGE,
+                        **_AC_POWER_SCALE,
                     ),
                 ),
                 ElectricalMeasurement.AttributeDefs.active_power_max_ph_c: AttrConfig(
@@ -1277,8 +1329,11 @@ class ElectricalMeasurementTotalActivePower(BaseElectricalMeasurement):
                 ),
                 ElectricalMeasurement.AttributeDefs.total_active_power: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_POWER_CHANGE,
+                        **_AC_POWER_SCALE,
                     ),
                 ),
                 ElectricalMeasurement.AttributeDefs.active_power_max: AttrConfig(
@@ -1343,8 +1398,11 @@ class ElectricalMeasurementApparentPower(BaseElectricalMeasurement):
                 ),
                 ElectricalMeasurement.AttributeDefs.apparent_power: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_POWER_CHANGE,
+                        **_AC_POWER_SCALE,
                     ),
                 ),
             },
@@ -1394,8 +1452,11 @@ class ElectricalMeasurementRMSCurrent(BaseElectricalMeasurement):
                 ),
                 ElectricalMeasurement.AttributeDefs.rms_current: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_CURRENT_CHANGE,
+                        **_AC_CURRENT_SCALE,
                     ),
                 ),
                 ElectricalMeasurement.AttributeDefs.rms_current_max: AttrConfig(
@@ -1441,8 +1502,11 @@ class ElectricalMeasurementRMSCurrentPhB(ElectricalMeasurementRMSCurrent):
                 ),
                 ElectricalMeasurement.AttributeDefs.rms_current_ph_b: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_CURRENT_CHANGE,
+                        **_AC_CURRENT_SCALE,
                     ),
                 ),
                 ElectricalMeasurement.AttributeDefs.rms_current_max_ph_b: AttrConfig(
@@ -1488,8 +1552,11 @@ class ElectricalMeasurementRMSCurrentPhC(ElectricalMeasurementRMSCurrent):
                 ),
                 ElectricalMeasurement.AttributeDefs.rms_current_ph_c: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_CURRENT_CHANGE,
+                        **_AC_CURRENT_SCALE,
                     ),
                 ),
                 ElectricalMeasurement.AttributeDefs.rms_current_max_ph_c: AttrConfig(
@@ -1542,8 +1609,11 @@ class ElectricalMeasurementRMSVoltage(BaseElectricalMeasurement):
                 ),
                 ElectricalMeasurement.AttributeDefs.rms_voltage: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_VOLTAGE_CHANGE,
+                        **_AC_VOLTAGE_SCALE,
                     ),
                 ),
                 ElectricalMeasurement.AttributeDefs.rms_voltage_max: AttrConfig(
@@ -1589,8 +1659,11 @@ class ElectricalMeasurementRMSVoltagePhB(ElectricalMeasurementRMSVoltage):
                 ),
                 ElectricalMeasurement.AttributeDefs.rms_voltage_ph_b: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_VOLTAGE_CHANGE,
+                        **_AC_VOLTAGE_SCALE,
                     ),
                 ),
                 ElectricalMeasurement.AttributeDefs.rms_voltage_max_ph_b: AttrConfig(
@@ -1636,8 +1709,11 @@ class ElectricalMeasurementRMSVoltagePhC(ElectricalMeasurementRMSVoltage):
                 ),
                 ElectricalMeasurement.AttributeDefs.rms_voltage_ph_c: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_VOLTAGE_CHANGE,
+                        **_AC_VOLTAGE_SCALE,
                     ),
                 ),
                 ElectricalMeasurement.AttributeDefs.rms_voltage_max_ph_c: AttrConfig(
@@ -1685,8 +1761,11 @@ class ElectricalMeasurementFrequency(BaseElectricalMeasurement):
                 ),
                 ElectricalMeasurement.AttributeDefs.ac_frequency: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_FREQUENCY_CHANGE,
+                        **_AC_FREQUENCY_SCALE,
                     ),
                 ),
                 ElectricalMeasurement.AttributeDefs.ac_frequency_max: AttrConfig(
@@ -1833,8 +1912,11 @@ class ElectricalMeasurementDCVoltage(BaseElectricalMeasurement):
                 ),
                 ElectricalMeasurement.AttributeDefs.dc_voltage: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_VOLTAGE_CHANGE,
+                        **_DC_VOLTAGE_SCALE,
                     ),
                 ),
             },
@@ -1886,8 +1968,11 @@ class ElectricalMeasurementDCCurrent(BaseElectricalMeasurement):
                 ),
                 ElectricalMeasurement.AttributeDefs.dc_current: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_CURRENT_CHANGE,
+                        **_DC_CURRENT_SCALE,
                     ),
                 ),
             },
@@ -1951,8 +2036,11 @@ class ElectricalMeasurementDCPower(BaseElectricalMeasurement):
                 ),
                 ElectricalMeasurement.AttributeDefs.dc_power: AttrConfig(
                     read_on_startup=True,
-                    reporting=ReportingConfig(
-                        min_interval=5, max_interval=900, reportable_change=1
+                    reporting=ScaledReportingConfig(
+                        min_interval=5,
+                        max_interval=900,
+                        reportable_change=_EM_POWER_CHANGE,
+                        **_DC_POWER_SCALE,
                     ),
                 ),
             },
