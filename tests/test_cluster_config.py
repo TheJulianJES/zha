@@ -1,5 +1,7 @@
 """Tests for cluster configuration aggregation."""
 
+from unittest.mock import patch
+
 import pytest
 import zigpy.profiles.zha
 from zigpy.zcl import ReportingConfig
@@ -14,13 +16,7 @@ from tests.common import (
     join_zigpy_device,
 )
 from zha.application.gateway import Gateway
-from zha.application.platforms import (
-    ENTITY_REGISTRY,
-    AttrConfig,
-    ClusterConfig,
-    ClusterMatch,
-)
-from zha.application.platforms.virtual import VirtualEntity
+from zha.application.platforms import AttrConfig, ClusterConfig, sensor
 from zha.zigbee.cluster_config import AggregatedAttrConfig
 
 # A tight, non-overriding config, like the ones ZHA's built-in entities declare
@@ -86,47 +82,17 @@ def test_override_without_reporting_is_rejected() -> None:
 
 
 async def test_reporting_override_configures_relaxed_reporting(
-    zha_gateway: Gateway, monkeypatch: pytest.MonkeyPatch
+    zha_gateway: Gateway,
 ) -> None:
     """An entity's overriding reporting config replaces the built-in default."""
-    em_cluster_id = homeautomation.ElectricalMeasurement.cluster_id
-    em_attrs = homeautomation.ElectricalMeasurement.AttributeDefs
-
-    class RelaxedVoltageReporting(VirtualEntity):
-        """Device-specific (e.g. quirk-provided) entity relaxing `rms_voltage`.
-
-        Declares its reporting config for `rms_voltage` by attribute name (str),
-        like quirks do, while the built-in voltage entity uses the ZCLAttributeDef.
-        Both must aggregate to the same attribute.
-        """
-
-        _unique_id_suffix = "relaxed_voltage_reporting"
-        _cluster_id = em_cluster_id
-        _cluster_match = ClusterMatch(server_clusters=frozenset({em_cluster_id}))
-        _server_cluster_config = {
-            em_cluster_id: ClusterConfig(
-                attributes={
-                    em_attrs.rms_voltage.name: AttrConfig(
-                        read_on_startup=False,
-                        reporting=RELAXED,
-                        reporting_override=True,
-                    ),
-                },
-            )
-        }
-
-    # Register the entity for this test only, alongside the built-in EM entities
-    monkeypatch.setitem(
-        ENTITY_REGISTRY,
-        em_cluster_id,
-        [*ENTITY_REGISTRY[em_cluster_id], RelaxedVoltageReporting],
-    )
-
     zigpy_device = create_mock_zigpy_device(
         zha_gateway,
         {
             1: {
-                SIG_EP_INPUT: [general.Basic.cluster_id, em_cluster_id],
+                SIG_EP_INPUT: [
+                    general.Basic.cluster_id,
+                    homeautomation.ElectricalMeasurement.cluster_id,
+                ],
                 SIG_EP_OUTPUT: [],
                 SIG_EP_TYPE: zigpy.profiles.zha.DeviceType.SMART_PLUG,
                 SIG_EP_PROFILE: zigpy.profiles.zha.PROFILE_ID,
@@ -134,7 +100,31 @@ async def test_reporting_override_configures_relaxed_reporting(
         },
     )
     cluster = zigpy_device.endpoints[1].electrical_measurement
-    await join_zigpy_device(zha_gateway, zigpy_device)
+    em_attrs = homeautomation.ElectricalMeasurement.AttributeDefs
+
+    # Simulate a device-specific (e.g. quirk-provided) entity declaring a relaxed
+    # reporting config for `rms_voltage`, alongside the built-in voltage entity
+    # declaring the default one for the same attribute. Quirks key attributes by
+    # name (str) while built-in entities use the ZCLAttributeDef, so both spellings
+    # must aggregate to the same attribute.
+    override_config = {
+        homeautomation.ElectricalMeasurement.cluster_id: ClusterConfig(
+            bind=True,
+            attributes={
+                em_attrs.rms_voltage.name: AttrConfig(
+                    read_on_startup=False,
+                    reporting=RELAXED,
+                    reporting_override=True,
+                ),
+            },
+        )
+    }
+    with patch.object(
+        sensor.ElectricalMeasurementRMSCurrent,
+        "_server_cluster_config",
+        override_config,
+    ):
+        await join_zigpy_device(zha_gateway, zigpy_device)
 
     assert len(cluster.configure_reporting_multiple.mock_calls) == 1
     configured = cluster.configure_reporting_multiple.mock_calls[0].args[0]
