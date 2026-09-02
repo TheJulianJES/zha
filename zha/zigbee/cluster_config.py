@@ -111,12 +111,7 @@ def aggregate_cluster_configs(
             agg.entities.append(entity)
 
             for attr_def, attr_config in config.attributes.items():
-                attr_name = (
-                    attr_def.name if isinstance(attr_def, ZCLAttributeDef) else attr_def
-                )
-                if attr_name not in agg.attributes:
-                    agg.attributes[attr_name] = AggregatedAttrConfig()
-                agg.attributes[attr_name].merge(attr_config)
+                _merge_attr_config(agg, entity, attr_def, attr_config)
 
         for cluster_id, config in entity._client_cluster_config.items():
             cluster = entity.endpoint.zigpy_endpoint.out_clusters.get(cluster_id)
@@ -132,14 +127,51 @@ def aggregate_cluster_configs(
             agg.entities.append(entity)
 
             for attr_def, attr_config in config.attributes.items():
-                attr_name = (
-                    attr_def.name if isinstance(attr_def, ZCLAttributeDef) else attr_def
-                )
-                if attr_name not in agg.attributes:
-                    agg.attributes[attr_name] = AggregatedAttrConfig()
-                agg.attributes[attr_name].merge(attr_config)
+                _merge_attr_config(agg, entity, attr_def, attr_config)
 
     return result
+
+
+def _merge_attr_config(
+    agg: AggregatedClusterConfig,
+    entity: BaseEntity,
+    attr_def: ZCLAttributeDef | str,
+    attr_config: AttrConfig,
+) -> None:
+    """Merge one entity's attribute config into the aggregate, logging overrides.
+
+    Which reporting config wins depends on the entities discovered for the device
+    and is otherwise invisible (the configure reporting event only carries the
+    result), so make discarded configs traceable in debug logs.
+    """
+    attr_name = attr_def.name if isinstance(attr_def, ZCLAttributeDef) else attr_def
+    attr_agg = agg.attributes.setdefault(attr_name, AggregatedAttrConfig())
+
+    if attr_config.reporting is not None:
+        if attr_config.reporting_override and not attr_agg.reporting_override:
+            if attr_agg.reporting is not None:
+                _LOGGER.debug(
+                    "[%s] %s overrides reporting config for %s on cluster %s: %s -> %s",
+                    agg.cluster.endpoint.device.ieee,
+                    type(entity).__name__,
+                    attr_name,
+                    agg.cluster.ep_attribute,
+                    attr_agg.reporting,
+                    attr_config.reporting,
+                )
+        elif attr_agg.reporting_override and not attr_config.reporting_override:
+            _LOGGER.debug(
+                "[%s] Ignoring reporting config for %s on cluster %s from %s: %s "
+                "(overridden by %s)",
+                agg.cluster.endpoint.device.ieee,
+                attr_name,
+                agg.cluster.ep_attribute,
+                type(entity).__name__,
+                attr_config.reporting,
+                attr_agg.reporting,
+            )
+
+    attr_agg.merge(attr_config)
 
 
 async def configure_cluster_configs(
