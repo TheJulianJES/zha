@@ -19,15 +19,8 @@ from zha.application.gateway import Gateway
 from zha.application.platforms import AttrConfig, ClusterConfig, sensor
 from zha.zigbee.cluster_config import AggregatedAttrConfig
 
-# ZHA's built-in reporting config for EM attributes, e.g. `rms_voltage`
-DEFAULT = (
-    sensor.ElectricalMeasurementRMSVoltage._server_cluster_config[
-        homeautomation.ElectricalMeasurement.cluster_id
-    ]
-    .attributes[homeautomation.ElectricalMeasurement.AttributeDefs.rms_voltage]
-    .reporting
-)
-assert DEFAULT is not None
+# A tight, non-overriding config, like the ones ZHA's built-in entities declare
+DEFAULT = ReportingConfig(min_interval=5, max_interval=900, reportable_change=1)
 RELAXED = ReportingConfig(min_interval=30, max_interval=3600, reportable_change=100)
 RELAXED_TIGHTER = ReportingConfig(
     min_interval=10, max_interval=1800, reportable_change=50
