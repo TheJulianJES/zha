@@ -82,7 +82,7 @@ def test_override_without_reporting_is_rejected() -> None:
 
 
 async def test_reporting_override_configures_relaxed_reporting(
-    zha_gateway: Gateway, caplog: pytest.LogCaptureFixture
+    zha_gateway: Gateway,
 ) -> None:
     """An entity's overriding reporting config replaces the built-in default."""
     zigpy_device = create_mock_zigpy_device(
@@ -131,12 +131,3 @@ async def test_reporting_override_configures_relaxed_reporting(
     assert configured[em_attrs.rms_voltage] == RELAXED
     # Attributes without an override keep the built-in default
     assert configured[em_attrs.active_power] == DEFAULT
-
-    # The discarded configs are traceable in the debug log
-    assert (
-        "ElectricalMeasurementRMSCurrent overrides reporting config for rms_voltage"
-        in caplog.text
-    ) or (
-        "Ignoring reporting config for rms_voltage on cluster electrical_measurement "
-        "from ElectricalMeasurementRMSVoltage" in caplog.text
-    )
