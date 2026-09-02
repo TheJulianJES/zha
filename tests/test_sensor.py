@@ -2215,7 +2215,7 @@ async def test_sonoff_s60_electrical_measurement_reporting(
     await join_zigpy_device(zha_gateway, zigpy_device)
 
     assert len(cluster.configure_reporting_multiple.mock_calls) == 1
-    configured = cluster.configure_reporting_multiple.mock_calls[0].args[0]
+    configured = cluster.configure_reporting_multiple.call_args.args[0]
     assert configured[EMAttrs.rms_voltage] == ReportingConfig(
         min_interval=5, max_interval=900, reportable_change=expected_voltage_change
     )
