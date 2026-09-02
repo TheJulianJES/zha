@@ -2190,3 +2190,39 @@ async def test_em_poller_runs_independently_of_entity_enabled_state(
     active_power.enable()
     assert active_power.enabled is True
     assert not poll_task.done()
+
+
+@pytest.mark.parametrize(
+    ("device_file", "expected_voltage_change", "expected_current_change"),
+    [
+        # SONOFF S60 reports with a divisor of 100: 1 V / 0.05 A
+        ("sonoff-s60zbtpg-0x00001002.json", 100, 5),
+        # Other devices keep the default raw reportable change
+        ("shelly-1pm.json", 1, 1),
+    ],
+)
+async def test_sonoff_s60_electrical_measurement_reporting(
+    zha_gateway: Gateway,
+    device_file: str,
+    expected_voltage_change: int,
+    expected_current_change: int,
+) -> None:
+    """The SONOFF S60 plugs get relaxed voltage/current reporting configured."""
+    zigpy_device = await zigpy_device_from_json(
+        zha_gateway.application_controller, f"tests/data/devices/{device_file}"
+    )
+    cluster = zigpy_device.endpoints[1].electrical_measurement
+    await join_zigpy_device(zha_gateway, zigpy_device)
+
+    assert len(cluster.configure_reporting_multiple.mock_calls) == 1
+    configured = cluster.configure_reporting_multiple.mock_calls[0].args[0]
+    assert configured[EMAttrs.rms_voltage] == ReportingConfig(
+        min_interval=5, max_interval=900, reportable_change=expected_voltage_change
+    )
+    assert configured[EMAttrs.rms_current] == ReportingConfig(
+        min_interval=5, max_interval=900, reportable_change=expected_current_change
+    )
+    # Other attributes are unaffected
+    assert configured[EMAttrs.active_power] == ReportingConfig(
+        min_interval=5, max_interval=900, reportable_change=1
+    )

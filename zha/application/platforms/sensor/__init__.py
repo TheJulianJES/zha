@@ -1021,6 +1021,46 @@ class ElectricalMeasurementReportingDevice(VirtualEntity):
 
 
 @register_entity(ElectricalMeasurement.cluster_id)
+class SonoffS60ElectricalMeasurementReporting(VirtualEntity):
+    """Relaxed voltage/current reporting for the SONOFF S60 plugs.
+
+    These plugs report `rms_voltage` and `rms_current` with a divisor of 100, so
+    the default raw reportable change of 1 is 0.01 V / 0.01 A and the device
+    reports at every minimum interval. Override with 1 V / 0.05 A.
+
+    Temporary: superseded by divisor-aware reportable changes for all devices.
+    """
+
+    _unique_id_suffix = "sonoff_s60_em_reporting"
+    _cluster_id = ElectricalMeasurement.cluster_id
+    _cluster_match = ClusterMatch(
+        server_clusters=frozenset({ElectricalMeasurement.cluster_id}),
+        manufacturers=frozenset({"SONOFF"}),
+        models=frozenset({"S60ZBTPF", "S60ZBTPG"}),
+    )
+    _server_cluster_config = {
+        ElectricalMeasurement.cluster_id: ClusterConfig(
+            attributes={
+                ElectricalMeasurement.AttributeDefs.rms_voltage: AttrConfig(
+                    read_on_startup=False,
+                    reporting=ReportingConfig(
+                        min_interval=5, max_interval=900, reportable_change=100
+                    ),
+                    reporting_override=True,
+                ),
+                ElectricalMeasurement.AttributeDefs.rms_current: AttrConfig(
+                    read_on_startup=False,
+                    reporting=ReportingConfig(
+                        min_interval=5, max_interval=900, reportable_change=5
+                    ),
+                    reporting_override=True,
+                ),
+            },
+        ),
+    }
+
+
+@register_entity(ElectricalMeasurement.cluster_id)
 class ElectricalMeasurementActivePower(BaseElectricalMeasurement):
     """Active power measurement."""
 
